@@ -273,7 +273,7 @@ function EventsHub() {
                 border: '2px solid rgba(255,255,255,0.1)',
                 overflow: 'hidden'
               }}>
-                <PenTool size={48} color="#00ff80" />
+                <img src="/assets/stencil-flow-icon.jpg" alt="Stencil Flow Icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <div>
                 <h3 style={{ color: 'white', fontSize: '2rem', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
