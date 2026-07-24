@@ -9,6 +9,7 @@ import { supabase } from './supabaseClient';
 import EventDetails from './EventDetails';
 import AuthPage from './AuthPage';
 import AdminPanel from './AdminPanel';
+import GuestHub from './GuestHub';
 import SearchOverlay from './SearchOverlay';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react';
 import './App.css';
@@ -723,16 +724,8 @@ export default function App() {
         <Route path="/artists" element={<ArtistsHub />} />
         <Route path="/submit" element={<SubmitEventHub />} />
         
-        {/* Hub Interno Futuro */}
-        <Route path="/hub" element={
-          <div className="wte-app-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-            <div className="wte-advanced-filters" style={{ padding: '3rem', textAlign: 'center', maxWidth: '700px' }}>
-              <h1 className="wte-title" style={{ fontSize: '2rem' }}>Marketplace & Guest</h1>
-              <p className="wte-subtitle" style={{ fontSize: '1rem', margin: '1rem auto' }}>Nosso diferencial! O mercado de vendas exclusivo para usuários do Hub (Integração futura).</p>
-              <button className="wte-nav-btn" onClick={() => window.location.href = '/'}>Voltar para Calendário</button>
-            </div>
-          </div>
-        } />
+        {/* Guest Hub */}
+        <Route path="/hub" element={<GuestHub />} />
       </Routes>
     </Router>
   );
