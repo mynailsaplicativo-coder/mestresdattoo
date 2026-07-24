@@ -273,7 +273,7 @@ function EventsHub() {
                 border: '2px solid rgba(255,255,255,0.1)',
                 overflow: 'hidden'
               }}>
-                <img src="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/4e/95/96/4e959648-5c4d-626a-9a94-4632b6e15a4f/AppIcon-0-0-1x_U007emarketing-0-7-0-sRGB-85-220.png/246x0w.webp" alt="Stencil Flow Icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <PenTool size={48} color="#00ff80" />
               </div>
               <div>
                 <h3 style={{ color: 'white', fontSize: '2rem', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
