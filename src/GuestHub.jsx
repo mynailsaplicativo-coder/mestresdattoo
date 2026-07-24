@@ -231,12 +231,12 @@ export default function GuestHub() {
               
               {profile?.role === 'studio' ? (
                 <>
-                  <input className="wte-search-input" placeholder="Título da Vaga (ex: Cadeira livre para Setembro)" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
+                  <input className="wte-search-input" style={{ padding: '0 1rem' }} placeholder="Título da Vaga (ex: Cadeira livre para Setembro)" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required />
                 </>
               ) : (
                 <>
-                  <input className="wte-search-input" placeholder="Cidade de Destino" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} required />
-                  <input className="wte-search-input" placeholder="País (ex: Brasil)" value={formData.dest} onChange={e => setFormData({...formData, dest: e.target.value})} required />
+                  <input className="wte-search-input" style={{ padding: '0 1rem' }} placeholder="Cidade de Destino" value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} required />
+                  <input className="wte-search-input" style={{ padding: '0 1rem' }} placeholder="País (ex: Brasil)" value={formData.dest} onChange={e => setFormData({...formData, dest: e.target.value})} required />
                 </>
               )}
               
@@ -245,7 +245,7 @@ export default function GuestHub() {
                 <input type="date" className="wte-search-input" style={{ padding: '0 1rem' }} value={formData.end} onChange={e => setFormData({...formData, end: e.target.value})} required />
               </div>
               
-              <textarea className="wte-search-input" placeholder="Descreva os detalhes..." style={{ height: '100px', paddingTop: '1rem' }} value={formData.desc} onChange={e => setFormData({...formData, desc: e.target.value})} required />
+              <textarea className="wte-search-input" placeholder="Descreva os detalhes..." style={{ height: '100px', padding: '1rem', resize: 'vertical' }} value={formData.desc} onChange={e => setFormData({...formData, desc: e.target.value})} required />
               
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                 <button type="button" className="wte-nav-btn" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setIsModalOpen(false)}>Cancelar</button>
