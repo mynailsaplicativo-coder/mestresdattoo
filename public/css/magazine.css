@@ -1,0 +1,694 @@
+/* Magazine Styles */
+:root {
+    --mag-gold: #D4AF37;
+    --mag-dark: #0a0a0a;
+    --mag-paper: #f4f1ea;
+    --mag-font-serif: 'Playfair Display', serif;
+    --mag-font-display: 'Cinzel', serif;
+    --mag-font-sans: 'Roboto', sans-serif;
+}
+
+body {
+    background-color: #000;
+    margin: 0;
+    font-family: var(--mag-font-sans);
+    overflow: hidden;
+    /* Prevent default scroll, wrapper handles it */
+}
+
+/* 3D Magazine Container */
+/* 3D Magazine Container */
+.magazine-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 2000px;
+    /* Enhanced perspective */
+    background-color: #222;
+    background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+    /* Subtle wood texture */
+    overflow: hidden;
+}
+
+/* Book Wrapper (The Book Itself) */
+/* Book Wrapper (The Book Itself) */
+.book {
+    position: relative;
+    height: 90vh;
+    width: auto;
+    aspect-ratio: 210 / 297;
+    /* Strict A4 Ratio */
+    max-width: 95vw;
+    transform-style: preserve-3d;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* The Sheet (Paper) */
+.paper {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    transform-origin: left center;
+    /* Rotate like a book page */
+    transform-style: preserve-3d;
+    transition: transform 1.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+    z-index: 1;
+}
+
+/* Flipped State */
+.paper.flipped {
+    transform: rotateY(-180deg);
+}
+
+/* Page Sides (Front/Back) */
+.front,
+.back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    backface-visibility: hidden;
+    background-color: var(--mag-paper);
+    overflow: hidden;
+    /* Ensure content doesn't bleed */
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
+    /* Inner shadow for depth */
+}
+
+/* Front Face */
+.front {
+    z-index: 2;
+}
+
+/* Back Face */
+.back {
+    z-index: 1;
+    transform: rotateY(180deg);
+    /* Pre-rotated to show when flipped */
+    background-color: #e8e4db;
+    /* Slightly darker back for realism? Or same. */
+}
+
+/* Page Content Override for Book Mode */
+.page {
+    position: absolute;
+    /* Reset from previous flex */
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    /* Remove the 100vw constraint */
+    overflow: hidden;
+    /* Reset styles that might conflict */
+}
+
+/* Nav Buttons Adjustments */
+.nav-btn.prev {
+    left: 2rem;
+}
+
+.nav-btn.next {
+    right: 2rem;
+}
+
+/* Z-Index Logic Helper Classes (Applied by JS) */
+/* Sheets roughly go: Z-index N down to 1 */
+
+
+/* Base Styles Override */
+.page {
+    /* Styles are handled by .front / .back wrappers now, but we keep content styles */
+    /* background-color: var(--mag-paper); handled by front/back */
+}
+
+.page.dark-bg {
+    background-color: var(--mag-dark);
+    color: var(--mag-paper);
+}
+
+.page-content {
+    padding: 4rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.page-number {
+    position: absolute;
+    bottom: 2rem;
+    right: 2rem;
+    font-family: var(--mag-font-display);
+    font-size: 1.2rem;
+    color: var(--mag-gold);
+}
+
+/* TypographyUtils */
+.gold-title {
+    color: var(--mag-gold);
+    font-family: var(--mag-font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+/* Cover Page */
+.cover-page {
+    position: relative;
+}
+
+.cover-image {
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+}
+
+.cover-overlays {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.6) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 3rem;
+    box-sizing: border-box;
+}
+
+.issue-number {
+    color: var(--mag-paper);
+    font-family: var(--mag-font-sans);
+    letter-spacing: 0.2em;
+    font-size: 0.9rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.headline-primary {
+    font-family: var(--mag-font-display);
+    font-size: 4rem;
+    color: var(--mag-gold);
+    line-height: 1.1;
+    margin: 0 0 1rem 0;
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.7);
+}
+
+.headline-secondary {
+    font-family: var(--mag-font-serif);
+    font-style: italic;
+    color: white;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.scroll-hint {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+        transform: translateX(-50%) translateY(0);
+    }
+
+    40% {
+        transform: translateX(-50%) translateY(-10px);
+    }
+
+    60% {
+        transform: translateX(-50%) translateY(-5px);
+    }
+}
+
+/* Index Page */
+.index-page .page-content {
+    align-items: flex-start;
+}
+
+.page-title {
+    font-family: var(--mag-font-display);
+    font-size: 3rem;
+    border-bottom: 2px solid var(--mag-gold);
+    padding-bottom: 0.5rem;
+    margin-bottom: 2rem;
+    width: 100%;
+}
+
+.index-list {
+    list-style: none;
+    padding: 0;
+    width: 100%;
+    margin-bottom: 3rem;
+}
+
+.index-list li {
+    display: flex;
+    align-items: baseline;
+    font-family: var(--mag-font-serif);
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px dotted #ccc;
+    padding-bottom: 0.5rem;
+}
+
+.index-page-num {
+    font-family: var(--mag-font-display);
+    color: var(--mag-gold);
+    margin-right: 1.5rem;
+    font-weight: bold;
+}
+
+.editor-note {
+    background-color: #e8e4db;
+    padding: 2rem;
+    border-left: 4px solid var(--mag-gold);
+}
+
+.editor-note h3 {
+    margin-top: 0;
+    font-family: var(--mag-font-display);
+}
+
+/* Manifesto */
+.manifesto-page .center-content {
+    text-align: center;
+    max-width: 800px;
+}
+
+.big-title {
+    font-size: 4vw;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.white-title {
+    color: white;
+}
+
+.manifesto-body {
+    font-family: var(--mag-font-serif);
+    font-size: 1.5rem;
+    line-height: 1.6;
+    margin-top: 3rem;
+    color: #ccc;
+}
+
+/* Article Spread */
+.article-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.article-header .category {
+    color: var(--mag-gold);
+    font-family: var(--mag-font-sans);
+    letter-spacing: 0.2em;
+    font-size: 0.9rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.article-header h1 {
+    font-family: var(--mag-font-display);
+    font-size: 2.5rem;
+    margin: 0;
+}
+
+.article-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+}
+
+.article-col img {
+    width: 100%;
+    height: 300px;
+    object-fit: cover;
+    margin-bottom: 1.5rem;
+    filter: sepia(0.2) contrast(1.1);
+}
+
+.article-col h3 {
+    font-family: var(--mag-font-display);
+    font-size: 1.5rem;
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.article-col p {
+    font-family: var(--mag-font-serif);
+    line-height: 1.6;
+    font-size: 1.1rem;
+    text-align: justify;
+}
+
+.drop-cap:first-letter {
+    float: left;
+    font-family: var(--mag-font-display);
+    font-size: 3.5rem;
+    line-height: 0.8;
+    margin-right: 0.5rem;
+    margin-top: 0.2rem;
+    color: var(--mag-gold);
+}
+
+/* Ad Page */
+.ad-page {
+    position: relative;
+    background-color: black;
+}
+
+.ad-page .ad-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
+}
+
+.ad-page img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
+
+.ad-page:hover img {
+    opacity: 0.6;
+}
+
+.ad-overlay {
+    position: absolute;
+    bottom: 20%;
+    left: 10%;
+    color: white;
+}
+
+.ad-overlay h2 {
+    font-family: var(--mag-font-display);
+    font-size: 3rem;
+    margin: 0 0 1rem 0;
+    text-transform: uppercase;
+}
+
+.btn-ad {
+    display: inline-block;
+    border: 1px solid var(--mag-gold);
+    color: var(--mag-gold);
+    padding: 1rem 2rem;
+    font-family: var(--mag-font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 1rem;
+}
+
+/* Ranking Spread */
+.ranking-spread .page-content {
+    height: 100%;
+    justify-content: flex-start;
+    padding-top: 6rem;
+}
+
+.ranking-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.ranking-columns {
+    column-count: 4;
+    column-gap: 2rem;
+    height: 100%;
+}
+
+.ranking-list-print {
+    padding: 0 0 0 1.5rem;
+    margin: 0;
+    font-family: var(--mag-font-serif);
+    font-size: 0.9rem;
+    color: #ccc;
+}
+
+.ranking-list-print li {
+    margin-bottom: 0.5rem;
+    padding-left: 0.5rem;
+}
+
+.ranking-list-print li:nth-child(-n+3) {
+    color: var(--mag-gold);
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+/* Events Page */
+.events-page .events-list-magazine {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+}
+
+.event-month-group {
+    background: white;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+}
+
+.event-month-group h3 {
+    font-family: var(--mag-font-display);
+    color: var(--mag-dark);
+    font-size: 2rem;
+    border-bottom: 2px solid var(--mag-gold);
+    margin-top: 0;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.btn-back {
+    display: inline-block;
+    background-color: var(--mag-gold);
+    color: black;
+    padding: 1rem 3rem;
+    text-decoration: none;
+    font-weight: bold;
+    margin-top: 2rem;
+    text-transform: uppercase;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .headline-primary {
+        font-size: 2.5rem;
+    }
+
+    .article-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .article-col img {
+        height: 200px;
+    }
+
+    .ranking-columns {
+        column-count: 2;
+    }
+
+    .events-page .events-list-magazine {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Navigation Buttons */
+.nav-btn {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--mag-gold);
+    border: 1px solid var(--mag-gold);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+.nav-btn:hover {
+    background: var(--mag-gold);
+    color: #000;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.nav-btn.prev {
+    left: 2rem;
+}
+
+.nav-btn.next {
+    right: 2rem;
+}
+
+/* Language Dropdown for Magazine */
+.lang-dropdown {
+    position: fixed;
+    top: 2rem;
+    right: 6rem;
+    /* Adjusted to match site desktop */
+    z-index: 2000;
+}
+
+.lang-toggle {
+    background: rgba(10, 10, 10, 0.8);
+    border: 1px solid var(--mag-gold);
+    color: #fff;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 4px;
+    transition: 0.3s;
+    backdrop-filter: blur(5px);
+}
+
+.lang-toggle:hover {
+    background: var(--mag-gold);
+    color: #000;
+}
+
+.arrow-down {
+    font-size: 0.8rem;
+    transition: transform 0.3s;
+}
+
+.lang-dropdown.open .arrow-down {
+    transform: rotate(180deg);
+}
+
+.lang-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 120px;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-top: none;
+    list-style: none;
+    display: none;
+    flex-direction: column;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.8);
+    padding: 0;
+}
+
+.lang-dropdown.open .lang-menu {
+    display: flex;
+}
+
+.lang-menu li {
+    padding: 10px 15px;
+    color: #ccc;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: 0.2s;
+    border-bottom: 1px solid #222;
+    margin: 0;
+}
+
+.lang-menu li:last-child {
+    border-bottom: none;
+}
+
+.lang-menu li:hover,
+.lang-menu li.active {
+    background: var(--mag-gold);
+    color: #000;
+}
+
+.flag {
+    font-size: 1.2rem;
+}
+
+@media (max-width: 768px) {
+    .lang-dropdown {
+        top: 1.5rem;
+        right: 5rem;
+        /* Match site mobile */
+    }
+}
+
+/* Full Image Page Override */
+.full-image-page .page-content {
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+    /* Reset flex loop if needed */
+}
+
+/* History Full Page Styles */
+.history-header {
+    flex: 0 0 auto;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--mag-gold);
+    padding-bottom: 0.3rem;
+}
+
+.history-header h2 {
+    font-size: 1.5rem;
+    line-height: 1;
+    margin: 0 0 0.2rem 0;
+    color: var(--mag-gold);
+    text-transform: uppercase;
+}
+
+.history-body {
+    flex: 1 1 auto;
+    column-count: 2;
+    column-gap: 1.5rem;
+    column-rule: 1px solid rgba(212, 175, 55, 0.2);
+    font-family: var(--mag-font-serif);
+    font-size: 0.78rem;
+    line-height: 1.4;
+    text-align: justify;
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .history-body {
+        column-count: 1 !important;
+        column-rule: none;
+        font-size: 0.9rem;
+        /* Readability on mobile */
+        overflow-y: auto;
+        /* Allow scroll if needed on mobile view */
+    }
+}

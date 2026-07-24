@@ -405,7 +405,7 @@ function MagazineHub() {
                      <span style={{ color: 'var(--wte-gold)', fontSize: '0.75rem', fontWeight: 900, marginBottom: '0.5rem', textTransform: 'uppercase' }}>{article.category}</span>
                      <h3 style={{ fontSize: '1.1rem', color: 'white', marginBottom: '1rem', fontWeight: 900 }}>{article.title}</h3>
                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.4 }}>{article.desc}</p>
-                     <button onClick={() => alert("O conteúdo completo deste artigo estará disponível em breve!")} style={{ marginTop: 'auto', background: 'transparent', border: '1px solid var(--wte-gold)', color: 'var(--wte-gold)', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>Ler Artigo</button>
+                     <button onClick={() => window.open(article.url || '/magazine.html', '_blank')} style={{ marginTop: 'auto', background: 'transparent', border: '1px solid var(--wte-gold)', color: 'var(--wte-gold)', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>Ler Artigo</button>
                    </div>
                 </article>
              ))}

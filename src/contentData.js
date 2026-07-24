@@ -1,25 +1,25 @@
 export const magazineArticles = [
   // DESTAQUES (Slider Superior - Tirados de "destaques 2025" / Entrevistas)
-  { category: "Campeão", title: "Cris Nieiro: Três Dias, Três Prêmios", desc: "Venceu a Tattoo Week e All Stars Miami no mesmo fim de semana.", imageUrl: "/assets/highlight-cris.jpg", isHighlight: true },
-  { category: "Perfil", title: "Julio: O Legado de um Mestre", desc: "A história e as técnicas que consolidaram seu nome na indústria.", imageUrl: "/assets/highlight-julio-portrait.jpg", isHighlight: true },
-  { category: "Destaque", title: "Ana Velho: Uma Lenda Brasileira", desc: "A força e a história de uma das maiores tatuadoras do país.", imageUrl: "/assets/legend-ana-velho.jpg", isHighlight: true },
-  { category: "Prêmio", title: "Vitória Histórica do Brasil em Milão", desc: "Tatuadores brasileiros conquistam os prêmios máximos na Milano Tattoo Convention.", imageUrl: "/assets/highlight-milano.jpg", isHighlight: true },
-  { category: "Internacional", title: "O Triunfo na França: Mondial de la Tatouage", desc: "A conquista de prêmios no evento mais prestigiado da Europa.", imageUrl: "/assets/highlight-mondial-cover.jpg", isHighlight: true },
+  { category: "Campeão", title: "Cris Nieiro: Três Dias, Três Prêmios", desc: "Venceu a Tattoo Week e All Stars Miami no mesmo fim de semana.", imageUrl: "/assets/highlight-cris.jpg", isHighlight: true, url: "/interviews.html" },
+  { category: "Perfil", title: "Julio: O Legado de um Mestre", desc: "A história e as técnicas que consolidaram seu nome na indústria.", imageUrl: "/assets/highlight-julio-portrait.jpg", isHighlight: true, url: "/interviews.html" },
+  { category: "Destaque", title: "Ana Velho: Uma Lenda Brasileira", desc: "A força e a história de uma das maiores tatuadoras do país.", imageUrl: "/assets/legend-ana-velho.jpg", isHighlight: true, url: "/history.html" },
+  { category: "Prêmio", title: "Vitória Histórica do Brasil em Milão", desc: "Tatuadores brasileiros conquistam os prêmios máximos na Milano Tattoo Convention.", imageUrl: "/assets/highlight-milano.jpg", isHighlight: true, url: "/magazine.html" },
+  { category: "Internacional", title: "O Triunfo na França: Mondial de la Tatouage", desc: "A conquista de prêmios no evento mais prestigiado da Europa.", imageUrl: "/assets/highlight-mondial-cover.jpg", isHighlight: true, url: "/magazine.html" },
   
   // ARTIGOS DA HISTORY.HTML
-  { category: "Origins", title: "O Significado Sagrado da Tatuagem Polinésia", desc: "Uma viagem profunda às raízes tribais e o significado de cada símbolo.", imageUrl: "/assets/history-tribal.png", isHighlight: true },
-  { category: "Brasil", title: "História da Tatuagem no Brasil", desc: "A evolução da arte na pele em terras brasileiras.", imageUrl: "/assets/brazil-history.png", isHighlight: true },
-  { category: "Raízes Profundas", title: "A Origem da Tatuagem: Marcas Milenares", desc: "Como as primeiras marcas foram feitas e seu propósito.", imageUrl: "/assets/origin-tattoo.png", isHighlight: false },
-  { category: "Revolução Visual", title: "Da Pele às Galerias: A Nova Era", desc: "O reconhecimento definitivo da tatuagem como arte.", imageUrl: "/assets/gallery-modern.png", isHighlight: false },
-  { category: "História", title: "Dr. Fukushi Masaichi: O Guardião das Peles", desc: "A incrível coleção de peles tatuadas preservadas.", imageUrl: "/assets/history-fukushi-real.jpg", isHighlight: false },
-  { category: "Pioneira", title: "Jessie Knight: A Dama da Agulha", desc: "A primeira mulher a tatuar profissionalmente no Reino Unido.", imageUrl: "/assets/legend-jessie.jpg", isHighlight: false },
-  { category: "Realeza", title: "George Burchett: O Rei dos Tatuadores", desc: "Atravessou guerras, reis e culturas.", imageUrl: "/assets/legend-burchett.jpg", isHighlight: false },
-  { category: "Lenda Viva", title: "Sailor Jerry: O Pai do Old School", desc: "Seus flashs definiram uma era inteira.", imageUrl: "/assets/legend-sailor.png", isHighlight: false },
-  { category: "Ancestralidade", title: "Whang-od: A Última Mambabatok", desc: "Guardiã da tradição filipina nas montanhas.", imageUrl: "/assets/whang-od.png", isHighlight: false },
-  { category: "Mestre", title: "Horiyoshi III: A Alma do Japão", desc: "Mestre supremo do Irezumi japonês.", imageUrl: "/assets/legend-irezumi.png", isHighlight: false },
-  { category: "Inovação", title: "Filip Leu: O Dragão Psicodélico", desc: "Pioneiro do estilo biomecânico e grandes composições.", imageUrl: "/assets/legend-leu.png", isHighlight: false },
-  { category: "Ícone Pop", title: "Lyle Tuttle: O Tatuador das Estrelas", desc: "Levou a arte das ruas para a capa da Rolling Stone.", imageUrl: "/assets/legend-lyle.png", isHighlight: false },
-  { category: "Padrinho", title: "Ed Hardy: O Rei do Tattoo Wear", desc: "Uniu o Oriente e o Ocidente na tatuagem moderna.", imageUrl: "/assets/legend-edhardy-real.jpg", isHighlight: false }
+  { category: "Origins", title: "O Significado Sagrado da Tatuagem Polinésia", desc: "Uma viagem profunda às raízes tribais e o significado de cada símbolo.", imageUrl: "/assets/history-tribal.png", isHighlight: true, url: "/history.html" },
+  { category: "Brasil", title: "História da Tatuagem no Brasil", desc: "A evolução da arte na pele em terras brasileiras.", imageUrl: "/assets/brazil-history.png", isHighlight: true, url: "/history.html" },
+  { category: "Raízes Profundas", title: "A Origem da Tatuagem: Marcas Milenares", desc: "Como as primeiras marcas foram feitas e seu propósito.", imageUrl: "/assets/origin-tattoo.png", isHighlight: false, url: "/history.html" },
+  { category: "Revolução Visual", title: "Da Pele às Galerias: A Nova Era", desc: "O reconhecimento definitivo da tatuagem como arte.", imageUrl: "/assets/gallery-modern.png", isHighlight: false, url: "/history.html" },
+  { category: "História", title: "Dr. Fukushi Masaichi: O Guardião das Peles", desc: "A incrível coleção de peles tatuadas preservadas.", imageUrl: "/assets/history-fukushi-real.jpg", isHighlight: false, url: "/history.html" },
+  { category: "Pioneira", title: "Jessie Knight: A Dama da Agulha", desc: "A primeira mulher a tatuar profissionalmente no Reino Unido.", imageUrl: "/assets/legend-jessie.jpg", isHighlight: false, url: "/history.html" },
+  { category: "Realeza", title: "George Burchett: O Rei dos Tatuadores", desc: "Atravessou guerras, reis e culturas.", imageUrl: "/assets/legend-burchett.jpg", isHighlight: false, url: "/history.html" },
+  { category: "Lenda Viva", title: "Sailor Jerry: O Pai do Old School", desc: "Seus flashs definiram uma era inteira.", imageUrl: "/assets/legend-sailor.png", isHighlight: false, url: "/history.html" },
+  { category: "Ancestralidade", title: "Whang-od: A Última Mambabatok", desc: "Guardiã da tradição filipina nas montanhas.", imageUrl: "/assets/whang-od.png", isHighlight: false, url: "/history.html" },
+  { category: "Mestre", title: "Horiyoshi III: A Alma do Japão", desc: "Mestre supremo do Irezumi japonês.", imageUrl: "/assets/legend-irezumi.png", isHighlight: false, url: "/history.html" },
+  { category: "Inovação", title: "Filip Leu: O Dragão Psicodélico", desc: "Pioneiro do estilo biomecânico e grandes composições.", imageUrl: "/assets/legend-leu.png", isHighlight: false, url: "/history.html" },
+  { category: "Ícone Pop", title: "Lyle Tuttle: O Tatuador das Estrelas", desc: "Levou a arte das ruas para a capa da Rolling Stone.", imageUrl: "/assets/legend-lyle.png", isHighlight: false, url: "/history.html" },
+  { category: "Padrinho", title: "Ed Hardy: O Rei do Tattoo Wear", desc: "Uniu o Oriente e o Ocidente na tatuagem moderna.", imageUrl: "/assets/legend-edhardy-real.jpg", isHighlight: false, url: "/history.html" }
 ];
 
 // O script gerou os artistas a partir da pasta. Vamos injetá-los diretamente aqui.
