@@ -32,17 +32,13 @@ function Header() {
   return (
     <header className={`wte-header ${scrolled ? 'scrolled' : ''}`} style={{ background: scrolled ? 'rgba(5, 6, 8, 0.95)' : 'rgba(5, 6, 8, 0.8)', borderBottom: scrolled ? '1px solid var(--wte-gold)' : 'none' }}>
       <div className="wte-header-inner">
-        <a href="/" className="wte-brand" onClick={(e) => { e.preventDefault(); navigate('/'); }} style={{ position: 'relative', width: '200px', display: 'flex', alignItems: 'center' }}>
+        <a href="/" className="wte-brand" onClick={(e) => { e.preventDefault(); navigate('/'); }} style={{ display: 'flex', alignItems: 'center' }}>
           <img 
             src="/fotos artistas/logo mestres.png" 
             alt="Mestres da Tattoo" 
             style={{ 
-              position: 'absolute',
               width: '180px',
               height: 'auto',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 100,
               filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.8))'
             }}
           />
@@ -67,8 +63,8 @@ function Header() {
           
           <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.2)', margin: '0 0.5rem' }}></div>
           
-          <div className="wte-lang-select" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'white', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
-             <Globe size={16} /> PT <ChevronDown size={14}/>
+          <div className="wte-lang-select" style={{ display: 'flex', alignItems: 'center', minWidth: '130px', overflow: 'hidden' }}>
+             <div id="google_translate_element"></div>
           </div>
 
           <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.2)', margin: '0 0.5rem' }}></div>
@@ -373,15 +369,15 @@ function ArtistsHub() {
 
   const getArtistMeta = (name) => {
     const meta = {
-      'Carolina Caosvalle': { country: 'URUGUAY', handle: '@carolina_caosvalle' },
-      'Chico Morbene': { country: 'BRAZIL', handle: '@chicomorbene' },
-      'Coimbra': { country: 'BRAZIL', handle: '@coimbratattoo' },
-      'Diego Nunes': { country: 'BRAZIL', handle: '@diegonunestattoo' },
+      'Carolina Caosvalle': { country: 'ITALY', handle: '@carolina_caosvalle' },
+      'Chico Morbene': { country: 'BRASIL', handle: '@chicomorbene' },
+      'Coimbra': { country: 'BRASIL', handle: '@coimbratattoo' },
+      'Diego Nunes': { country: 'BRASIL', handle: '@diegonunestattoo' },
       'Dung Tran': { country: 'VIETNAM', handle: '@dungtattoo' },
-      'Fabricio Galdino': { country: 'BRAZIL', handle: '@fabriciogaldino' },
-      'Ganso Galvão': { country: 'BRAZIL', handle: '@gansogalvao' },
+      'Fabricio Galdino': { country: 'BRASIL', handle: '@fabriciogaldino' },
+      'Ganso Galvão': { country: 'BRASIL', handle: '@gansogalvao' },
       'Hernan Yepes': { country: 'COLOMBIA', handle: '@hernanyepes' },
-      'Ibrahim Barboza': { country: 'BRAZIL', handle: '@ibrahimbarboza' },
+      'Ibrahim Barboza': { country: 'BRASIL', handle: '@ibrahimbarboza' },
       'Javi Tattooedtheory': { country: 'SPAIN', handle: '@tattooedtheory' },
       'Yomico Moreno': { country: 'VENEZUELA', handle: '@yomicomoreno' },
       'Zakarov': { country: 'RUSSIA', handle: '@zakarov_tattoo' },
@@ -389,10 +385,10 @@ function ArtistsHub() {
       'Julian Siebert': { country: 'GERMANY', handle: '@juliansiebert' },
       'Steve Butcher': { country: 'NEW ZEALAND', handle: '@stevebutchertattoos' },
       'Nikko Hurtado': { country: 'UNITED STATES', handle: '@nikkohurtado' },
-      'Luiza Bello': { country: 'BRAZIL', handle: '@luizabello' },
-      'Klebyz Tattoo': { country: 'BRAZIL', handle: '@klebyz_tattoo' },
-      'Machado Artes': { country: 'BRAZIL', handle: '@machadoartes' },
-      'Paulinho De Deus': { country: 'BRAZIL', handle: '@paulinhodedeus' },
+      'Luiza Bello': { country: 'BRASIL', handle: '@luizabello' },
+      'Klebyz Tattoo': { country: 'BRASIL', handle: '@klebyz_tattoo' },
+      'Machado Artes': { country: 'BRASIL', handle: '@machadoartes' },
+      'Paulinho De Deus': { country: 'BRASIL', handle: '@paulinhodedeus' },
       'Joybacks Morales': { country: 'UNITED STATES', handle: '@joybacksmorales' },
       'Ítalo Santos': { country: 'BRASIL', handle: '@italosantostattoo' },
       'Tampa': { country: 'BRASIL', handle: '@tampatattoo' },
