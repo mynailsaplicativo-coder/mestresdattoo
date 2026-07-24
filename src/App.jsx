@@ -2,7 +2,8 @@ import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, usePa
 import { useState, useEffect, useRef } from 'react';
 import { 
   CalendarDays, BookOpen, UserRound, Mail, Send, Search, Archive, Earth, ListFilter, 
-  ChevronDown, RotateCcw, Sparkles, MapPin, Store, BadgeCheck, UserCircle, Globe, PlayCircle, Clock
+  ChevronDown, RotateCcw, Sparkles, MapPin, Store, BadgeCheck, UserCircle, Globe, PlayCircle, Clock,
+  Calendar, User, Star
 } from 'lucide-react';
 import { magazineArticles, featuredArtists, registeredEvents as fallbackEvents, registeredVideos } from './contentData';
 import { supabase } from './supabaseClient';
