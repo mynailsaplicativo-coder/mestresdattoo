@@ -103,7 +103,7 @@ function EventCard({ id, title, date, venue, city, country, desc, imageUrl, isUp
           <span>
             <a href="#" className="wte-event-meta-link">{city}</a>
             <span style={{ color: 'rgba(255,255,255,0.42)' }}>, </span>
-            <span style={{ fontSize: '0.85em' }}>🇺🇸</span>
+            <span style={{ fontSize: '0.85em' }}>{country.toLowerCase() === 'brasil' || country.toLowerCase() === 'brazil' ? '🇧🇷' : '🇺🇸'}</span>
             <a href="#" className="wte-event-meta-link" style={{ marginLeft: '4px' }}>{country}</a>
           </span>
         </div>
@@ -253,6 +253,8 @@ function EventsHub() {
         <section style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 1.5rem', paddingBottom: '4rem' }}>
           <div style={{
             display: 'flex',
+            flexWrap: 'wrap',
+            gap: '2rem',
             alignItems: 'center',
             justifyContent: 'space-between',
             background: 'linear-gradient(90deg, #0f2015 0%, #050a07 100%)',
@@ -261,7 +263,7 @@ function EventsHub() {
             padding: '2rem',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2rem', flex: '1 1 300px' }}>
               <div style={{ 
                 width: '100px', 
                 height: '100px', 
@@ -271,12 +273,13 @@ function EventsHub() {
                 alignItems: 'center', 
                 justifyContent: 'center',
                 border: '2px solid rgba(255,255,255,0.1)',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                flexShrink: 0
               }}>
                 <img src="/assets/stencil-flow-icon.jpg" alt="Stencil Flow Icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
-              <div>
-                <h3 style={{ color: 'white', fontSize: '2rem', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ minWidth: '200px' }}>
+                <h3 style={{ color: 'white', fontSize: '2rem', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                   Stencil Flow 
                   <span style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.1)', padding: '0.2rem 0.6rem', borderRadius: '10px', color: 'rgba(255,255,255,0.8)' }}>App</span>
                 </h3>
@@ -284,7 +287,7 @@ function EventsHub() {
                 <p style={{ color: 'rgba(0,255,128,0.7)', fontSize: '0.9rem', margin: 0 }}>Desenvolvido para criar artes de tatuagem perfeitas.</p>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', width: '100%', maxWidth: 'max-content' }}>
               <a href="https://apps.apple.com/br/app/stencil-flow/id6764149272" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
                 <button className="wte-nav-btn" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', padding: '1rem 1.5rem', fontSize: '1rem', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.2)' }}>
                   Baixar na App Store
@@ -402,7 +405,7 @@ function MagazineHub() {
                      <span style={{ color: 'var(--wte-gold)', fontSize: '0.75rem', fontWeight: 900, marginBottom: '0.5rem', textTransform: 'uppercase' }}>{article.category}</span>
                      <h3 style={{ fontSize: '1.1rem', color: 'white', marginBottom: '1rem', fontWeight: 900 }}>{article.title}</h3>
                      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.4 }}>{article.desc}</p>
-                     <button style={{ marginTop: 'auto', background: 'transparent', border: '1px solid var(--wte-gold)', color: 'var(--wte-gold)', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>Ler Artigo</button>
+                     <button onClick={() => alert("O conteúdo completo deste artigo estará disponível em breve!")} style={{ marginTop: 'auto', background: 'transparent', border: '1px solid var(--wte-gold)', color: 'var(--wte-gold)', padding: '0.5rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>Ler Artigo</button>
                    </div>
                 </article>
              ))}
