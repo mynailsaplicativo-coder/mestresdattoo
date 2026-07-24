@@ -519,4 +519,37 @@
   .wte-status-tabs {
     grid-template-columns: 1fr;
   }
+  
+  .wte-header-inner {
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .wte-brand {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .wte-nav {
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+    gap: 0.75rem;
+  }
+  
+  /* Esconder barras de rolagem para um visual mais limpo mas ainda permitir deslizar */
+  .wte-nav::-webkit-scrollbar {
+    height: 4px;
+  }
+  .wte-nav::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .wte-nav::-webkit-scrollbar-thumb {
+    background: rgba(238, 195, 88, 0.3);
+    border-radius: 4px;
+  }
 }
