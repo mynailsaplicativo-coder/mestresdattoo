@@ -1,0 +1,31 @@
+/* Load More Button Styles */
+.hidden-item {
+    display: none !important;
+}
+
+.load-more-container {
+    text-align: center;
+    margin-top: 2rem;
+    width: 100%;
+    grid-column: 1 / -1;
+    /* Ensure it spans full width in grid */
+}
+
+.load-more-btn {
+    background: transparent;
+    border: 1px solid var(--color-gold);
+    color: var(--color-gold);
+    padding: 10px 30px;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.load-more-btn:hover {
+    background: var(--color-gold);
+    color: #000;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+}

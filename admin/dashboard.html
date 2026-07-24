@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MESTRES Admin | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto:wght@300;400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>MESTRES<br><span style="font-size: 0.6em; color: #666;">AUTHORITY</span></h2>
+            <ul class="nav-links">
+                <li><a href="#" class="active">Visão Geral</a></li>
+                <li><a href="https://analytics.google.com/" target="_blank" style="color: #00ff00;">Dados Reais (Google)
+                        ↗</a></li>
+                <li><a href="#">Tráfego (Google)</a></li>
+                <li><a href="#">Páginas Mais Vistas</a></li>
+                <li><a href="#">Configurações</a></li>
+                <li><a href="#" class="logout-link" id="logoutBtn">Sair</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header-top">
+                <div>
+                    <h1>Dashboard</h1>
+                    <p style="color: #666;">Bem-vindo, Administrador.</p>
+                </div>
+                <div class="date-display">
+                    02 Fevereiro 2026
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-title">Visitas Totais (Mês)</div>
+                    <div class="stat-value">12,450</div>
+                    <div class="stat-change up">▲ 15% vs mês anterior</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Origem: Google</div>
+                    <div class="stat-value">8,320</div>
+                    <div class="stat-change up">▲ 22% (SEO Otimizado)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Cliques em Artigos</div>
+                    <div class="stat-value">45,102</div>
+                    <div class="stat-change up">▲ 8% Engajamento</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">Tempo Médio</div>
+                    <div class="stat-value">4m 12s</div>
+                    <div class="stat-change down">▼ 0.5% (Estável)</div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="charts-split">
+                <div class="chart-box">
+                    <div class="chart-title">Evolução de Acessos (Últimos 7 Dias)</div>
+                    <canvas id="visitsChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">Fontes de Tráfego</div>
+                    <canvas id="sourceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Pages -->
+            <div class="chart-box">
+                <div class="chart-title">Páginas Mais Acessadas</div>
+                <ul class="top-pages-list">
+                    <li>
+                        <span>/ (Home)</span>
+                        <span class="count">5,200</span>
+                    </li>
+                    <li>
+                        <span>/magazine (Edição #1)</span>
+                        <span class="count">3,850</span>
+                    </li>
+                    <li>
+                        <span>/lendas-de-ouro (História)</span>
+                        <span class="count">2,100</span>
+                    </li>
+                    <li>
+                        <span>/ranking (Top 60)</span>
+                        <span class="count">1,800</span>
+                    </li>
+                    <li>
+                        <span>/quiz</span>
+                        <span class="count">950</span>
+                    </li>
+                </ul>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+
+</html>

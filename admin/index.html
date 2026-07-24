@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MESTRES Admin | Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto:wght@300;400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+    <div class="login-container">
+        <div class="login-box">
+            <div class="logo-area">
+                <h1>MESTRES</h1>
+                <p>PAINEL ADMINISTRATIVO</p>
+            </div>
+            <form id="loginForm">
+                <div class="input-group">
+                    <label for="user">Usuário</label>
+                    <input type="text" id="user" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label for="pass">Senha</label>
+                    <input type="password" id="pass" required>
+                </div>
+                <div id="errorMsg" style="color: red; display: none; margin-bottom: 1rem; font-size: 0.9rem;"></div>
+                <button type="submit" class="btn-login">Entrar</button>
+            </form>
+            <p style="margin-top: 1.5rem; font-size: 0.8rem; color: #666;">
+                <a href="../index.html" style="color: #666; text-decoration: none;">← Voltar ao Site</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+</body>
+
+</html>
