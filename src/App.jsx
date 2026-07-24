@@ -248,6 +248,57 @@ function EventsHub() {
             ))}
           </div>
         </section>
+
+        {/* Stencil Flow Banner */}
+        <section style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 1.5rem', paddingBottom: '4rem' }}>
+          <a href="https://stencilflowapp.com.br" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(90deg, #0f2015 0%, #050a07 100%)',
+              border: '1px solid rgba(0, 255, 128, 0.2)',
+              borderRadius: '16px',
+              padding: '2rem',
+              cursor: 'pointer',
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = '0 10px 30px rgba(0, 255, 128, 0.15)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.5)'; }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                <div style={{ 
+                  width: '100px', 
+                  height: '100px', 
+                  background: 'black', 
+                  borderRadius: '20px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '2px solid rgba(255,255,255,0.1)',
+                  overflow: 'hidden'
+                }}>
+                  <img src="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/4e/95/96/4e959648-5c4d-626a-9a94-4632b6e15a4f/AppIcon-0-0-1x_U007emarketing-0-7-0-sRGB-85-220.png/246x0w.webp" alt="Stencil Flow Icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div>
+                  <h3 style={{ color: 'white', fontSize: '2rem', margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    Stencil Flow 
+                    <span style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.1)', padding: '0.2rem 0.6rem', borderRadius: '10px', color: 'rgba(255,255,255,0.8)' }}>App</span>
+                  </h3>
+                  <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', margin: '0 0 0.5rem 0' }}>Artes gráficas e design para iPad.</p>
+                  <p style={{ color: 'rgba(0,255,128,0.7)', fontSize: '0.9rem', margin: 0 }}>Desenvolvido para criar artes de tatuagem perfeitas.</p>
+                </div>
+              </div>
+              <div>
+                <button className="wte-nav-btn" style={{ background: 'white', color: 'black', padding: '1rem 2rem', fontSize: '1.1rem', fontWeight: 'bold' }}>
+                  Acessar Site Oficial
+                </button>
+              </div>
+            </div>
+          </a>
+        </section>
+
       </main>
     </div>
   );
