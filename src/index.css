@@ -1,1 +1,4 @@
 /* Cleared default Vite styles */
+* {
+  box-sizing: border-box;
+}

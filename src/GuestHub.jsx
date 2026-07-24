@@ -131,9 +131,9 @@ export default function GuestHub() {
               </select>
             </div>
             
-            <input type="text" className="wte-search-input" placeholder={role === 'artist' ? "Seu Nome Artístico" : "Nome do Estúdio"} value={name} onChange={e => setName(e.target.value)} required />
-            <input type="text" className="wte-search-input" placeholder="Cidade Base" value={city} onChange={e => setCity(e.target.value)} required />
-            <input type="text" className="wte-search-input" placeholder="WhatsApp (com DDD)" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} required />
+            <input type="text" className="wte-search-input" style={{ padding: '0 1rem' }} placeholder={role === 'artist' ? "Seu Nome Artístico" : "Nome do Estúdio"} value={name} onChange={e => setName(e.target.value)} required />
+            <input type="text" className="wte-search-input" style={{ padding: '0 1rem' }} placeholder="Cidade Base" value={city} onChange={e => setCity(e.target.value)} required />
+            <input type="text" className="wte-search-input" style={{ padding: '0 1rem' }} placeholder="WhatsApp (com DDD)" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} required />
             
             <button className="wte-nav-btn" type="submit" style={{ justifyContent: 'center', padding: '1rem', marginTop: '1rem', background: 'var(--wte-gold)', color: 'black' }}>
               Salvar Perfil
