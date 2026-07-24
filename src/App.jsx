@@ -400,7 +400,7 @@ function ArtistsHub() {
       'Neto Coutinho': { country: 'BRASIL', handle: '@netocoutinho' },
       'sylvio freitas': { country: 'BRASIL', handle: '@sylviofreitas' },
       'Cris Niero': { country: 'BRASIL', handle: '@crisniero' },
-      'Vitoria Lee': { country: 'USA', handle: '@vitorialee' },
+      'Vitoria Lee': { country: 'CHINA', handle: '@vitorialee' },
       'Tery Do': { country: 'VIETNAM', handle: '@TERY_DO' },
       'Ralf Nonnweiler': { country: 'GERMANY', handle: '@RALFNONNWEILERTATTOO' },
       'Matt Gone': { country: 'UNITED STATES', handle: '@MATTGONE' },
