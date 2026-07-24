@@ -10,6 +10,7 @@ import EventDetails from './EventDetails';
 import AuthPage from './AuthPage';
 import AdminPanel from './AdminPanel';
 import GuestHub from './GuestHub';
+import ContactMediaKit from './ContactMediaKit';
 import SearchOverlay from './SearchOverlay';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react';
 import './App.css';
@@ -45,9 +46,11 @@ function Header() {
           />
         </a>
         <nav className="wte-nav">
-          <button className="wte-nav-btn" onClick={() => navigate('/')}><CalendarDays size={14} /> Eventos</button>
+          <button className="wte-nav-btn" onClick={() => navigate('/')}><Calendar size={14} /> Eventos</button>
           <button className="wte-nav-btn" onClick={() => navigate('/magazine')}><BookOpen size={14} /> Magazine</button>
-          <button className="wte-nav-btn" onClick={() => navigate('/artists')}><UserRound size={14} /> Artistas</button>
+          <button className="wte-nav-btn" onClick={() => navigate('/artists')}><User size={14} /> Artistas</button>
+          <button className="wte-nav-btn" onClick={() => navigate('/hub')}><Store size={14} /> Guest Hub</button>
+          <button className="wte-nav-btn" onClick={() => navigate('/contato')}><Star size={14} /> Mídia Kit</button>
           <SignedOut>
             <SignInButton mode="modal">
               <button className="wte-nav-btn" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -723,6 +726,7 @@ export default function App() {
         <Route path="/magazine" element={<MagazineHub />} />
         <Route path="/artists" element={<ArtistsHub />} />
         <Route path="/submit" element={<SubmitEventHub />} />
+        <Route path="/contato" element={<ContactMediaKit />} />
         
         {/* Guest Hub */}
         <Route path="/hub" element={<GuestHub />} />
