@@ -13,6 +13,7 @@ import AdminPanel from './AdminPanel';
 import GuestHub from './GuestHub';
 import ContactMediaKit from './ContactMediaKit';
 import SearchOverlay from './SearchOverlay';
+import MastersInkSelection from './MastersInkSelection';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react';
 import './App.css';
 
@@ -785,6 +786,7 @@ export default function App() {
         
         {/* Guest Hub */}
         <Route path="/hub" element={<GuestHub />} />
+        <Route path="/selecao-masters-ink" element={<MastersInkSelection />} />
       </Routes>
     </Router>
   );

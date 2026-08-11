@@ -110,8 +110,8 @@ export const registeredEvents = [
     title: "MASTERS INK TATTOO FESTIVAL",
     date: "18 - 20 Setembro 2026",
     startDate: "2026-09-18",
-    venue: "Expo Center",
-    city: "São Paulo",
+    venue: "Juiz de Fora",
+    city: "Minas Gerais",
     country: "Brasil",
     desc: "Um festival focado nos maiores mestres e tendências do mundo da tatuagem.",
     imageUrl: "/cartazes eventos/masters ink cartaz.jpeg"
