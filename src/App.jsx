@@ -182,7 +182,13 @@ function EventsHub() {
             </div>
             <button className="wte-icon-btn"><UserCircle size={20} /></button>
           </div>
-          <h1 className="wte-title fade-in delay-1">Mestres da Tattoo:<br/> O Maior Portal da Tatuagem no Brasil</h1>
+          
+          {/* BANNER MASTERS INK */}
+          <div className="fade-in delay-1" style={{ marginTop: '2rem', display: 'inline-block', background: 'var(--wte-gold)', color: '#000', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 204, 13, 0.3)' }} onClick={() => navigate('/selecao-masters-ink')}>
+            🔥 SELEÇÃO MASTERS INK: GARANTA SUA VAGA NO STAND! CLIQUE AQUI
+          </div>
+
+          <h1 className="wte-title fade-in delay-1" style={{ marginTop: '1.5rem' }}>Mestres da Tattoo:<br/> O Maior Portal da Tatuagem no Brasil</h1>
           <p className="wte-subtitle fade-in delay-2">Encontre estúdios, tatuadores, cultura e muito mais.</p>
           <div className="wte-stats-grid fade-in delay-3">
             <a href="#" className="wte-stat-card"><div className="wte-stat-icon-wrapper"><CalendarDays size={16} /></div><div><span className="wte-stat-number">{events.length}</span><span className="wte-stat-label">Eventos</span></div></a>
