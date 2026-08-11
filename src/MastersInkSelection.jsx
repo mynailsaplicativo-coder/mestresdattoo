@@ -1,34 +1,81 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Image, User, Mail, Smartphone, CreditCard, ArrowLeft } from 'lucide-react';
+import { Send, Image as ImageIcon, User, Mail, Smartphone, CreditCard, ArrowLeft, Loader2 } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 export default function MastersInkSelection() {
   const navigate = useNavigate();
+  const [isUploading, setIsUploading] = useState(false);
+  const [files, setFiles] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     whatsapp: '',
     cpf: '',
     email: '',
-    instagram: '',
-    portfolioLink: ''
+    instagram: ''
   });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleFileChange = (e) => {
+    if (e.target.files) {
+      setFiles(Array.from(e.target.files));
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Formata a mensagem para o WhatsApp
+    if (files.length === 0) {
+      alert("Por favor, anexe pelo menos 1 foto do seu trabalho.");
+      return;
+    }
+
+    setIsUploading(true);
+    let uploadedUrls = [];
+
+    try {
+      // Faz o upload de cada arquivo para o Supabase
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `selecao_masters/${fileName}`;
+
+        const { error: uploadError, data } = await supabase.storage
+          .from('mestres_imagens')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('mestres_imagens')
+          .getPublicUrl(filePath);
+
+        uploadedUrls.push(publicUrlData.publicUrl);
+      }
+    } catch (error) {
+      console.error("Erro no upload:", error);
+      alert("Erro ao fazer o upload das imagens. O administrador precisa configurar o Banco de Dados (Supabase). Se preferir, tente enviar pelo WhatsApp diretamente.");
+      setIsUploading(false);
+      return;
+    }
+
+    setIsUploading(false);
+
+    // Formata a mensagem para o WhatsApp com os links das imagens
+    const photosText = uploadedUrls.map((url, i) => `Foto ${i+1}: ${url}`).join('%0A');
+    
     const message = `*INSCRIÇÃO: STAND MESTRES DA TATTOO (MASTERS INK)*%0A%0A` +
       `*Nome:* ${formData.name}%0A` +
       `*WhatsApp:* ${formData.whatsapp}%0A` +
       `*CPF:* ${formData.cpf}%0A` +
       `*Email:* ${formData.email}%0A` +
-      `*Instagram:* ${formData.instagram}%0A` +
-      `*Link do Portfólio (Fotos):* ${formData.portfolioLink}%0A%0A` +
-      `_Estou enviando as fotos do meu trabalho logo abaixo!_`;
+      `*Instagram:* ${formData.instagram}%0A%0A` +
+      `*Fotos do Trabalho (Anexadas pelo site):*%0A${photosText}`;
 
     const wppNumber = '5521985262854';
     const wppUrl = `https://wa.me/${wppNumber}?text=${message}`;
@@ -54,7 +101,7 @@ export default function MastersInkSelection() {
             <span style={{ color: 'rgba(255,255,255,0.5)' }}>@ Masters Ink</span>
           </h1>
           <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', lineHeight: 1.5 }}>
-            Juiz de Fora - MG. Garanta sua vaga no nosso stand oficial. Preencha os dados abaixo e entraremos em contato.
+            Juiz de Fora - MG. Garanta sua vaga no nosso stand oficial. Preencha os dados abaixo, envie suas fotos e entraremos em contato.
           </p>
         </div>
 
@@ -103,21 +150,34 @@ export default function MastersInkSelection() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <label style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.8)', fontWeight: 'bold' }}>Link do Portfólio (Google Drive, Behance, etc) - Opcional</label>
+              <label style={{ fontSize: '0.9rem', color: 'var(--wte-gold)', fontWeight: 'bold' }}>Anexar Fotos do Trabalho (Máx: 5)</label>
               <div style={{ position: 'relative' }}>
-                <Image size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
-                <input type="url" name="portfolioLink" onChange={handleChange} value={formData.portfolioLink} placeholder="https://..." style={{ width: '100%', padding: '1rem 1rem 1rem 3rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'white', fontSize: '1rem' }} />
+                <ImageIcon size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
+                <input type="file" multiple accept="image/*" required onChange={handleFileChange} style={{ width: '100%', padding: '1rem 1rem 1rem 3rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,204,13,0.3)', borderRadius: '8px', color: 'white', fontSize: '1rem' }} />
               </div>
-              <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>Você também poderá anexar suas fotos diretamente no WhatsApp após clicar em enviar.</p>
+              <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>Você pode selecionar várias fotos de uma vez.</p>
             </div>
 
-            <button type="submit" style={{ marginTop: '1rem', background: 'var(--wte-gold)', color: 'black', padding: '1.2rem', borderRadius: '8px', border: 'none', fontSize: '1.1rem', fontWeight: 900, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              <Send size={20} /> Enviar Inscrição
+            <button disabled={isUploading} type="submit" style={{ marginTop: '1rem', background: 'var(--wte-gold)', color: 'black', padding: '1.2rem', borderRadius: '8px', border: 'none', fontSize: '1.1rem', fontWeight: 900, cursor: isUploading ? 'not-allowed' : 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: isUploading ? 0.7 : 1 }}>
+              {isUploading ? (
+                <><Loader2 size={20} className="spin" /> Processando Imagens...</>
+              ) : (
+                <><Send size={20} /> Enviar Inscrição</>
+              )}
             </button>
-            <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)' }}>Você será redirecionado para o WhatsApp com os seus dados.</p>
+            <p style={{ textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.3)' }}>As fotos serão salvas no sistema e você será redirecionado para o WhatsApp com os links das imagens gerados automaticamente.</p>
           </form>
         </div>
       </div>
+      <style>{`
+        .spin {
+          animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
