@@ -51,6 +51,7 @@ function Header() {
           <button className="wte-nav-btn" onClick={() => navigate('/')}><Calendar size={14} /> Eventos</button>
           <button className="wte-nav-btn" onClick={() => navigate('/magazine')}><BookOpen size={14} /> Magazine</button>
           <button className="wte-nav-btn" onClick={() => navigate('/artists')}><User size={14} /> Artistas</button>
+          <button className="wte-nav-btn" onClick={() => navigate('/selecaomastersink')} style={{ color: 'var(--wte-gold)' }}><Star size={14} /> Seleção Masters</button>
           <button className="wte-nav-btn" onClick={() => navigate('/hub')}><Store size={14} /> Guest Hub</button>
           <button className="wte-nav-btn" onClick={() => navigate('/contato')}><Star size={14} /> Mídia Kit</button>
           <SignedOut>
@@ -146,6 +147,7 @@ function ArtistCard({ artist, isGold }) {
 // --- PÁGINA 1: EVENTS (HOME) ---
 
 function EventsHub() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [events, setEvents] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -184,7 +186,7 @@ function EventsHub() {
           </div>
           
           {/* BANNER MASTERS INK */}
-          <div className="fade-in delay-1" style={{ marginTop: '2rem', display: 'inline-block', background: 'var(--wte-gold)', color: '#000', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 204, 13, 0.3)' }} onClick={() => navigate('/selecao-masters-ink')}>
+          <div className="fade-in delay-1" style={{ marginTop: '2rem', display: 'inline-block', background: 'var(--wte-gold)', color: '#000', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 204, 13, 0.3)' }} onClick={() => navigate('/selecaomastersink')}>
             🔥 SELEÇÃO MASTERS INK: GARANTA SUA VAGA NO STAND! CLIQUE AQUI
           </div>
 
@@ -792,7 +794,7 @@ export default function App() {
         
         {/* Guest Hub */}
         <Route path="/hub" element={<GuestHub />} />
-        <Route path="/selecao-masters-ink" element={<MastersInkSelection />} />
+        <Route path="/selecaomastersink" element={<MastersInkSelection />} />
       </Routes>
     </Router>
   );
