@@ -73,7 +73,7 @@ export default function TwNfc() {
       <div className="tw-artist-hero">
         {artist.photo_url
           ? <img src={artist.photo_url} alt={artist.name} />
-          : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: 'radial-gradient(circle at 50% 30%, #2a2210, #050608)' }}><Nfc size={96} color="rgba(238,195,88,0.4)" /></div>}
+          : <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: 'radial-gradient(circle at 50% 30%, rgba(var(--tw-gold-rgb), 0.2), var(--tw-bg))' }}><Nfc size={96} color="var(--tw-gold)" style={{ opacity: 0.45 }} /></div>}
         <div className="tw-artist-name">
           <span className="tw-chip tw-chip-gold"><Nfc size={12} /> Credencial {artist.slug.replace('artista-', '#')}</span>
           <h1 className="tw-h1" style={{ fontSize: 'clamp(2rem, 10vw, 3.4rem)', margin: '0.5rem 0 0.2rem' }}>{artist.name}</h1>
@@ -96,7 +96,7 @@ export default function TwNfc() {
         )}
 
         {secret && open_ && (
-          <div className="tw-surprise" style={{ animation: 'none', borderColor: 'rgba(238,195,88,0.6)', background: 'linear-gradient(120deg, rgba(238,195,88,0.18), #0d0f13 70%)' }}>
+          <div className="tw-surprise" style={{ animation: 'none', borderColor: 'rgba(var(--tw-gold-rgb), 0.6)', background: 'linear-gradient(120deg, rgba(var(--tw-gold-rgb), 0.18), var(--tw-card) 70%)' }}>
             <span className="tw-kicker"><KeyRound size={12} style={{ verticalAlign: -1 }} /> Você encontrou a missão secreta</span>
             <h3 className="tw-h3" style={{ margin: '0.5rem 0' }}>{secret.title}</h3>
             <p className="tw-p" style={{ fontSize: '0.88rem', marginBottom: '0.8rem' }}>{secret.description}</p>

@@ -91,7 +91,7 @@ export default function TwProfile() {
         {editing && <ProfileEditor person={person} onClose={() => setEditing(false)} onSaved={(p) => { setPerson(p); tw.setParticipant(p); setEditing(false); }} />}
 
         <div className="tw-card tw-card-gold" style={{ marginTop: '1.25rem' }}>
-          <div className="tw-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          <div className="tw-grid tw-stats-4">
             <div className="tw-stat"><b>{totalPoints}</b><span>Pontos Mestres</span></div>
             <div className="tw-stat"><b>{history.length}</b><span>Experiências</span></div>
             <div className="tw-stat"><b>{totalMissions}</b><span>Missões</span></div>

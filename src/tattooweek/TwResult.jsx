@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Share2, Download, Loader2 } from 'lucide-react';
 import { TwShell, JoinGate, BadgeGrid } from './TwShell';
-import { useTwParticipant, useCampaign, trackEvent, downloadBlob } from './twData';
+import { useTwParticipant, useCampaign, trackEvent, downloadBlob, campaignTheme } from './twData';
 import { loadCampaignProgress } from './badges';
 
 // Card vertical 1080x1920 (Stories) com pontos, posição e selos
 const W = 1080;
 const H = 1920;
-const GOLD = '#eec358';
 
 export default function TwResult() {
   const tw = useTwParticipant();
@@ -35,6 +34,8 @@ function loadImage(src, cors = true) {
 
 function ResultCard({ participant }) {
   const { campaign, base } = useCampaign();
+  const theme = campaignTheme(campaign);
+  const GOLD = theme.primary;
   const canvasRef = useRef(null);
   const [data, setData] = useState(null);
   const [blob, setBlob] = useState(null);
@@ -59,14 +60,14 @@ function ResultCard({ participant }) {
         ctx.fillText(str, x, y);
       };
 
-      ctx.fillStyle = '#050608';
+      ctx.fillStyle = theme.bg;
       ctx.fillRect(0, 0, W, H);
       const glow = ctx.createRadialGradient(W / 2, 380, 50, W / 2, 380, 900);
-      glow.addColorStop(0, 'rgba(238,195,88,0.28)');
-      glow.addColorStop(1, 'rgba(5,6,8,0)');
+      glow.addColorStop(0, (theme.accents[0] || GOLD) + '55');
+      glow.addColorStop(1, theme.bg + '00');
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = 'rgba(238,195,88,0.5)';
+      ctx.strokeStyle = GOLD + '88';
       ctx.lineWidth = 4;
       ctx.strokeRect(40, 40, W - 80, H - 80);
 
@@ -139,7 +140,7 @@ function ResultCard({ participant }) {
       canvasRef.current.toBlob(b => alive && setBlob(b), 'image/png');
     })();
     return () => { alive = false; };
-  }, [data, participant, campaign, base]);
+  }, [data, participant, campaign, base, GOLD, theme.bg, theme.accents]);
 
   const fileName = `resultado-${campaign.slug}.png`;
   const file = blob && new File([blob], fileName, { type: 'image/png' });

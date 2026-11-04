@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 import { Home, Camera, Swords, Trophy, Film, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { submitMission, useCountdown, useCampaign, CATEGORY_LABELS, DEFAULT_PARTNERS } from './twData';
+import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS } from './twData';
 import './tattooweek.css';
 
 export function TwShell({ children }) {
@@ -24,14 +24,18 @@ export function TwShell({ children }) {
     ]
     : [{ to: '/experience', label: 'Experiências', icon: Home }];
 
-  const [first, ...rest] = (ctx?.campaign.name || 'Mestres Experience').split(' ');
+  // Quebra antes da última palavra: "Tattoo Week" / "Experience"
+  const words = (ctx?.campaign.name || 'Mestres Experience').split(' ');
+  const last = words.length > 1 ? words.pop() : '';
+
+  const theme = ctx ? campaignTheme(ctx.campaign) : null;
 
   return (
-    <div className="tw">
+    <div className={`tw ${theme?.accents?.length ? 'tw-themed' : ''}`} style={theme ? themeStyle(theme) : undefined}>
       <header className="tw-top">
         <button className="tw-top-brand" onClick={() => navigate(base || '/experience')}>
           <img src="/fotos artistas/logo mestres.png" alt="Mestres da Tattoo" />
-          <span>{rest.length ? <>{first}<br />{rest.join(' ')}</> : first}</span>
+          <span>{words.join(' ')}{last && <><br />{last}</>}</span>
         </button>
         <nav className="tw-top-links">
           {nav.map(n => (

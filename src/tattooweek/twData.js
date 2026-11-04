@@ -254,3 +254,48 @@ export async function loadAdjustments(participantId, campaignId) {
   (data || []).forEach(a => { out[a.track] = (out[a.track] || 0) + a.points; });
   return out;
 }
+
+// --- Tema visual por campanha ---
+
+export const DEFAULT_THEME = {
+  primary: '#eec358', primaryStrong: '#ffcc0d', primaryDeep: '#d4a000',
+  bg: '#050608', card: '#0d0f13', card2: '#14171d',
+  accents: [],
+};
+
+// Paleta do Instagram da Tattoo Week: degradê pastel lilás/rosa/ciano, amarelo forte e azul-marinho/roxo
+export const PRESET_THEMES = {
+  tattooweek: {
+    primary: '#f4e14d', primaryStrong: '#fff176', primaryDeep: '#e3b81f',
+    bg: '#0c0a24', card: '#16133a', card2: '#201c4f',
+    accents: ['#a995ff', '#ff8fd8', '#7fe7f2'],
+  },
+};
+
+export function campaignTheme(c) {
+  return { ...DEFAULT_THEME, ...(PRESET_THEMES[c?.slug] || {}), ...(c?.theme || {}) };
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map(x => x + x).join('') : h, 16);
+  return `${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}`;
+}
+
+// Variáveis CSS aplicadas na raiz das páginas da campanha
+export function themeStyle(t) {
+  const a = t.accents?.length ? t.accents : [t.primary, t.primary, t.primary];
+  return {
+    '--tw-gold': t.primary,
+    '--tw-gold-rgb': hexToRgb(t.primary),
+    '--tw-gold-strong': t.primaryStrong,
+    '--tw-gold-deep': t.primaryDeep,
+    '--tw-bg': t.bg,
+    '--tw-bg-rgb': hexToRgb(t.bg),
+    '--tw-card': t.card,
+    '--tw-card-2': t.card2,
+    '--tw-accent-1': a[0],
+    '--tw-accent-2': a[1] || a[0],
+    '--tw-accent-3': a[2] || a[0],
+  };
+}

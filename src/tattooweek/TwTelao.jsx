@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../supabaseClient';
-import { useCampaign } from './twData';
+import { useCampaign, campaignTheme, themeStyle } from './twData';
 
 // Tela cheia para a TV do stand: rankings, números ao vivo, QR para entrar e fotos autorizadas
 export default function TwTelao() {
@@ -41,14 +41,15 @@ export default function TwTelao() {
     return () => clearInterval(t);
   }, []);
 
-  if (!d) return <div className="tw-tv" />;
+  const style = themeStyle(campaignTheme(campaign));
+  if (!d) return <div className="tw-tv" style={style} />;
   const current = d.photos.length ? d.photos[photo % d.photos.length] : null;
   const joinUrl = `${window.location.origin}${base}`;
 
   const List = ({ title, rows }) => (
     <div>
       <h2>{title}</h2>
-      {rows.length === 0 && <p style={{ fontSize: '1.3vw', color: 'rgba(255,255,255,0.5)' }}>Aguardando os primeiros pontos…</p>}
+      {rows.length === 0 && <p className="tw-tv-empty">Aguardando os primeiros pontos…</p>}
       {rows.map((r, i) => (
         <div key={r.participant_id} className={`tw-tv-row ${i < 3 ? 'top' : ''}`}>
           <b>{i + 1}</b><span>{r.name}</span><em>{r.points}</em>
@@ -58,13 +59,13 @@ export default function TwTelao() {
   );
 
   return (
-    <div className="tw-tv">
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5vw' }}>
-          <img src="/fotos artistas/logo mestres.png" alt="" style={{ height: '7vh' }} />
+    <div className="tw-tv" style={style}>
+      <header className="tw-tv-head">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <img className="tw-tv-logo" src="/fotos artistas/logo mestres.png" alt="" />
           <div>
-            <div style={{ fontSize: '1vw', letterSpacing: 3, color: '#eec358', fontWeight: 900 }}>AO VIVO</div>
-            <div style={{ fontSize: '2.6vw', fontWeight: 900, textTransform: 'uppercase', lineHeight: 1 }}>{campaign.name}</div>
+            <div className="tw-tv-kicker">AO VIVO</div>
+            <div className="tw-tv-title">{campaign.name}</div>
           </div>
         </div>
         <div className="tw-tv-stats">
@@ -81,19 +82,19 @@ export default function TwTelao() {
           {current
             ? <div style={{ position: 'relative' }}>
                 <img className="tw-tv-photo" src={current.url} alt="" />
-                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '1.5vh 1vw', background: 'linear-gradient(transparent, rgba(0,0,0,0.85))', borderRadius: '0 0 1vw 1vw', fontSize: '1.1vw' }}>
+                <div className="tw-tv-caption">
                   <b>{current.name}</b><br /><span style={{ color: 'rgba(255,255,255,0.7)' }}>{current.title}</span>
                 </div>
               </div>
-            : <div className="tw-tv-photo" style={{ display: 'grid', placeItems: 'center', color: 'rgba(255,255,255,0.4)', fontSize: '1.3vw' }}>Os melhores momentos aparecem aqui</div>}
+            : <div className="tw-tv-photo tw-tv-empty" style={{ display: 'grid', placeItems: 'center', textAlign: 'center', padding: '1rem', maxHeight: 240 }}>Os melhores momentos aparecem aqui</div>}
         </div>
       </div>
 
-      <footer style={{ display: 'flex', alignItems: 'center', gap: '1.5vw', justifyContent: 'center' }}>
-        <div style={{ background: '#fff', padding: '0.8vh', borderRadius: '0.8vw' }}><QRCodeSVG value={joinUrl} size={110} /></div>
+      <footer className="tw-tv-foot">
+        <div style={{ background: '#fff', padding: 6, borderRadius: 10, flex: '0 0 auto' }}><QRCodeSVG value={joinUrl} size={110} /></div>
         <div>
-          <div style={{ fontSize: '2vw', fontWeight: 900 }}>ENTRE NO JOGO</div>
-          <div style={{ fontSize: '1.2vw', color: 'rgba(255,255,255,0.7)' }}>Aponte a câmera · {joinUrl.replace(/^https?:\/\//, '')}</div>
+          <div className="tw-tv-cta">ENTRE NO JOGO</div>
+          <div className="tw-tv-cta-sub">Aponte a câmera · {joinUrl.replace(/^https?:\/\//, '')}</div>
         </div>
       </footer>
     </div>

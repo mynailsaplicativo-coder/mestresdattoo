@@ -320,7 +320,7 @@ export function ParticipantSheet({ participantId, campaign, role, onClose, onCha
             </div>
             {msg && <div className="tw-notice">{msg}</div>}
 
-            <div className="tw-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+            <div className="tw-grid tw-stats-4">
               <div className="tw-card tw-kpi"><b>{progress.points.public || 0}</b><span>Pts público{progress.ranks.public ? ` · ${progress.ranks.public}º` : ''}</span></div>
               <div className="tw-card tw-kpi"><b>{progress.points.artist || 0}</b><span>Pts challenge{progress.ranks.artist ? ` · ${progress.ranks.artist}º` : ''}</span></div>
               <div className="tw-card tw-kpi"><b>{progress.approved.length}</b><span>Missões</span></div>
@@ -656,7 +656,7 @@ export function Staff() {
         <button className="tw-btn tw-btn-sm tw-btn-primary"><UserPlus size={14} /> Adicionar</button>
       </form>
       <div className="tw-table-wrap">
-        <table className="tw-table">
+        <table className="tw-table tw-table-stack">
           <tbody>
             {rows.map(r => (
               <tr key={r.email}>

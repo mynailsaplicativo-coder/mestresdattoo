@@ -66,7 +66,6 @@ function ChallengePanel({ participant }) {
   const passportMission = visible.find(m => m.category === 'passaporte');
   const approved = subs.filter(s => s.status === 'approved' && s.mission?.track === 'artist');
   const points = approved.reduce((a, s) => a + (s.points || 0), 0) + adj.artist;
-  const pending = subs.filter(s => s.status === 'pending').length;
   const stamps = passportMission ? missionSubs(passportMission.id) : [];
   const badges = computeBadges({ approved, missions, artistsCount: artists.length, ranks: { artist: rank } }).filter(b => ARTIST_BADGES.includes(b.id));
   const finished = campaign.status === 'finished';
@@ -77,11 +76,11 @@ function ChallengePanel({ participant }) {
       <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem' }}>{participant.name}</h1>
 
       <div className="tw-card tw-card-gold">
-        <div className="tw-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+        <div className="tw-grid tw-stats-4">
           <div className="tw-stat"><b>{points}</b><span>Pontos</span></div>
           <div className="tw-stat"><b>{rank ? `${rank}º` : '–'}</b><span>Ranking</span></div>
           <div className="tw-stat"><b>{scanned.size}</b><span>Conexões</span></div>
-          <div className="tw-stat"><b>{pending}</b><span>Em análise</span></div>
+          <div className="tw-stat"><b>{badges.length}</b><span>Selos</span></div>
         </div>
       </div>
 

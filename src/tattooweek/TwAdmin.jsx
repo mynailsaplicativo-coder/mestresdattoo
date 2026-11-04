@@ -7,7 +7,7 @@ import {
   ArrowLeft, FileText, Handshake, ExternalLink, Copy, Activity, Images, Trophy, Megaphone, UserCog, Trash2, CopyPlus,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES } from './twData';
+import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES, campaignTheme, themeStyle, PRESET_THEMES, DEFAULT_THEME } from './twData';
 import { Live, Gallery, ParticipantSheet, Awards, Announcements, Staff } from './AdminExtra';
 import './tattooweek.css';
 
@@ -579,7 +579,7 @@ function Missions({ campaign, partners }) {
         <section key={title} className="tw-stack" style={{ marginTop: '1rem' }}>
           <h3 className="tw-kicker">{title}</h3>
           <div className="tw-table-wrap">
-            <table className="tw-table">
+            <table className="tw-table tw-table-stack">
               <tbody>
                 {list.map(m => (
                   <tr key={m.id} style={{ opacity: m.active ? 1 : 0.45 }}>
@@ -792,7 +792,7 @@ function People({ campaign, onOpenParticipant }) {
       </div>
       <input className="tw-input" placeholder="Buscar por nome, e-mail, @, telefone" value={q} onChange={e => setQ(e.target.value)} />
       <div className="tw-table-wrap">
-        <table className="tw-table">
+        <table className="tw-table tw-table-stack">
           <thead><tr><th>Nome</th><th>Contato</th><th>Trilhas</th><th>Pts público</th><th>Pts challenge</th><th>Divulgação</th><th></th></tr></thead>
           <tbody>
             {list.map(r => (
@@ -804,9 +804,9 @@ function People({ campaign, onOpenParticipant }) {
                 </td>
                 <td style={{ fontSize: '0.78rem' }}>{r.email}<br />{r.phone}</td>
                 <td>{r.tracks.includes('public') && <span className="tw-chip">Público</span>} {r.tracks.includes('artist') && <span className="tw-chip tw-chip-gold">Challenge</span>}</td>
-                <td>{r.public_points}</td>
-                <td>{r.artist_points}</td>
-                <td>{r.consent_marketing ? <span className="tw-chip tw-chip-ok">Sim</span> : <span className="tw-chip">Não</span>}</td>
+                <td data-label="Pts público">{r.public_points}</td>
+                <td data-label="Pts challenge">{r.artist_points}</td>
+                <td data-label="Divulgação">{r.consent_marketing ? <span className="tw-chip tw-chip-ok">Sim</span> : <span className="tw-chip">Não</span>}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`${campaignBase(campaign)}/retrospectiva?p=${r.id}`)} title="Ver retrospectiva"><Film size={14} /></button>{' '}
                   <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`/experience/perfil/${r.id}`)} title="Ver perfil"><Users size={14} /></button>
@@ -909,6 +909,10 @@ function CampaignEditor({ campaign, partners, reload, isNew, onCreated }) {
     setSaving(false);
   };
 
+  const th = campaignTheme({ slug: f.slug, theme: f.theme });
+  const setTheme = (patch) => setF(x => ({ ...x, theme: { ...th, ...patch } }));
+  const setAccent = (i, color) => { const a = [...(th.accents.length ? th.accents : [th.primary, th.primary, th.primary])]; a[i] = color; setTheme({ accents: a }); };
+
   const togglePartner = (pid) => setF(x => ({ ...x, partners: x.partners.includes(pid) ? x.partners.filter(p => p !== pid) : [...x.partners, pid] }));
 
   return (
@@ -979,6 +983,32 @@ function CampaignEditor({ campaign, partners, reload, isNew, onCreated }) {
         <h3 className="tw-h3">Premiação</h3>
         <label className="tw-field"><span>Nome do grande prêmio</span><input className="tw-input" value={f.prize_title || ''} onChange={e => setF({ ...f, prize_title: e.target.value })} /></label>
         <label className="tw-field"><span>Itens (um por linha)</span><textarea className="tw-input" style={{ minHeight: 110 }} value={f.prizeText} onChange={e => setF({ ...f, prizeText: e.target.value })} /></label>
+      </div>
+
+      <div className="tw-card tw-stack">
+        <h3 className="tw-h3">Cores da campanha</h3>
+        <p className="tw-p" style={{ fontSize: '0.85rem' }}>Usadas nas páginas da campanha, no telão, no vídeo e no card de resultado. O painel admin continua dourado.</p>
+        <div className="tw-row" style={{ flexWrap: 'wrap' }}>
+          {[['primary', 'Destaque / botões'], ['bg', 'Fundo'], ['card', 'Cartões'], ['card2', 'Cartões 2']].map(([k, label]) => (
+            <label key={k} className="tw-row" style={{ gap: '0.4rem', fontSize: '0.82rem' }}>
+              <input type="color" value={th[k]} onChange={e => setTheme(k === 'primary' ? { primary: e.target.value, primaryStrong: e.target.value, primaryDeep: e.target.value } : { [k]: e.target.value })} style={{ width: 40, height: 40, border: 0, background: 'none' }} /> {label}
+            </label>
+          ))}
+          {[0, 1, 2].map(i => (
+            <label key={i} className="tw-row" style={{ gap: '0.4rem', fontSize: '0.82rem' }}>
+              <input type="color" value={th.accents[i] || th.primary} onChange={e => setAccent(i, e.target.value)} style={{ width: 40, height: 40, border: 0, background: 'none' }} /> Degradê {i + 1}
+            </label>
+          ))}
+        </div>
+        <div className="tw-row" style={{ flexWrap: 'wrap' }}>
+          <button type="button" className="tw-btn tw-btn-sm" onClick={() => setF(x => ({ ...x, theme: PRESET_THEMES.tattooweek }))}>Paleta Tattoo Week</button>
+          <button type="button" className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => setF(x => ({ ...x, theme: { ...DEFAULT_THEME } }))}>Dourado Mestres</button>
+        </div>
+        <div className="tw" style={{ ...themeStyle(th), minHeight: 0, padding: '1rem', paddingBottom: '1rem', borderRadius: 12 }}>
+          <span className="tw-kicker">Prévia</span>
+          <div style={{ height: 8, borderRadius: 99, margin: '0.6rem 0', background: `linear-gradient(90deg, ${(th.accents.length ? th.accents : [th.primary]).join(', ')}, ${th.primary})` }} />
+          <div className="tw-card"><b className="tw-gold">Missão do dia</b><p className="tw-p" style={{ fontSize: '0.85rem' }}>Mostre você chegando ao evento</p><button type="button" className="tw-btn tw-btn-primary tw-btn-sm" style={{ marginTop: '0.5rem' }}>Enviar missão</button></div>
+        </div>
       </div>
 
       <div className="tw-card tw-stack">

@@ -3,12 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, Pause, Download, Share2, Loader2, Film } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate } from './TwShell';
-import { useTwParticipant, useCampaign, useStaffRole, trackEvent, dayName, campaignPartners } from './twData';
+import { useTwParticipant, useCampaign, useStaffRole, trackEvent, dayName, campaignPartners, campaignTheme } from './twData';
 
 // Vídeo vertical 720x1280, ~30–60s: abertura, dia 1, dia 2, dia 3, encerramento.
 const W = 720;
 const H = 1280;
-const GOLD = '#eec358';
 const MAX_MEDIA = 20;
 const IMAGE_SEC = 2.2;
 const VIDEO_SEC = 4;
@@ -166,6 +165,7 @@ function wrap(ctx, str, maxW) {
 }
 
 function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine }) {
+  const { primary: GOLD, bg: BG } = campaignTheme(campaign);
   const canvasRef = useRef(null);
   const assetsRef = useRef(new Map());
   const logoRef = useRef(null);
@@ -206,7 +206,7 @@ function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine }) {
     const fadeIn = Math.min(1, local / 0.35);
 
     ctx.globalAlpha = 1;
-    ctx.fillStyle = '#050608';
+    ctx.fillStyle = BG;
     ctx.fillRect(0, 0, W, H);
 
     if (scene.kind === 'image' || scene.kind === 'video') {
@@ -226,8 +226,8 @@ function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine }) {
       if (el) drawCover(ctx, el, scene.kind === 'image' ? 1 + 0.08 * p : 1);
       ctx.globalAlpha = 1;
       const g = ctx.createLinearGradient(0, H * 0.7, 0, H);
-      g.addColorStop(0, 'rgba(5,6,8,0)');
-      g.addColorStop(1, 'rgba(5,6,8,0.85)');
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,0.8)');
       ctx.fillStyle = g;
       ctx.fillRect(0, H * 0.7, W, H * 0.3);
       if (scene.media.caption) {
@@ -275,7 +275,7 @@ function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine }) {
         ctx.fillRect(x, 24, bw * fill, 5);
       });
     }
-  }, [scenes, campaign, partnerLine]);
+  }, [scenes, campaign, partnerLine, GOLD, BG]);
 
   // Primeiro quadro
   useEffect(() => { if (ready) draw(0, true); }, [ready, draw]);
