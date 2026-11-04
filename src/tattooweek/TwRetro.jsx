@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, Pause, Download, Share2, Loader2, Film } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate } from './TwShell';
-import { useTwParticipant, useCampaign, isAdmin, trackEvent, dayName, campaignPartners } from './twData';
+import { useTwParticipant, useCampaign, useStaffRole, trackEvent, dayName, campaignPartners } from './twData';
 
 // Vídeo vertical 720x1280, ~30–60s: abertura, dia 1, dia 2, dia 3, encerramento.
 const W = 720;
@@ -17,7 +17,8 @@ export default function TwRetro() {
   const tw = useTwParticipant();
   const { campaign } = useCampaign();
   const [params] = useSearchParams();
-  const adminView = params.get('p') && isAdmin(tw.user);
+  const staff = useStaffRole();
+  const adminView = params.get('p') && staff;
   // Quem está só no Artist Challenge também tem retrospectiva
   const enrolledArtist = tw.participant && tw.isEnrolled(campaign.id, 'artist');
 

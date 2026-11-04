@@ -4,7 +4,7 @@ import { SignInButton } from '@clerk/clerk-react';
 import { AtSign, MapPin, Pencil, Save, X, Lock } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, BadgeGrid } from './TwShell';
-import { useTwParticipant, isAdmin, instagramUrl, campaignBase, uploadMedia } from './twData';
+import { useTwParticipant, useStaffRole, instagramUrl, campaignBase, uploadMedia } from './twData';
 import { loadCampaignProgress, BADGES, BADGE_BY_ID } from './badges';
 
 // Perfil permanente: soma todas as experiências (histórico, pontos acumulados, selos)
@@ -12,6 +12,7 @@ export default function TwProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const tw = useTwParticipant();
+  const staff = useStaffRole();
   const [person, setPerson] = useState(undefined);
   const [history, setHistory] = useState(null);
   const [editing, setEditing] = useState(false);
@@ -57,7 +58,7 @@ export default function TwProfile() {
   }
   if (person === undefined || (person && !history)) return <TwShell><div className="tw-center-screen">Carregando perfil...</div></TwShell>;
   if (person === null) return <TwShell><div className="tw-center-screen">Perfil não encontrado.</div></TwShell>;
-  if (!person.show_in_ranking && !isSelf && !isAdmin(tw.user)) {
+  if (!person.show_in_ranking && !isSelf && !staff) {
     return <TwShell><div className="tw-center-screen"><div><Lock size={40} color="var(--tw-gold)" /><h1 className="tw-h2" style={{ marginTop: '1rem' }}>Perfil privado</h1></div></div></TwShell>;
   }
 

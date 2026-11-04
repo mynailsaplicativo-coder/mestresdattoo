@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check, Nfc, KeyRound, Share2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate, MissionSheet, SurpriseCard, BadgeGrid } from './TwShell';
-import { useTwParticipant, useCampaign, isMissionLive, CATEGORY_LABELS } from './twData';
+import { useTwParticipant, useCampaign, loadAdjustments, isMissionLive, CATEGORY_LABELS } from './twData';
 import { computeBadges, BADGES } from './badges';
 
 const SECTIONS = ['networking', 'conteudo', 'parceiros', 'secreta'];
@@ -28,17 +28,20 @@ function ChallengePanel({ participant }) {
   const [subs, setSubs] = useState([]);
   const [scanned, setScanned] = useState(new Set());
   const [rank, setRank] = useState(null);
+  const [adj, setAdj] = useState({ public: 0, artist: 0 });
   const [open, setOpen] = useState(null);
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
-    const [m, a, s, e, r] = await Promise.all([
+    const [m, a, s, e, r, ad] = await Promise.all([
       supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).eq('track', 'artist').eq('active', true).order('position'),
       supabase.from('tw_artists').select('*').eq('campaign_id', campaign.id).eq('active', true).order('slug'),
       supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participant.id).eq('mission.campaign_id', campaign.id),
       supabase.from('tw_events').select('ref').eq('participant_id', participant.id).eq('campaign_id', campaign.id).in('type', ['nfc_scan', 'qr_scan']),
       supabase.from('tw_ranking').select('participant_id, points').eq('campaign_id', campaign.id).eq('track', 'artist').order('points', { ascending: false }).order('last_at'),
+      loadAdjustments(participant.id, campaign.id),
     ]);
+    setAdj(ad);
     setMissions(m.data || []);
     setArtists(a.data || []);
     setSubs(s.data || []);
@@ -62,7 +65,7 @@ function ChallengePanel({ participant }) {
   const surprises = visible.filter(m => m.category === 'surpresa' && isMissionLive(m));
   const passportMission = visible.find(m => m.category === 'passaporte');
   const approved = subs.filter(s => s.status === 'approved' && s.mission?.track === 'artist');
-  const points = approved.reduce((a, s) => a + (s.points || 0), 0);
+  const points = approved.reduce((a, s) => a + (s.points || 0), 0) + adj.artist;
   const pending = subs.filter(s => s.status === 'pending').length;
   const stamps = passportMission ? missionSubs(passportMission.id) : [];
   const badges = computeBadges({ approved, missions, artistsCount: artists.length, ranks: { artist: rank } }).filter(b => ARTIST_BADGES.includes(b.id));
@@ -157,7 +160,7 @@ function ChallengePanel({ participant }) {
       </section>
 
       <p className="tw-p" style={{ fontSize: '0.8rem', marginTop: '2rem' }}>
-        Todas as missões do Artist Challenge são validadas pela equipe. Ler uma credencial NFC não conta pontos sozinho — é preciso enviar o registro.
+        Os pontos entram na hora; a equipe revisa os envios e pode recusar o que não cumprir a missão. Ler uma credencial NFC não conta pontos sozinho — é preciso enviar o registro.
       </p>
 
       {open && (

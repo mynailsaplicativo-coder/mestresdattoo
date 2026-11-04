@@ -61,11 +61,35 @@ export function TwRanking() {
 export function TwPrizes() {
   const navigate = useNavigate();
   const { campaign: c, base } = useCampaign();
+  const [winners, setWinners] = useState([]);
+
+  useEffect(() => {
+    if (!c.awards_published) return;
+    supabase.from('tw_awards').select('id, title, description, status, participant:tw_participants(id, name, instagram, photo_url)')
+      .eq('campaign_id', c.id).neq('status', 'open').order('position')
+      .then(({ data }) => setWinners((data || []).filter(w => w.participant)));
+  }, [c.id, c.awards_published]);
+
   return (
     <TwShell>
       <div className="tw-wrap" style={{ maxWidth: 760 }}>
         <span className="tw-kicker">Premiação</span>
-        <h1 className="tw-h2" style={{ margin: '0.3rem 0 1.25rem' }}>Prêmios e regras</h1>
+        <h1 className="tw-h2" style={{ margin: '0.3rem 0 1.25rem' }}>{winners.length ? 'Vencedores' : 'Prêmios e regras'}</h1>
+
+        {winners.length > 0 && (
+          <div className="tw-stack" style={{ marginBottom: '1.5rem' }}>
+            {winners.map(w => (
+              <button key={w.id} className="tw-card tw-card-gold tw-history" style={{ width: '100%', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }} onClick={() => navigate(`/experience/perfil/${w.participant.id}`)}>
+                <div className="tw-avatar" style={{ width: 64, height: 64, flex: '0 0 64px', fontSize: '1.4rem' }}>{w.participant.photo_url ? <img src={w.participant.photo_url} alt="" /> : w.participant.name.slice(0, 1)}</div>
+                <div>
+                  <span className="tw-kicker">🏆 {w.title}</span>
+                  <h3 className="tw-h3" style={{ margin: '0.2rem 0' }}>{w.participant.name}</h3>
+                  <div className="tw-p" style={{ fontSize: '0.82rem' }}>{[w.participant.instagram, w.description].filter(Boolean).join(' · ')}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
 
         {c.prize_title && (
           <div className="tw-card tw-card-gold">
@@ -87,7 +111,7 @@ export function TwPrizes() {
           <h2 className="tw-h3"><Award size={16} style={{ verticalAlign: -2 }} /> Regras</h2>
           <div className="tw-card tw-p" style={{ fontSize: '0.9rem', lineHeight: 1.7 }}>
             <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: '#fff' }}>Meu {c.event_name} (público):</b> 10 missões por dia. Missão de 1 registro = 10 pts, de 3 registros = 20 pts. Completar as 10 do dia = +{DAY_BONUS} pts. A recompensa principal é o seu vídeo.</p>
-            <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: '#fff' }}>Artist Challenge (tatuadores):</b> missões de networking, conteúdo, parceiros, passaporte NFC, surpresas e secretas. Todas validadas manualmente pela equipe.</p>
+            <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: '#fff' }}>Artist Challenge (tatuadores):</b> missões de networking, conteúdo, parceiros, passaporte NFC, surpresas e secretas. Os pontos entram na hora e a equipe revisa os envios — o que não cumprir a missão é recusado e perde os pontos.</p>
             <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: '#fff' }}>Validação:</b> só contam registros feitos durante o evento, com a pessoa participante e o que a missão pede. Envios repetidos, de terceiros ou fora do tema são recusados.</p>
             <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: '#fff' }}>NFC:</b> ler uma credencial não conta pontos sozinho. O carimbo exige uma foto com o artista.</p>
             <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: '#fff' }}>Selos:</b> conquistas automáticas por dias completos, carimbos, missões surpresa, secretas e pódio. Ficam no seu perfil para sempre.</p>

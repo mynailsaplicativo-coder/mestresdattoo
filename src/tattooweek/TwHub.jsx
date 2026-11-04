@@ -1,19 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
 import { CalendarDays, MapPin, UserRound } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell } from './TwShell';
-import { campaignBase, formatDays, isAdmin } from './twData';
+import { campaignBase, formatDays, useStaffRole } from './twData';
 
 const STATUS = { active: ['Acontecendo', 'tw-chip-gold'], draft: ['Em breve', ''], finished: ['Encerrada', ''] };
 
 // Lista todas as experiências criadas pelo Mestres da Tattoo
 export default function TwHub() {
   const navigate = useNavigate();
-  const { user } = useUser();
   const [list, setList] = useState(null);
-  const admin = isAdmin(user);
+  const admin = !!useStaffRole();
 
   useEffect(() => {
     let q = supabase.from('tw_campaigns').select('*').order('created_at', { ascending: false });

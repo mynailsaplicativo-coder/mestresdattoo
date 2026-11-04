@@ -226,3 +226,30 @@ export function downloadBlob(blob, name) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
+
+// --- Equipe ---
+
+// 'admin' | 'moderator' | null (undefined enquanto carrega). A lista ADMIN_EMAILS sempre é admin.
+export function useStaffRole() {
+  const { user, isLoaded } = useUser();
+  const [role, setRole] = useState(undefined);
+  const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase();
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!email) { setRole(null); return; }
+    if (ADMIN_EMAILS.includes(email)) { setRole('admin'); return; }
+    supabase.from('tw_staff').select('role').eq('email', email).maybeSingle()
+      .then(({ data }) => setRole(data?.role || null));
+  }, [isLoaded, email]);
+
+  return role;
+}
+
+// Bônus/penalidades manuais por trilha (tabela pode não existir antes do SQL da fase 4)
+export async function loadAdjustments(participantId, campaignId) {
+  const { data } = await supabase.from('tw_adjustments').select('track, points').eq('participant_id', participantId).eq('campaign_id', campaignId);
+  const out = { public: 0, artist: 0 };
+  (data || []).forEach(a => { out[a.track] = (out[a.track] || 0) + a.points; });
+  return out;
+}

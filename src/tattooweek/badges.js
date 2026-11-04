@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient';
-import { DAY_BONUS } from './twData';
+import { DAY_BONUS, loadAdjustments } from './twData';
 
 // Selos digitais: calculados a partir dos envios aprovados, sem tabela própria.
 export const BADGES = [
@@ -57,12 +57,13 @@ export function computeBadges({ approved, missions, artistsCount, ranks, videoGe
 
 // Tudo o que é preciso para mostrar o progresso de uma pessoa em uma campanha
 export async function loadCampaignProgress(participantId, campaignId) {
-  const [s, m, a, r, e] = await Promise.all([
+  const [s, m, a, r, e, adj] = await Promise.all([
     supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participantId).eq('mission.campaign_id', campaignId),
     supabase.from('tw_missions').select('*').eq('campaign_id', campaignId).eq('active', true),
     supabase.from('tw_artists').select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('active', true),
     supabase.from('tw_ranking').select('participant_id, track, points').eq('campaign_id', campaignId).order('points', { ascending: false }).order('last_at'),
     supabase.from('tw_events').select('id').eq('participant_id', participantId).eq('campaign_id', campaignId).eq('type', 'video_generated').limit(1),
+    loadAdjustments(participantId, campaignId),
   ]);
   const subs = s.data || [];
   const approved = subs.filter(x => x.status === 'approved');
@@ -73,7 +74,7 @@ export async function loadCampaignProgress(participantId, campaignId) {
     const list = (r.data || []).filter(x => x.track === track);
     const pos = list.findIndex(x => x.participant_id === participantId);
     ranks[track] = pos >= 0 ? pos + 1 : null;
-    points[track] = pos >= 0 ? list[pos].points : sumPoints(approved, missions, track);
+    points[track] = pos >= 0 ? list[pos].points : sumPoints(approved, missions, track) + (adj[track] || 0);
   });
   const badges = computeBadges({ approved, missions, artistsCount: a.count || 0, ranks, videoGenerated: (e.data || []).length > 0 });
   return { subs, approved, missions, ranks, points, badges, artistsCount: a.count || 0 };

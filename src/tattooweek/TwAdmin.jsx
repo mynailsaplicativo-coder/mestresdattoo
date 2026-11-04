@@ -4,30 +4,39 @@ import { useUser, RedirectToSignIn } from '@clerk/clerk-react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   LayoutDashboard, ShieldCheck, ListChecks, Nfc, Users, Settings, Check, X, Zap, Download, Printer, Plus, Save, Film,
-  ArrowLeft, FileText, Handshake, ExternalLink, Copy,
+  ArrowLeft, FileText, Handshake, ExternalLink, Copy, Activity, Images, Trophy, Megaphone, UserCog, Trash2, CopyPlus,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { isAdmin, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES } from './twData';
+import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES } from './twData';
+import { Live, Gallery, ParticipantSheet, Awards, Announcements, Staff } from './AdminExtra';
 import './tattooweek.css';
 
+// mod: true = moderadores também veem
 const TABS = [
+  { id: 'live', label: 'Ao vivo', icon: Activity, mod: true },
   { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
-  { id: 'review', label: 'Moderação', icon: ShieldCheck },
+  { id: 'review', label: 'Moderação', icon: ShieldCheck, mod: true },
+  { id: 'gallery', label: 'Galeria', icon: Images, mod: true },
+  { id: 'people', label: 'Participantes', icon: Users, mod: true },
   { id: 'missions', label: 'Missões', icon: ListChecks },
   { id: 'artists', label: 'Credenciais NFC', icon: Nfc },
-  { id: 'people', label: 'Participantes', icon: Users },
+  { id: 'awards', label: 'Premiação', icon: Trophy },
+  { id: 'notices', label: 'Avisos', icon: Megaphone, mod: true },
   { id: 'report', label: 'Relatório', icon: FileText },
   { id: 'campaign', label: 'Campanha', icon: Settings },
   { id: 'partners', label: 'Parceiros', icon: Handshake },
+  { id: 'staff', label: 'Equipe', icon: UserCog },
 ];
 
 export default function TwAdmin({ initialCampaignId }) {
   const navigate = useNavigate();
-  const { user, isLoaded, isSignedIn } = useUser();
-  const [tab, setTab] = useState('overview');
+  const { isLoaded, isSignedIn } = useUser();
+  const role = useStaffRole();
+  const [tab, setTab] = useState('live');
   const [campaigns, setCampaigns] = useState(null);
   const [cid, setCid] = useState(initialCampaignId || null);
   const [partners, setPartners] = useState({});
+  const [sheet, setSheet] = useState(null);
 
   const loadAll = useCallback(async () => {
     const [c, p] = await Promise.all([
@@ -39,11 +48,12 @@ export default function TwAdmin({ initialCampaignId }) {
     setCid(cur => cur || c.data?.find(x => x.status === 'active')?.id || c.data?.[0]?.id || null);
   }, []);
 
-  useEffect(() => { if (isSignedIn && isAdmin(user)) loadAll(); }, [isSignedIn, user, loadAll]);
+  useEffect(() => { if (role) loadAll(); }, [role, loadAll]);
 
   if (!isLoaded) return <div className="tw"><div className="tw-center-screen">Carregando...</div></div>;
   if (!isSignedIn) return <RedirectToSignIn />;
-  if (!isAdmin(user)) {
+  if (role === undefined) return <div className="tw"><div className="tw-center-screen">Carregando...</div></div>;
+  if (!role) {
     return (
       <div className="tw"><div className="tw-center-screen"><div>
         <h2 className="tw-h2">Acesso negado</h2>
@@ -55,15 +65,20 @@ export default function TwAdmin({ initialCampaignId }) {
   if (!campaigns) return <div className="tw"><div className="tw-center-screen">Carregando...</div></div>;
 
   const campaign = campaigns.find(c => c.id === cid);
-  const ctx = { campaign, partners, reload: loadAll };
+  const isAdminRole = role === 'admin';
+  const tabs = TABS.filter(t => isAdminRole || t.mod);
+  const current = tabs.some(t => t.id === tab) || (isAdminRole && tab === 'campaign-new') ? tab : 'live';
+  const openParticipant = (id) => setSheet(id);
+  const ctx = { campaign, partners, reload: loadAll, role, onOpenParticipant: openParticipant };
+  const needsCampaign = !['campaign-new', 'partners', 'staff'].includes(current);
 
   return (
     <div className="tw" style={{ paddingBottom: 0 }}>
       <div className="tw-admin">
         <nav className="tw-admin-nav">
           <button onClick={() => navigate(campaign ? campaignBase(campaign) : '/experience')}><ArrowLeft size={16} /> Site</button>
-          {TABS.map(t => (
-            <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}><t.icon size={16} /> {t.label}</button>
+          {tabs.map(t => (
+            <button key={t.id} className={current === t.id ? 'on' : ''} onClick={() => setTab(t.id)}><t.icon size={16} /> {t.label}</button>
           ))}
         </nav>
         <main className="tw-admin-main">
@@ -72,27 +87,36 @@ export default function TwAdmin({ initialCampaignId }) {
               {campaigns.map(c => <option key={c.id} value={c.id}>{c.name} {c.status === 'draft' ? '(rascunho)' : c.status === 'finished' ? '(encerrada)' : ''}</option>)}
             </select>
             {campaign && <a className="tw-btn tw-btn-sm tw-btn-ghost" href={campaignBase(campaign)} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Abrir</a>}
-            <button className="tw-btn tw-btn-sm" onClick={() => setTab('campaign-new')}><Plus size={14} /> Nova campanha</button>
+            {isAdminRole && <button className="tw-btn tw-btn-sm" onClick={() => setTab('campaign-new')}><Plus size={14} /> Nova campanha</button>}
+            <span className="tw-chip" style={{ marginLeft: 'auto' }}>{isAdminRole ? 'Admin' : 'Moderador'}</span>
           </div>
-          {!campaign && tab !== 'campaign-new' && tab !== 'partners' && (
+          {!campaign && needsCampaign && (
             <div className="tw-empty">Nenhuma campanha. Rode o tattooweek_fase2_3.sql no Supabase ou crie uma nova campanha.</div>
           )}
-          {campaign && tab === 'overview' && <Overview key={cid} {...ctx} />}
-          {campaign && tab === 'review' && <Review key={cid} {...ctx} />}
-          {campaign && tab === 'missions' && <Missions key={cid} {...ctx} />}
-          {campaign && tab === 'artists' && <Artists key={cid} {...ctx} />}
-          {campaign && tab === 'people' && <People key={cid} {...ctx} />}
-          {campaign && tab === 'report' && <Report key={cid} {...ctx} />}
-          {campaign && tab === 'campaign' && <CampaignEditor key={cid} {...ctx} />}
-          {tab === 'campaign-new' && (
+          {campaign && current === 'live' && <Live key={cid} {...ctx} />}
+          {campaign && current === 'overview' && <Overview key={cid} {...ctx} />}
+          {campaign && current === 'review' && <Review key={cid} {...ctx} />}
+          {campaign && current === 'gallery' && <Gallery key={cid} {...ctx} />}
+          {campaign && current === 'people' && <People key={cid} {...ctx} />}
+          {campaign && current === 'missions' && <Missions key={cid} {...ctx} />}
+          {campaign && current === 'artists' && <Artists key={cid} {...ctx} />}
+          {campaign && current === 'awards' && <Awards key={cid} {...ctx} />}
+          {campaign && current === 'notices' && <Announcements key={cid} {...ctx} />}
+          {campaign && current === 'report' && <Report key={cid} {...ctx} />}
+          {campaign && current === 'campaign' && <CampaignEditor key={cid} {...ctx} />}
+          {current === 'campaign-new' && (
             <CampaignEditor
               key="new" {...ctx} isNew
               onCreated={async (id) => { await loadAll(); setCid(id); setTab('campaign'); }}
             />
           )}
-          {tab === 'partners' && <Partners {...ctx} />}
+          {current === 'partners' && <Partners {...ctx} />}
+          {current === 'staff' && <Staff />}
         </main>
       </div>
+      {sheet && campaign && (
+        <ParticipantSheet participantId={sheet} campaign={campaign} role={role} onClose={() => setSheet(null)} />
+      )}
     </div>
   );
 }
@@ -304,67 +328,106 @@ function Report({ campaign, partners }) {
 
 // --- Moderação ---
 
-function Review({ campaign }) {
-  const [status, setStatus] = useState('pending');
+function Review({ campaign, onOpenParticipant }) {
+  // Com aprovação automática, a revisão é feita sobre os aprovados (recusar o que não vale)
+  const [status, setStatus] = useState('approved');
   const [track, setTrack] = useState('all');
+  const [mission, setMission] = useState('');
+  const [missions, setMissions] = useState([]);
   const [rows, setRows] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const [counts, setCounts] = useState({});
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from('tw_submissions')
+    let q = supabase.from('tw_submissions')
       .select('*, mission:tw_missions!inner(*), participant:tw_participants(name, instagram, phone), artist:tw_artists(name)')
       .eq('mission.campaign_id', campaign.id)
-      .eq('status', status).order('created_at', { ascending: status === 'pending' }).limit(100);
+      .eq('status', status).order('created_at', { ascending: status === 'pending' }).limit(150);
+    if (mission) q = q.eq('mission_id', mission);
+    const { data } = await q;
     setRows(data || []);
-  }, [status, campaign.id]);
+    setSelected(new Set());
+    const c = {};
+    await Promise.all(['pending', 'approved', 'rejected'].map(async st => {
+      const { count } = await supabase.from('tw_submissions').select('id, mission:tw_missions!inner(campaign_id)', { count: 'exact', head: true }).eq('mission.campaign_id', campaign.id).eq('status', st);
+      c[st] = count || 0;
+    }));
+    setCounts(c);
+  }, [status, campaign.id, mission]);
 
   useEffect(() => { setRows(null); load(); }, [load]);
+  useEffect(() => {
+    supabase.from('tw_missions').select('id, title, track').eq('campaign_id', campaign.id).order('track').order('day').order('position').then(({ data }) => setMissions(data || []));
+  }, [campaign.id]);
 
-  const decide = async (row, ok, pts) => {
-    const reviewer_note = ok ? null : (prompt('Motivo (opcional, o participante pode reenviar):') || null);
-    await supabase.from('tw_submissions').update({
+  const apply = async (items, ok, pts) => {
+    const reviewer_note = ok ? null : (prompt(`Recusar ${items.length > 1 ? `${items.length} envios` : 'este envio'}? Motivo (opcional, o participante pode reenviar):`));
+    if (!ok && reviewer_note === null) return;
+    await Promise.all(items.map(row => supabase.from('tw_submissions').update({
       status: ok ? 'approved' : 'rejected',
       points: ok ? Number(pts ?? row.mission?.points ?? 0) : 0,
-      reviewer_note,
+      reviewer_note: ok ? null : reviewer_note || null,
       reviewed_at: new Date().toISOString(),
-    }).eq('id', row.id);
-    setRows(r => r.filter(x => x.id !== row.id));
+    }).eq('id', row.id)));
+    load();
   };
 
   const list = (rows || []).filter(r => track === 'all' || r.mission?.track === track);
+  const picked = list.filter(r => selected.has(r.id));
+  const toggle = (id) => setSelected(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   return (
     <div className="tw-stack">
       <div className="tw-between" style={{ flexWrap: 'wrap' }}>
         <h1 className="tw-h2">Moderação</h1>
-        <div className="tw-row">
-          <select className="tw-input" style={{ width: 'auto' }} value={track} onChange={e => setTrack(e.target.value)}>
-            <option value="all">Todas</option><option value="artist">Artist Challenge</option><option value="public">Público</option>
-          </select>
+        <div className="tw-row" style={{ flexWrap: 'wrap' }}>
           <select className="tw-input" style={{ width: 'auto' }} value={status} onChange={e => setStatus(e.target.value)}>
-            <option value="pending">Pendentes</option><option value="approved">Aprovadas</option><option value="rejected">Recusadas</option>
+            <option value="approved">Aprovadas ({counts.approved ?? '…'})</option>
+            <option value="pending">Pendentes ({counts.pending ?? '…'})</option>
+            <option value="rejected">Recusadas ({counts.rejected ?? '…'})</option>
+          </select>
+          <select className="tw-input" style={{ width: 'auto' }} value={track} onChange={e => setTrack(e.target.value)}>
+            <option value="all">Todas as trilhas</option><option value="artist">Artist Challenge</option><option value="public">Público</option>
+          </select>
+          <select className="tw-input" style={{ width: 'auto', maxWidth: 240 }} value={mission} onChange={e => setMission(e.target.value)}>
+            <option value="">Todas as missões</option>{missions.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
           </select>
         </div>
       </div>
-      <p className="tw-p" style={{ fontSize: '0.85rem' }}>Missões do público entram aprovadas automaticamente — use “Aprovadas” para retirar conteúdo impróprio. As do Artist Challenge esperam sua validação.</p>
+      <p className="tw-p" style={{ fontSize: '0.85rem' }}>Os envios entram aprovados automaticamente. Revise aqui e recuse o que não cumpre a missão — os pontos saem do ranking na hora e a pessoa pode reenviar.</p>
+      {list.length > 0 && (
+        <div className="tw-card tw-row" style={{ flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 5 }}>
+          <label className="tw-row" style={{ gap: '0.4rem', fontSize: '0.85rem' }}>
+            <input type="checkbox" checked={picked.length === list.length} onChange={e => setSelected(e.target.checked ? new Set(list.map(r => r.id)) : new Set())} /> Selecionar todos
+          </label>
+          <span className="tw-p" style={{ fontSize: '0.85rem' }}>{picked.length} selecionado(s)</span>
+          {status !== 'approved' && <button className="tw-btn tw-btn-sm tw-btn-ok" disabled={!picked.length} onClick={() => apply(picked, true)}><Check size={14} /> Aprovar selecionados</button>}
+          {status !== 'rejected' && <button className="tw-btn tw-btn-sm tw-btn-bad" disabled={!picked.length} onClick={() => apply(picked, false)}><X size={14} /> Recusar selecionados</button>}
+        </div>
+      )}
       {rows === null && <p className="tw-p">Carregando...</p>}
       {rows && list.length === 0 && <div className="tw-empty">Nada aqui. 🎉</div>}
-      {list.map(r => <ReviewCard key={r.id} row={r} onDecide={decide} />)}
+      {list.map(r => (
+        <ReviewCard key={r.id} row={r} checked={selected.has(r.id)} onToggle={() => toggle(r.id)}
+          onDecide={(row, ok, pts) => apply([row], ok, pts)} onOpenParticipant={onOpenParticipant} />
+      ))}
     </div>
   );
 }
 
-function ReviewCard({ row, onDecide }) {
+function ReviewCard({ row, onDecide, checked, onToggle, onOpenParticipant }) {
   const [pts, setPts] = useState(row.status === 'approved' ? row.points : row.mission?.points);
   return (
-    <div className="tw-card tw-stack">
+    <div className="tw-card tw-stack" style={checked ? { borderColor: 'rgba(238,195,88,0.6)' } : undefined}>
       <div>
         <div className="tw-row" style={{ gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
+          <input type="checkbox" checked={checked} onChange={onToggle} style={{ width: 18, height: 18 }} />
           <span className="tw-chip tw-chip-gold">{row.mission?.track === 'artist' ? 'Challenge' : `Público · Dia ${row.mission?.day ?? '-'}`}</span>
           {row.mission?.category && row.mission.category !== 'dia' && <span className="tw-chip">{CATEGORY_LABELS[row.mission.category]}</span>}
         </div>
         <h3 className="tw-h3">{row.mission?.title}</h3>
         <p className="tw-p" style={{ fontSize: '0.85rem' }}>
-          <b style={{ color: '#fff' }}>{row.participant?.name}</b> {row.participant?.instagram} · {new Date(row.created_at).toLocaleString('pt-BR')}
+          <button style={{ background: 'none', border: 0, padding: 0, color: '#fff', font: 'inherit', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }} onClick={() => onOpenParticipant(row.participant_id)}>{row.participant?.name}</button> {row.participant?.instagram} · {new Date(row.created_at).toLocaleString('pt-BR')}
           {row.artist && <> · com <b style={{ color: '#fff' }}>{row.artist.name}</b></>}
         </p>
         {row.note && <p style={{ margin: '0.4rem 0 0', fontSize: '0.9rem' }}>“{row.note}”</p>}
@@ -391,12 +454,12 @@ function ReviewCard({ row, onDecide }) {
 
 // --- Missões ---
 
-const EMPTY_MISSION = { track: 'artist', day: '', category: 'networking', partner: '', title: '', description: '', points: 20, media_count: 1, approval: 'manual', hidden: false, active: true, position: 0 };
+const EMPTY_MISSION = { track: 'artist', day: '', category: 'networking', partner: '', title: '', description: '', points: 20, media_count: 1, approval: 'auto', hidden: false, active: true, position: 0 };
 
 function Missions({ campaign, partners }) {
   const [rows, setRows] = useState([]);
   const [edit, setEdit] = useState(null);
-  const [surprise, setSurprise] = useState({ track: 'artist', title: '', description: '', points: 30, minutes: 20, media_count: 1 });
+  const [surprise, setSurprise] = useState({ track: 'artist', title: '', description: '', points: 30, minutes: 20, media_count: 1, at: '' });
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).order('track').order('day').order('position');
@@ -415,9 +478,10 @@ function Missions({ campaign, partners }) {
     load();
   };
 
+  // Sem horário = começa agora; com horário = programada (aparece sozinha na hora)
   const launch = async (e) => {
     e.preventDefault();
-    const now = new Date();
+    const now = surprise.at ? new Date(surprise.at) : new Date();
     const { error } = await supabase.from('tw_missions').insert([{
       campaign_id: campaign.id,
       track: surprise.track,
@@ -426,19 +490,41 @@ function Missions({ campaign, partners }) {
       description: surprise.description || null,
       points: Number(surprise.points),
       media_count: Number(surprise.media_count),
-      approval: surprise.track === 'public' ? 'auto' : 'manual',
+      approval: 'auto',
       starts_at: now.toISOString(),
       ends_at: new Date(now.getTime() + Number(surprise.minutes) * 60000).toISOString(),
       position: 0,
     }]);
     if (error) { alert(error.message); return; }
-    setSurprise(s => ({ ...s, title: '', description: '' }));
+    setSurprise(s => ({ ...s, title: '', description: '', at: '' }));
     load();
   };
 
   const toggle = async (m) => {
     await supabase.from('tw_missions').update({ active: !m.active }).eq('id', m.id);
     load();
+  };
+
+  const duplicate = (m) => {
+    const { id, created_at, ...rest } = m;
+    void id; void created_at;
+    setEdit({ ...rest, title: `${m.title} (cópia)`, starts_at: null, ends_at: null });
+  };
+
+  const remove = async (m) => {
+    const { count } = await supabase.from('tw_submissions').select('id', { count: 'exact', head: true }).eq('mission_id', m.id);
+    const warn = count ? `\n\nATENÇÃO: ${count} envio(s) desta missão serão apagados e os pontos saem do ranking. Prefira “Desativar”.` : '';
+    if (!confirm(`Excluir a missão “${m.title}”?${warn}`)) return;
+    const { error } = await supabase.from('tw_missions').delete().eq('id', m.id);
+    if (error) alert(error.message);
+    load();
+  };
+
+  const surpriseState = (m) => {
+    const now = new Date();
+    if (m.starts_at && new Date(m.starts_at) > now) return ['Programada', 'tw-chip-gold'];
+    if (m.ends_at && new Date(m.ends_at) < now) return ['Encerrada', ''];
+    return ['No ar', 'tw-chip-bad'];
   };
 
   const groups = [
@@ -452,7 +538,7 @@ function Missions({ campaign, partners }) {
       <div className="tw-between"><h1 className="tw-h2">Missões</h1><button className="tw-btn tw-btn-sm" onClick={() => setEdit({ ...EMPTY_MISSION })}><Plus size={14} /> Nova missão</button></div>
 
       <form className="tw-surprise tw-stack" style={{ animation: 'none' }} onSubmit={launch}>
-        <span className="tw-kicker" style={{ color: '#fca5a5' }}><Zap size={12} /> Lançar missão surpresa agora</span>
+        <span className="tw-kicker" style={{ color: '#fca5a5' }}><Zap size={12} /> Missão surpresa — lançar agora ou programar</span>
         <div className="tw-grid tw-grid-2">
           <input className="tw-input" placeholder="Você tem 20 minutos para encontrar um artista de outro país" value={surprise.title} onChange={e => setSurprise({ ...surprise, title: e.target.value })} required />
           <input className="tw-input" placeholder="Detalhes (opcional)" value={surprise.description} onChange={e => setSurprise({ ...surprise, description: e.target.value })} />
@@ -464,9 +550,10 @@ function Missions({ campaign, partners }) {
           <label className="tw-row" style={{ gap: '0.3rem', fontSize: '0.8rem' }}>Minutos <input className="tw-input" type="number" style={{ width: 80 }} value={surprise.minutes} onChange={e => setSurprise({ ...surprise, minutes: e.target.value })} /></label>
           <label className="tw-row" style={{ gap: '0.3rem', fontSize: '0.8rem' }}>Pontos <input className="tw-input" type="number" style={{ width: 80 }} value={surprise.points} onChange={e => setSurprise({ ...surprise, points: e.target.value })} /></label>
           <label className="tw-row" style={{ gap: '0.3rem', fontSize: '0.8rem' }}>Registros <input className="tw-input" type="number" min="1" max="3" style={{ width: 70 }} value={surprise.media_count} onChange={e => setSurprise({ ...surprise, media_count: e.target.value })} /></label>
-          <button className="tw-btn tw-btn-primary tw-btn-sm"><Zap size={14} /> Lançar</button>
+          <label className="tw-row" style={{ gap: '0.3rem', fontSize: '0.8rem' }}>Começa em <input className="tw-input" type="datetime-local" style={{ width: 'auto' }} value={surprise.at} onChange={e => setSurprise({ ...surprise, at: e.target.value })} /></label>
+          <button className="tw-btn tw-btn-primary tw-btn-sm"><Zap size={14} /> {surprise.at ? 'Programar' : 'Lançar agora'}</button>
         </div>
-        <p className="tw-p" style={{ fontSize: '0.78rem' }}>Aparece no painel dos participantes em até 1 minuto, com contagem regressiva.</p>
+        <p className="tw-p" style={{ fontSize: '0.78rem' }}>Deixe “Começa em” vazio para lançar agora. Programadas aparecem sozinhas no horário, com contagem regressiva (em até 1 minuto). Dica: monte toda a agenda de surpresas dos 3 dias antes do evento.</p>
       </form>
 
       {edit && (
@@ -502,7 +589,8 @@ function Missions({ campaign, partners }) {
                       <div className="tw-row" style={{ gap: '0.3rem', marginTop: 4, flexWrap: 'wrap' }}>
                         {m.partner && <span className="tw-chip" style={{ color: partners[m.partner]?.color }}>{partners[m.partner]?.name || m.partner}</span>}
                         {m.hidden && <span className="tw-chip tw-chip-gold">Secreta</span>}
-                        {m.ends_at && <span className="tw-chip tw-chip-bad">até {new Date(m.ends_at).toLocaleString('pt-BR', { day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>}
+                        {m.category === 'surpresa' && <span className={`tw-chip ${surpriseState(m)[1]}`}>{surpriseState(m)[0]}</span>}
+                        {m.starts_at && <span className="tw-chip">{new Date(m.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}{m.ends_at && ` → ${new Date(m.ends_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}</span>}
                       </div>
                     </td>
                     <td>{m.points} pts</td>
@@ -510,7 +598,9 @@ function Missions({ campaign, partners }) {
                     <td>{m.approval === 'auto' ? 'Auto' : 'Manual'}</td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => setEdit({ ...m })}>Editar</button>{' '}
-                      <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => toggle(m)}>{m.active ? 'Desativar' : 'Ativar'}</button>
+                      <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => toggle(m)}>{m.active ? 'Desativar' : 'Ativar'}</button>{' '}
+                      <button className="tw-icon-btn" style={{ display: 'inline-grid' }} onClick={() => duplicate(m)} title="Duplicar"><CopyPlus size={13} /></button>{' '}
+                      <button className="tw-icon-btn" style={{ display: 'inline-grid' }} onClick={() => remove(m)} title="Excluir"><Trash2 size={13} /></button>
                     </td>
                   </tr>
                 ))}
@@ -553,9 +643,18 @@ function Artists({ campaign }) {
   };
 
   const addSlot = async () => {
-    const n = rows.length + 1;
+    // Próximo número livre (credenciais podem ter sido excluídas)
+    const used = new Set(rows.map(r => r.slug));
+    let n = 1;
+    while (used.has(`artista-${String(n).padStart(2, '0')}`)) n++;
     const slug = `artista-${String(n).padStart(2, '0')}`;
     await supabase.from('tw_artists').insert([{ campaign_id: campaign.id, slug, name: `Artista ${String(n).padStart(2, '0')}` }]);
+    load();
+  };
+
+  const remove = async (r) => {
+    if (!confirm(`Excluir a credencial ${r.slug} (${r.name})? Se o adesivo já foi gravado, ele para de funcionar. Prefira desmarcar “Ativa”.`)) return;
+    await supabase.from('tw_artists').delete().eq('id', r.id);
     load();
   };
 
@@ -633,6 +732,7 @@ function Artists({ campaign }) {
           <div className="tw-row">
             <button className="tw-btn tw-btn-sm tw-btn-primary" onClick={() => save(r)} disabled={saving === r.id}><Save size={14} /> {saving === r.id ? 'Salvando...' : 'Salvar'}</button>
             <label className="tw-row" style={{ gap: '0.4rem', fontSize: '0.85rem' }}><input type="checkbox" checked={r.active} onChange={e => set(r.id, { active: e.target.checked })} /> Ativa</label>
+            <button className="tw-icon-btn" style={{ marginLeft: 'auto' }} onClick={() => remove(r)} title="Excluir credencial"><Trash2 size={13} /></button>
           </div>
         </div>
       ))}
@@ -650,7 +750,7 @@ function toCsv(rows) {
   return [cols.join(';'), ...rows.map(r => cols.map(c => esc(r[c])).join(';'))].join('\n');
 }
 
-function People({ campaign }) {
+function People({ campaign, onOpenParticipant }) {
   const navigate = useNavigate();
   const [rows, setRows] = useState(null);
   const [q, setQ] = useState('');
@@ -699,7 +799,11 @@ function People({ campaign }) {
           <tbody>
             {list.map(r => (
               <tr key={r.id}>
-                <td><b>{r.name}</b><div className="tw-p" style={{ fontSize: '0.75rem' }}>{r.instagram} {r.city}</div></td>
+                <td>
+                  <button style={{ background: 'none', border: 0, padding: 0, color: '#fff', font: 'inherit', fontWeight: 800, cursor: 'pointer', textAlign: 'left' }} onClick={() => onOpenParticipant(r.id)}>{r.name}</button>
+                  {r.blocked && <span className="tw-chip tw-chip-bad" style={{ marginLeft: 6 }}>Desclassificado</span>}
+                  <div className="tw-p" style={{ fontSize: '0.75rem' }}>{r.instagram} {r.city}</div>
+                </td>
                 <td style={{ fontSize: '0.78rem' }}>{r.email}<br />{r.phone}</td>
                 <td>{r.tracks.includes('public') && <span className="tw-chip">Público</span>} {r.tracks.includes('artist') && <span className="tw-chip tw-chip-gold">Challenge</span>}</td>
                 <td>{r.public_points}</td>

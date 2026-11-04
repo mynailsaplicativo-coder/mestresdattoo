@@ -49,6 +49,7 @@ export function TwShell({ children }) {
           </SignedIn>
         </div>
       </header>
+      {ctx && <Announcements campaignId={ctx.campaign.id} />}
       {children}
       {base && (
         <nav className="tw-bottom">
@@ -86,6 +87,17 @@ export function JoinGate({ tw, track, children }) {
           <h1 className="tw-h2" style={{ marginTop: '0.5rem' }}>Entre para participar</h1>
           <p className="tw-p" style={{ margin: '0.5rem 0 1.5rem' }}>Sem aplicativo. Use seu e-mail ou Google e comece em menos de um minuto.</p>
           <SignInButton mode="modal"><button className="tw-btn tw-btn-primary tw-btn-block">Entrar / Criar conta</button></SignInButton>
+        </div>
+      </div>
+    );
+  }
+
+  if (participant?.blocked) {
+    return (
+      <div className="tw-center-screen">
+        <div style={{ maxWidth: 420 }}>
+          <h1 className="tw-h2">Participação suspensa</h1>
+          <p className="tw-p" style={{ marginTop: '0.5rem' }}>{participant.blocked_reason || 'Sua participação foi desclassificada pela organização.'} Fale com a equipe do Mestres da Tattoo no evento.</p>
         </div>
       </div>
     );
@@ -230,7 +242,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
             <h2 className="tw-h2" style={{ marginTop: '0.8rem' }}>{done.status === 'approved' ? `+${done.points} pontos!` : 'Enviado!'}</h2>
             <p className="tw-p">{done.status === 'approved'
               ? 'Missão concluída. Esse registro já entrou na sua retrospectiva.'
-              : 'Nossa equipe vai validar seu envio. Os pontos entram assim que for aprovado.'}</p>
+              : 'Envio recebido! Os pontos entram assim que a missão for validada.'}</p>
             <button className="tw-btn tw-btn-primary tw-btn-block" style={{ marginTop: '1.25rem' }} onClick={onClose}>Continuar</button>
           </div>
         ) : (
@@ -273,6 +285,48 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// Avisos da organização (aba Avisos do admin). Some depois de fechado.
+function Announcements({ campaignId }) {
+  const [list, setList] = useState([]);
+  const [hidden, setHidden] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('tw-hidden-notices') || '[]'); } catch { return []; }
+  });
+
+  useEffect(() => {
+    const load = () => {
+      const now = new Date().toISOString();
+      supabase.from('tw_announcements').select('*').eq('campaign_id', campaignId).eq('active', true)
+        .lte('starts_at', now).or(`ends_at.is.null,ends_at.gt.${now}`).order('created_at', { ascending: false })
+        .then(({ data }) => setList(data || []));
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => clearInterval(t);
+  }, [campaignId]);
+
+  const close = (id) => {
+    const next = [...hidden, id];
+    setHidden(next);
+    try { localStorage.setItem('tw-hidden-notices', JSON.stringify(next)); } catch { /* sem storage */ }
+  };
+
+  const visible = list.filter(a => !hidden.includes(a.id));
+  if (!visible.length) return null;
+  return (
+    <div className="tw-notices">
+      {visible.map(a => (
+        <div key={a.id} className={`tw-notice-bar ${a.level === 'urgent' ? 'urgent' : ''}`}>
+          <span style={{ flex: 1 }}>
+            {a.message}
+            {a.link && <> <a href={a.link} className="tw-gold" style={{ fontWeight: 800 }}>Ver</a></>}
+          </span>
+          <button className="tw-sheet-x" onClick={() => close(a.id)} aria-label="Fechar aviso"><X size={16} /></button>
+        </div>
+      ))}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Check, Film, Share2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate, MissionSheet, SurpriseCard, BadgeGrid } from './TwShell';
-import { useTwParticipant, useCampaign, isDayUnlocked, currentDay, isMissionLive, dayName, DAY_BONUS } from './twData';
+import { useTwParticipant, useCampaign, loadAdjustments, isDayUnlocked, currentDay, isMissionLive, dayName, DAY_BONUS } from './twData';
 import { computeBadges, sumPoints, BADGES } from './badges';
 
 const PUBLIC_BADGES = ['primeira', 'dia1', 'dia2', 'dia3', 'maratona', 'explorador', 'relampago'];
@@ -24,14 +24,17 @@ function PublicPanel({ participant }) {
   const { campaign, base } = useCampaign();
   const [missions, setMissions] = useState(null);
   const [subs, setSubs] = useState([]);
+  const [adj, setAdj] = useState({ public: 0, artist: 0 });
   const [day, setDay] = useState(() => currentDay(campaign));
   const [open, setOpen] = useState(null);
 
   const load = useCallback(async () => {
-    const [m, s] = await Promise.all([
+    const [m, s, a] = await Promise.all([
       supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).eq('track', 'public').eq('active', true).order('day').order('position'),
       supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participant.id).eq('mission.campaign_id', campaign.id),
+      loadAdjustments(participant.id, campaign.id),
     ]);
+    setAdj(a);
     setMissions(m.data || []);
     setSubs(s.data || []);
   }, [participant.id, campaign.id]);
@@ -51,7 +54,7 @@ function PublicPanel({ participant }) {
   const allDayMissions = missions.filter(m => m.category === 'dia');
   const badges = computeBadges({ approved, missions, artistsCount: 0, ranks: {} }).filter(b => PUBLIC_BADGES.includes(b.id));
   const daysComplete = badges.filter(b => b.id.startsWith('dia')).length;
-  const points = sumPoints(approved, missions, 'public');
+  const points = sumPoints(approved, missions, 'public') + adj.public;
   const doneToday = dayMissions.filter(m => subByMission[m.id] && subByMission[m.id].status !== 'rejected').length;
   const unlocked = isDayUnlocked(campaign, day);
   const finished = campaign.status === 'finished';
