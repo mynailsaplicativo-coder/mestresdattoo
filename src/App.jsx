@@ -14,6 +14,13 @@ import GuestHub from './GuestHub';
 import ContactMediaKit from './ContactMediaKit';
 import SearchOverlay from './SearchOverlay';
 import MastersInkSelection from './MastersInkSelection';
+import TwLanding from './tattooweek/TwLanding';
+import TwPublic from './tattooweek/TwPublic';
+import TwChallenge from './tattooweek/TwChallenge';
+import TwNfc from './tattooweek/TwNfc';
+import TwRetro from './tattooweek/TwRetro';
+import TwAdmin from './tattooweek/TwAdmin';
+import { TwRanking, TwPrizes } from './tattooweek/TwRanking';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react';
 import './App.css';
 
@@ -52,6 +59,7 @@ function Header() {
           <button className="wte-nav-btn" onClick={() => navigate('/magazine')}><BookOpen size={14} /> Magazine</button>
           <button className="wte-nav-btn" onClick={() => navigate('/artists')}><User size={14} /> Artistas</button>
           <button className="wte-nav-btn" onClick={() => navigate('/selecaomastersink')} style={{ color: 'var(--wte-gold)' }}><Star size={14} /> Seleção Masters</button>
+          <button className="wte-nav-btn" onClick={() => navigate('/tattooweek')} style={{ color: 'var(--wte-gold)' }}><Sparkles size={14} /> Tattoo Week Experience</button>
           <button className="wte-nav-btn" onClick={() => navigate('/hub')}><Store size={14} /> Guest Hub</button>
           <button className="wte-nav-btn" onClick={() => navigate('/contato')}><Star size={14} /> Mídia Kit</button>
           <SignedOut>
@@ -795,6 +803,16 @@ export default function App() {
         {/* Guest Hub */}
         <Route path="/hub" element={<GuestHub />} />
         <Route path="/selecaomastersink" element={<MastersInkSelection />} />
+
+        {/* Tattoo Week Experience */}
+        <Route path="/tattooweek" element={<TwLanding />} />
+        <Route path="/tattooweek/meu" element={<TwPublic />} />
+        <Route path="/tattooweek/artist" element={<TwChallenge />} />
+        <Route path="/tattooweek/nfc/:slug" element={<TwNfc />} />
+        <Route path="/tattooweek/ranking" element={<TwRanking />} />
+        <Route path="/tattooweek/retrospectiva" element={<TwRetro />} />
+        <Route path="/tattooweek/premiacao" element={<TwPrizes />} />
+        <Route path="/tattooweek/admin" element={<TwAdmin />} />
       </Routes>
     </Router>
   );
