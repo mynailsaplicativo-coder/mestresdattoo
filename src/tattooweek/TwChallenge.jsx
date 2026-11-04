@@ -1,17 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Nfc, KeyRound } from 'lucide-react';
+import { Check, Nfc, KeyRound, Share2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard } from './TwShell';
-import { useTwParticipant, isMissionLive, CATEGORY_LABELS, PARTNERS } from './twData';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, BadgeGrid } from './TwShell';
+import { useTwParticipant, useCampaign, isMissionLive, CATEGORY_LABELS } from './twData';
+import { computeBadges, BADGES } from './badges';
 
 const SECTIONS = ['networking', 'conteudo', 'parceiros', 'secreta'];
+const ARTIST_BADGES = ['primeira', 'relampago', 'secreta', 'conector', 'superconector', 'passaporte', 'parceiros', 'criador', 'podio'];
 
 export default function TwChallenge() {
   const tw = useTwParticipant();
   return (
     <TwShell>
-      <JoinGate tw={tw} mode="artist">
+      <JoinGate tw={tw} track="artist">
         <ChallengePanel participant={tw.participant} />
       </JoinGate>
     </TwShell>
@@ -20,6 +22,7 @@ export default function TwChallenge() {
 
 function ChallengePanel({ participant }) {
   const navigate = useNavigate();
+  const { campaign, partners, base } = useCampaign();
   const [missions, setMissions] = useState([]);
   const [artists, setArtists] = useState([]);
   const [subs, setSubs] = useState([]);
@@ -30,11 +33,11 @@ function ChallengePanel({ participant }) {
 
   const load = useCallback(async () => {
     const [m, a, s, e, r] = await Promise.all([
-      supabase.from('tw_missions').select('*').eq('track', 'artist').eq('active', true).order('position'),
-      supabase.from('tw_artists').select('*').eq('active', true).order('slug'),
-      supabase.from('tw_submissions').select('*').eq('participant_id', participant.id),
-      supabase.from('tw_events').select('ref').eq('participant_id', participant.id).in('type', ['nfc_scan', 'qr_scan']),
-      supabase.from('tw_ranking').select('participant_id, points').eq('track', 'artist').order('points', { ascending: false }).order('last_at'),
+      supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).eq('track', 'artist').eq('active', true).order('position'),
+      supabase.from('tw_artists').select('*').eq('campaign_id', campaign.id).eq('active', true).order('slug'),
+      supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participant.id).eq('mission.campaign_id', campaign.id),
+      supabase.from('tw_events').select('ref').eq('participant_id', participant.id).eq('campaign_id', campaign.id).in('type', ['nfc_scan', 'qr_scan']),
+      supabase.from('tw_ranking').select('participant_id, points').eq('campaign_id', campaign.id).eq('track', 'artist').order('points', { ascending: false }).order('last_at'),
     ]);
     setMissions(m.data || []);
     setArtists(a.data || []);
@@ -43,7 +46,7 @@ function ChallengePanel({ participant }) {
     const pos = (r.data || []).findIndex(x => x.participant_id === participant.id);
     setRank(pos >= 0 ? pos + 1 : null);
     setLoaded(true);
-  }, [participant.id]);
+  }, [participant.id, campaign.id]);
 
   useEffect(() => {
     load();
@@ -58,13 +61,16 @@ function ChallengePanel({ participant }) {
   const visible = missions.filter(m => !m.hidden || revealed.has(m.id));
   const surprises = visible.filter(m => m.category === 'surpresa' && isMissionLive(m));
   const passportMission = visible.find(m => m.category === 'passaporte');
-  const points = subs.filter(s => s.status === 'approved').reduce((a, s) => a + (s.points || 0), 0);
+  const approved = subs.filter(s => s.status === 'approved' && s.mission?.track === 'artist');
+  const points = approved.reduce((a, s) => a + (s.points || 0), 0);
   const pending = subs.filter(s => s.status === 'pending').length;
   const stamps = passportMission ? missionSubs(passportMission.id) : [];
+  const badges = computeBadges({ approved, missions, artistsCount: artists.length, ranks: { artist: rank } }).filter(b => ARTIST_BADGES.includes(b.id));
+  const finished = campaign.status === 'finished';
 
   return (
     <div className="tw-wrap">
-      <span className="tw-kicker">Artist Challenge</span>
+      <span className="tw-kicker">Artist Challenge · {campaign.event_name}</span>
       <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem' }}>{participant.name}</h1>
 
       <div className="tw-card tw-card-gold">
@@ -76,7 +82,9 @@ function ChallengePanel({ participant }) {
         </div>
       </div>
 
-      {surprises.length > 0 && (
+      {finished && <div className="tw-notice" style={{ marginTop: '1rem' }}>O Artist Challenge desta experiência foi encerrado.</div>}
+
+      {!finished && surprises.length > 0 && (
         <div className="tw-stack" style={{ marginTop: '1rem' }}>
           {surprises.map(m => <SurpriseCard key={m.id} mission={m} sub={missionSubs(m.id)[0]} onOpen={() => setOpen({ mission: m })} />)}
         </div>
@@ -97,12 +105,12 @@ function ChallengePanel({ participant }) {
               const cls = s?.status === 'approved' ? 'got' : s?.status === 'pending' ? 'pending' : scanned.has(a.slug) ? 'scanned' : '';
               const content = a.photo_url && cls ? <img src={a.photo_url} alt={a.name} /> : (cls ? a.name.split(' ')[0] : a.slug.replace('artista-', ''));
               return scanned.has(a.slug)
-                ? <a key={a.id} className={`tw-stamp ${cls}`} href={`/tattooweek/nfc/${a.slug}`} onClick={e => { e.preventDefault(); navigate(`/tattooweek/nfc/${a.slug}`); }} title={a.name}>{content}</a>
+                ? <a key={a.id} className={`tw-stamp ${cls}`} href={`${base}/nfc/${a.slug}`} onClick={e => { e.preventDefault(); navigate(`${base}/nfc/${a.slug}`); }} title={a.name}>{content}</a>
                 : <div key={a.id} className="tw-stamp" title="Encontre a credencial">{content}</div>;
             })}
           </div>
           <p className="tw-p" style={{ fontSize: '0.8rem', marginTop: '0.7rem' }}>
-            Encontre os 20 artistas com credencial, aproxime o celular (ou leia o QR Code) e registre o encontro com uma foto.
+            Encontre os artistas com credencial, aproxime o celular (ou leia o QR Code) e registre o encontro com uma foto.
           </p>
         </section>
       )}
@@ -116,9 +124,9 @@ function ChallengePanel({ participant }) {
             <div className="tw-stack" style={{ marginTop: '0.7rem' }}>
               {list.map(m => {
                 const s = missionSubs(m.id)[0];
-                const partner = m.partner && PARTNERS[m.partner];
+                const partner = m.partner && partners[m.partner];
                 return (
-                  <button key={m.id} className={`tw-mission ${s?.status === 'approved' ? 'done' : ''}`} disabled={s && s.status !== 'rejected'} onClick={() => setOpen({ mission: m })}>
+                  <button key={m.id} className={`tw-mission ${s?.status === 'approved' ? 'done' : ''} ${finished ? 'locked' : ''}`} disabled={finished || (s && s.status !== 'rejected')} onClick={() => setOpen({ mission: m })}>
                     <span className="tw-mission-num">{s?.status === 'approved' ? <Check size={18} /> : m.points}</span>
                     <span className="tw-mission-body">
                       <span className="tw-mission-title">{m.title}</span>
@@ -137,6 +145,16 @@ function ChallengePanel({ participant }) {
           </section>
         );
       })}
+
+      <section className="tw-section">
+        <div className="tw-between">
+          <span className="tw-kicker">Seus selos</span>
+          <button className="tw-btn tw-btn-sm" onClick={() => navigate(`${base}/resultado`)}><Share2 size={14} /> Card de resultado</button>
+        </div>
+        <div style={{ marginTop: '0.7rem' }}>
+          <BadgeGrid badges={badges} all={BADGES.filter(b => ARTIST_BADGES.includes(b.id))} small />
+        </div>
+      </section>
 
       <p className="tw-p" style={{ fontSize: '0.8rem', marginTop: '2rem' }}>
         Todas as missões do Artist Challenge são validadas pela equipe. Ler uma credencial NFC não conta pontos sozinho — é preciso enviar o registro.

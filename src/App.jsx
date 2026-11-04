@@ -14,13 +14,10 @@ import GuestHub from './GuestHub';
 import ContactMediaKit from './ContactMediaKit';
 import SearchOverlay from './SearchOverlay';
 import MastersInkSelection from './MastersInkSelection';
-import TwLanding from './tattooweek/TwLanding';
-import TwPublic from './tattooweek/TwPublic';
-import TwChallenge from './tattooweek/TwChallenge';
-import TwNfc from './tattooweek/TwNfc';
-import TwRetro from './tattooweek/TwRetro';
+import CampaignApp from './tattooweek/TwCampaign';
+import TwHub from './tattooweek/TwHub';
+import TwProfile from './tattooweek/TwProfile';
 import TwAdmin from './tattooweek/TwAdmin';
-import { TwRanking, TwPrizes } from './tattooweek/TwRanking';
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react';
 import './App.css';
 
@@ -804,15 +801,13 @@ export default function App() {
         <Route path="/hub" element={<GuestHub />} />
         <Route path="/selecaomastersink" element={<MastersInkSelection />} />
 
-        {/* Tattoo Week Experience */}
-        <Route path="/tattooweek" element={<TwLanding />} />
-        <Route path="/tattooweek/meu" element={<TwPublic />} />
-        <Route path="/tattooweek/artist" element={<TwChallenge />} />
-        <Route path="/tattooweek/nfc/:slug" element={<TwNfc />} />
-        <Route path="/tattooweek/ranking" element={<TwRanking />} />
-        <Route path="/tattooweek/retrospectiva" element={<TwRetro />} />
-        <Route path="/tattooweek/premiacao" element={<TwPrizes />} />
-        <Route path="/tattooweek/admin" element={<TwAdmin />} />
+        {/* Mestres Experience: a Tattoo Week mantém /tattooweek (URL dos adesivos NFC) */}
+        <Route path="/tattooweek/*" element={<CampaignApp slug="tattooweek" />} />
+        <Route path="/experience" element={<TwHub />} />
+        <Route path="/experience/perfil" element={<TwProfile />} />
+        <Route path="/experience/perfil/:id" element={<TwProfile />} />
+        <Route path="/experience/admin" element={<TwAdmin />} />
+        <Route path="/experience/:campaignSlug/*" element={<CampaignApp />} />
       </Routes>
     </Router>
   );

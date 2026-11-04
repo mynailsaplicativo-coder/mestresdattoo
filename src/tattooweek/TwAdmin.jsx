@@ -2,9 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser, RedirectToSignIn } from '@clerk/clerk-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { LayoutDashboard, ShieldCheck, ListChecks, Nfc, Users, Settings, Check, X, Zap, Download, Printer, Plus, Save, Film, ArrowLeft } from 'lucide-react';
+import {
+  LayoutDashboard, ShieldCheck, ListChecks, Nfc, Users, Settings, Check, X, Zap, Download, Printer, Plus, Save, Film,
+  ArrowLeft, FileText, Handshake, ExternalLink, Copy,
+} from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { isAdmin, loadConfig, saveConfig, CATEGORY_LABELS, PARTNERS, DAY_NAMES } from './twData';
+import { isAdmin, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES } from './twData';
 import './tattooweek.css';
 
 const TABS = [
@@ -13,13 +16,30 @@ const TABS = [
   { id: 'missions', label: 'Missões', icon: ListChecks },
   { id: 'artists', label: 'Credenciais NFC', icon: Nfc },
   { id: 'people', label: 'Participantes', icon: Users },
-  { id: 'config', label: 'Configuração', icon: Settings },
+  { id: 'report', label: 'Relatório', icon: FileText },
+  { id: 'campaign', label: 'Campanha', icon: Settings },
+  { id: 'partners', label: 'Parceiros', icon: Handshake },
 ];
 
-export default function TwAdmin() {
+export default function TwAdmin({ initialCampaignId }) {
   const navigate = useNavigate();
   const { user, isLoaded, isSignedIn } = useUser();
   const [tab, setTab] = useState('overview');
+  const [campaigns, setCampaigns] = useState(null);
+  const [cid, setCid] = useState(initialCampaignId || null);
+  const [partners, setPartners] = useState({});
+
+  const loadAll = useCallback(async () => {
+    const [c, p] = await Promise.all([
+      supabase.from('tw_campaigns').select('*').order('created_at', { ascending: false }),
+      loadPartners(),
+    ]);
+    setCampaigns(c.data || []);
+    setPartners(p);
+    setCid(cur => cur || c.data?.find(x => x.status === 'active')?.id || c.data?.[0]?.id || null);
+  }, []);
+
+  useEffect(() => { if (isSignedIn && isAdmin(user)) loadAll(); }, [isSignedIn, user, loadAll]);
 
   if (!isLoaded) return <div className="tw"><div className="tw-center-screen">Carregando...</div></div>;
   if (!isSignedIn) return <RedirectToSignIn />;
@@ -28,97 +48,163 @@ export default function TwAdmin() {
       <div className="tw"><div className="tw-center-screen"><div>
         <h2 className="tw-h2">Acesso negado</h2>
         <p className="tw-p">Apenas administradores do Mestres da Tattoo.</p>
-        <button className="tw-btn" style={{ marginTop: '1rem' }} onClick={() => navigate('/tattooweek')}>Voltar</button>
+        <button className="tw-btn" style={{ marginTop: '1rem' }} onClick={() => navigate('/experience')}>Voltar</button>
       </div></div></div>
     );
   }
+  if (!campaigns) return <div className="tw"><div className="tw-center-screen">Carregando...</div></div>;
+
+  const campaign = campaigns.find(c => c.id === cid);
+  const ctx = { campaign, partners, reload: loadAll };
 
   return (
     <div className="tw" style={{ paddingBottom: 0 }}>
       <div className="tw-admin">
         <nav className="tw-admin-nav">
-          <button onClick={() => navigate('/tattooweek')}><ArrowLeft size={16} /> Site da campanha</button>
+          <button onClick={() => navigate(campaign ? campaignBase(campaign) : '/experience')}><ArrowLeft size={16} /> Site</button>
           {TABS.map(t => (
             <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}><t.icon size={16} /> {t.label}</button>
           ))}
         </nav>
         <main className="tw-admin-main">
-          {tab === 'overview' && <Overview />}
-          {tab === 'review' && <Review />}
-          {tab === 'missions' && <Missions />}
-          {tab === 'artists' && <Artists />}
-          {tab === 'people' && <People />}
-          {tab === 'config' && <Config />}
+          <div className="tw-row tw-noprint" style={{ flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+            <select className="tw-input" style={{ width: 'auto', minWidth: 240 }} value={cid || ''} onChange={e => setCid(e.target.value)}>
+              {campaigns.map(c => <option key={c.id} value={c.id}>{c.name} {c.status === 'draft' ? '(rascunho)' : c.status === 'finished' ? '(encerrada)' : ''}</option>)}
+            </select>
+            {campaign && <a className="tw-btn tw-btn-sm tw-btn-ghost" href={campaignBase(campaign)} target="_blank" rel="noreferrer"><ExternalLink size={14} /> Abrir</a>}
+            <button className="tw-btn tw-btn-sm" onClick={() => setTab('campaign-new')}><Plus size={14} /> Nova campanha</button>
+          </div>
+          {!campaign && tab !== 'campaign-new' && tab !== 'partners' && (
+            <div className="tw-empty">Nenhuma campanha. Rode o tattooweek_fase2_3.sql no Supabase ou crie uma nova campanha.</div>
+          )}
+          {campaign && tab === 'overview' && <Overview key={cid} {...ctx} />}
+          {campaign && tab === 'review' && <Review key={cid} {...ctx} />}
+          {campaign && tab === 'missions' && <Missions key={cid} {...ctx} />}
+          {campaign && tab === 'artists' && <Artists key={cid} {...ctx} />}
+          {campaign && tab === 'people' && <People key={cid} {...ctx} />}
+          {campaign && tab === 'report' && <Report key={cid} {...ctx} />}
+          {campaign && tab === 'campaign' && <CampaignEditor key={cid} {...ctx} />}
+          {tab === 'campaign-new' && (
+            <CampaignEditor
+              key="new" {...ctx} isNew
+              onCreated={async (id) => { await loadAll(); setCid(id); setTab('campaign'); }}
+            />
+          )}
+          {tab === 'partners' && <Partners {...ctx} />}
         </main>
       </div>
     </div>
   );
 }
 
-// --- Visão geral: indicadores para o relatório dos parceiros ---
+// --- Números da campanha (Visão geral e Relatório) ---
 
-function Overview() {
-  const [d, setD] = useState(null);
+async function loadStats(campaign) {
+  const cid = campaign.id;
+  const [en, s, e, m, a, r] = await Promise.all([
+    supabase.from('tw_enrollments').select('participant_id, track, created_at').eq('campaign_id', cid),
+    supabase.from('tw_submissions').select('id, status, mission_id, media, participant_id, artist_id, created_at, mission:tw_missions!inner(campaign_id)').eq('mission.campaign_id', cid),
+    supabase.from('tw_events').select('type, ref, participant_id, created_at').eq('campaign_id', cid),
+    supabase.from('tw_missions').select('*').eq('campaign_id', cid),
+    supabase.from('tw_artists').select('id, slug, name').eq('campaign_id', cid),
+    supabase.from('tw_ranking').select('*').eq('campaign_id', cid).order('points', { ascending: false }).order('last_at'),
+  ]);
+  const enroll = en.data || [];
+  const subs = s.data || [];
+  const events = e.data || [];
+  const missions = m.data || [];
+  const artists = a.data || [];
+  const ranking = r.data || [];
+  const missionById = Object.fromEntries(missions.map(x => [x.id, x]));
+  const approved = subs.filter(x => x.status === 'approved');
+  const count = (type, ref) => events.filter(x => x.type === type && (ref === undefined || x.ref === ref)).length;
+  const scans = events.filter(x => x.type === 'nfc_scan' || x.type === 'qr_scan');
 
-  useEffect(() => {
-    (async () => {
-      const [p, s, e, m, a] = await Promise.all([
-        supabase.from('tw_participants').select('id, in_public, in_challenge'),
-        supabase.from('tw_submissions').select('id, status, mission_id, media, participant_id'),
-        supabase.from('tw_events').select('type, ref, participant_id'),
-        supabase.from('tw_missions').select('id, partner, track'),
-        supabase.from('tw_artists').select('slug, name'),
-      ]);
-      setD({ p: p.data || [], s: s.data || [], e: e.data || [], m: m.data || [], a: a.data || [] });
-    })();
-  }, []);
+  const partnerStats = (campaign.partners || []).filter(p => p !== 'mestres').map(pid => {
+    const ms = missions.filter(x => x.partner === pid);
+    const done = approved.filter(x => missionById[x.mission_id]?.partner === pid);
+    return {
+      id: pid,
+      missions: ms.map(x => ({ title: x.title, done: done.filter(d => d.mission_id === x.id).length })),
+      done: done.length,
+      people: new Set(done.map(x => x.participant_id)).size,
+      clicks: count('partner_click', pid),
+    };
+  });
 
-  if (!d) return <p className="tw-p">Carregando indicadores...</p>;
+  const days = (campaign.event_days || []).map((d, i) => ({
+    label: `Dia ${i + 1}`,
+    date: d,
+    subs: subs.filter(x => x.created_at.slice(0, 10) === d).length,
+    scans: scans.filter(x => x.created_at.slice(0, 10) === d).length,
+  }));
 
-  const missionById = Object.fromEntries(d.m.map(m => [m.id, m]));
-  const approved = d.s.filter(s => s.status === 'approved');
-  const media = d.s.reduce((a, s) => a + (s.media?.length || 0), 0);
-  const scans = d.e.filter(e => e.type === 'nfc_scan' || e.type === 'qr_scan');
-  const count = (type, ref) => d.e.filter(e => e.type === type && (ref === undefined || e.ref === ref)).length;
-  const partnerDone = (k) => approved.filter(s => missionById[s.mission_id]?.partner === k).length;
-  const scansBy = d.a.map(a => ({ name: a.name, n: scans.filter(e => e.ref === a.slug).length })).sort((x, y) => y.n - x.n);
-  const maxScan = Math.max(1, ...scansBy.map(x => x.n));
+  return {
+    participants: new Set(enroll.map(x => x.participant_id)).size,
+    publicCount: enroll.filter(x => x.track === 'public').length,
+    artistCount: enroll.filter(x => x.track === 'artist').length,
+    started: new Set(subs.map(x => `${x.participant_id}:${x.mission_id}:${x.artist_id || ''}`)).size,
+    approved: approved.length,
+    pending: subs.filter(x => x.status === 'pending').length,
+    media: subs.reduce((acc, x) => acc + (x.media?.length || 0), 0),
+    nfc: count('nfc_scan'),
+    qr: count('qr_scan'),
+    uniqueConnections: new Set(scans.filter(x => x.participant_id).map(x => `${x.participant_id}:${x.ref}`)).size,
+    videos: count('video_generated'),
+    videoShares: count('video_shared'),
+    resultShares: count('result_shared'),
+    partnerStats,
+    scansBy: artists.map(x => ({ name: x.name, n: scans.filter(e2 => e2.ref === x.slug).length })).sort((p, q) => q.n - p.n),
+    days,
+    topPublic: ranking.filter(x => x.track === 'public').slice(0, 10),
+    topArtist: ranking.filter(x => x.track === 'artist').slice(0, 10),
+  };
+}
 
-  const kpis = [
-    ['Participantes', d.p.length],
-    ['No público', d.p.filter(p => p.in_public).length],
-    ['No Artist Challenge', d.p.filter(p => p.in_challenge).length],
-    ['Missões iniciadas', new Set(d.s.map(s => `${s.participant_id}:${s.mission_id}`)).size],
-    ['Missões concluídas', approved.length],
-    ['Pendentes', d.s.filter(s => s.status === 'pending').length],
-    ['Fotos e vídeos', media],
-    ['Leituras NFC', count('nfc_scan')],
-    ['Leituras QR', count('qr_scan')],
-    ['Vídeos gerados', count('video_generated')],
-    ['Vídeos compartilhados', count('video_shared')],
-    ['Cliques STENCILFLOW', count('partner_click', 'stencilflow')],
+function kpiList(d) {
+  return [
+    ['Participantes', d.participants, 'Alcance da experiência'],
+    ['No público', d.publicCount, 'Inscrições Meu evento'],
+    ['No Artist Challenge', d.artistCount, 'Tatuadores competindo'],
+    ['Missões iniciadas', d.started, 'Interesse'],
+    ['Missões concluídas', d.approved, 'Engajamento'],
+    ['Pendentes', d.pending, 'Aguardando validação'],
+    ['Fotos e vídeos', d.media, 'Conteúdo gerado'],
+    ['Leituras NFC', d.nfc, 'Interações presenciais'],
+    ['Leituras QR', d.qr, 'Interações presenciais'],
+    ['Conexões únicas', d.uniqueConnections, 'Networking'],
+    ['Vídeos gerados', d.videos, 'Retrospectivas'],
+    ['Vídeos compartilhados', d.videoShares, 'Distribuição orgânica'],
+    ['Cards compartilhados', d.resultShares, 'Distribuição orgânica'],
   ];
+}
+
+function Overview({ campaign, partners }) {
+  const [d, setD] = useState(null);
+  useEffect(() => { loadStats(campaign).then(setD); }, [campaign]);
+  if (!d) return <p className="tw-p">Carregando indicadores...</p>;
+  const maxScan = Math.max(1, ...d.scansBy.map(x => x.n));
 
   return (
     <div className="tw-stack">
       <h1 className="tw-h2">Visão geral</h1>
-      <div className="tw-grid tw-grid-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
-        {kpis.map(([label, v]) => <div key={label} className="tw-card tw-kpi"><b>{v}</b><span>{label}</span></div>)}
+      <div className="tw-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
+        {kpiList(d).map(([label, v]) => <div key={label} className="tw-card tw-kpi"><b>{v}</b><span>{label}</span></div>)}
       </div>
-
       <div className="tw-grid tw-grid-2" style={{ marginTop: '1.25rem' }}>
         <div className="tw-card tw-stack">
           <h3 className="tw-h3">Resultado por parceiro</h3>
-          {['bronc', 'stencilflow', 'inkauthority'].map(k => (
-            <div key={k} className="tw-between" style={{ fontSize: '0.9rem' }}>
-              <span style={{ color: PARTNERS[k].color, fontWeight: 800 }}>{PARTNERS[k].name}</span>
-              <span className="tw-p">{partnerDone(k)} desafios concluídos · {count('partner_click', k)} cliques</span>
+          {d.partnerStats.map(p => (
+            <div key={p.id} className="tw-between" style={{ fontSize: '0.9rem' }}>
+              <span style={{ color: partners[p.id]?.color, fontWeight: 800 }}>{partners[p.id]?.name || p.id}</span>
+              <span className="tw-p">{p.done} desafios · {p.people} pessoas · {p.clicks} cliques</span>
             </div>
           ))}
+          {d.partnerStats.length === 0 && <p className="tw-p">Nenhum parceiro nesta campanha.</p>}
         </div>
         <div className="tw-card tw-stack">
           <h3 className="tw-h3">Leituras por credencial</h3>
-          {scansBy.slice(0, 10).map(x => (
+          {d.scansBy.slice(0, 10).map(x => (
             <div key={x.name} className="tw-bar">
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.name}</span>
               <div className="tw-bar-track"><div style={{ width: `${(x.n / maxScan) * 100}%` }} /></div>
@@ -131,19 +217,105 @@ function Overview() {
   );
 }
 
+// --- Relatório para os parceiros (imprimir / salvar PDF) ---
+
+function Report({ campaign, partners }) {
+  const [d, setD] = useState(null);
+  useEffect(() => { loadStats(campaign).then(setD); }, [campaign]);
+  if (!d) return <p className="tw-p">Montando relatório...</p>;
+
+  const exportCsv = () => {
+    const rows = [['Indicador', 'Valor', 'O que mede'], ...kpiList(d).map(([a, b, c]) => [a, b, c])];
+    d.partnerStats.forEach(p => {
+      const name = partners[p.id]?.name || p.id;
+      rows.push([`${name} — desafios concluídos`, p.done, 'Ativação comercial']);
+      rows.push([`${name} — pessoas que completaram`, p.people, 'Alcance do parceiro']);
+      rows.push([`${name} — cliques`, p.clicks, 'Interesse no produto']);
+    });
+    downloadBlob(new Blob(['﻿' + toCsv(rows)], { type: 'text/csv;charset=utf-8' }), `relatorio-${campaign.slug}.csv`);
+  };
+
+  const Rank = ({ list }) => (
+    <table className="tw-report-table">
+      <tbody>{list.map((r, i) => <tr key={r.participant_id}><td>{i + 1}º {r.name} <span className="tw-p">{r.instagram}</span></td><td>{r.points} pts</td></tr>)}</tbody>
+    </table>
+  );
+
+  return (
+    <div className="tw-stack tw-report">
+      <div className="tw-row tw-noprint" style={{ flexWrap: 'wrap' }}>
+        <button className="tw-btn tw-btn-sm tw-btn-primary" onClick={() => window.print()}><Printer size={14} /> Imprimir / Salvar PDF</button>
+        <button className="tw-btn tw-btn-sm" onClick={exportCsv}><Download size={14} /> Exportar CSV</button>
+      </div>
+      <div>
+        <span className="tw-kicker">Relatório de resultados · Mestres da Tattoo</span>
+        <h1 className="tw-h2" style={{ marginTop: '0.3rem' }}>{campaign.name}</h1>
+        <p className="tw-p">{[formatDays(campaign), campaign.venue, campaign.city].filter(Boolean).join(' · ')}</p>
+      </div>
+
+      <h2 className="tw-h3">Indicadores gerais</h2>
+      <div className="tw-card">
+        <table className="tw-report-table">
+          <thead><tr><th>Indicador</th><th>O que mede</th><th>Resultado</th></tr></thead>
+          <tbody>{kpiList(d).map(([a, b, c]) => <tr key={a}><td>{a}</td><td className="tw-p">{c}</td><td><b>{b}</b></td></tr>)}</tbody>
+        </table>
+      </div>
+
+      <h2 className="tw-h3">Por dia</h2>
+      <div className="tw-card">
+        <table className="tw-report-table">
+          <thead><tr><th>Dia</th><th>Envios</th><th>Leituras NFC/QR</th></tr></thead>
+          <tbody>{d.days.map(x => <tr key={x.label}><td>{x.label} — {dayName(campaign, Number(x.label.slice(-1)))} ({x.date && new Date(`${x.date}T00:00:00`).toLocaleDateString('pt-BR')})</td><td>{x.subs}</td><td>{x.scans}</td></tr>)}</tbody>
+        </table>
+      </div>
+
+      <h2 className="tw-h3">Entrega por parceiro</h2>
+      <div className="tw-grid tw-grid-2">
+        {d.partnerStats.map(p => (
+          <div key={p.id} className="tw-card tw-stack">
+            <h3 className="tw-h3" style={{ color: partners[p.id]?.color }}>{partners[p.id]?.name || p.id}</h3>
+            <p className="tw-p" style={{ fontSize: '0.85rem' }}>{partners[p.id]?.role}</p>
+            <table className="tw-report-table">
+              <tbody>
+                <tr><td>Desafios concluídos</td><td><b>{p.done}</b></td></tr>
+                <tr><td>Pessoas que completaram</td><td><b>{p.people}</b></td></tr>
+                <tr><td>Cliques para o parceiro</td><td><b>{p.clicks}</b></td></tr>
+                {p.missions.map(x => <tr key={x.title}><td className="tw-p">{x.title}</td><td>{x.done}</td></tr>)}
+              </tbody>
+            </table>
+            <p className="tw-p" style={{ fontSize: '0.78rem' }}>Exposição: marca na página da campanha, nos desafios, na premiação e na assinatura dos vídeos compartilhados ({d.videoShares}).</p>
+          </div>
+        ))}
+      </div>
+
+      <h2 className="tw-h3">Credenciais mais lidas</h2>
+      <div className="tw-card">
+        <table className="tw-report-table"><tbody>{d.scansBy.slice(0, 10).map(x => <tr key={x.name}><td>{x.name}</td><td>{x.n}</td></tr>)}</tbody></table>
+      </div>
+
+      <div className="tw-grid tw-grid-2">
+        <div><h2 className="tw-h3">Top 10 Artist Challenge</h2><div className="tw-card"><Rank list={d.topArtist} /></div></div>
+        <div><h2 className="tw-h3">Top 10 público</h2><div className="tw-card"><Rank list={d.topPublic} /></div></div>
+      </div>
+      <p className="tw-p" style={{ fontSize: '0.75rem' }}>Gerado em {new Date().toLocaleString('pt-BR')}. Participantes com participação privada não aparecem nos rankings.</p>
+    </div>
+  );
+}
+
 // --- Moderação ---
 
-function Review() {
+function Review({ campaign }) {
   const [status, setStatus] = useState('pending');
   const [track, setTrack] = useState('all');
   const [rows, setRows] = useState(null);
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('tw_submissions')
-      .select('*, mission:tw_missions(*), participant:tw_participants(name, instagram, phone), artist:tw_artists(name)')
+      .select('*, mission:tw_missions!inner(*), participant:tw_participants(name, instagram, phone), artist:tw_artists(name)')
+      .eq('mission.campaign_id', campaign.id)
       .eq('status', status).order('created_at', { ascending: status === 'pending' }).limit(100);
     setRows(data || []);
-  }, [status]);
+  }, [status, campaign.id]);
 
   useEffect(() => { setRows(null); load(); }, [load]);
 
@@ -185,20 +357,18 @@ function ReviewCard({ row, onDecide }) {
   const [pts, setPts] = useState(row.status === 'approved' ? row.points : row.mission?.points);
   return (
     <div className="tw-card tw-stack">
-      <div className="tw-between" style={{ alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div>
-          <div className="tw-row" style={{ gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
-            <span className="tw-chip tw-chip-gold">{row.mission?.track === 'artist' ? 'Challenge' : `Público · Dia ${row.mission?.day ?? '-'}`}</span>
-            {row.mission?.category && row.mission.category !== 'dia' && <span className="tw-chip">{CATEGORY_LABELS[row.mission.category]}</span>}
-          </div>
-          <h3 className="tw-h3">{row.mission?.title}</h3>
-          <p className="tw-p" style={{ fontSize: '0.85rem' }}>
-            <b style={{ color: '#fff' }}>{row.participant?.name}</b> {row.participant?.instagram} · {new Date(row.created_at).toLocaleString('pt-BR')}
-            {row.artist && <> · com <b style={{ color: '#fff' }}>{row.artist.name}</b></>}
-          </p>
-          {row.note && <p style={{ margin: '0.4rem 0 0', fontSize: '0.9rem' }}>“{row.note}”</p>}
-          {row.reviewer_note && <p className="tw-p" style={{ fontSize: '0.8rem' }}>Motivo: {row.reviewer_note}</p>}
+      <div>
+        <div className="tw-row" style={{ gap: '0.4rem', flexWrap: 'wrap', marginBottom: '0.4rem' }}>
+          <span className="tw-chip tw-chip-gold">{row.mission?.track === 'artist' ? 'Challenge' : `Público · Dia ${row.mission?.day ?? '-'}`}</span>
+          {row.mission?.category && row.mission.category !== 'dia' && <span className="tw-chip">{CATEGORY_LABELS[row.mission.category]}</span>}
         </div>
+        <h3 className="tw-h3">{row.mission?.title}</h3>
+        <p className="tw-p" style={{ fontSize: '0.85rem' }}>
+          <b style={{ color: '#fff' }}>{row.participant?.name}</b> {row.participant?.instagram} · {new Date(row.created_at).toLocaleString('pt-BR')}
+          {row.artist && <> · com <b style={{ color: '#fff' }}>{row.artist.name}</b></>}
+        </p>
+        {row.note && <p style={{ margin: '0.4rem 0 0', fontSize: '0.9rem' }}>“{row.note}”</p>}
+        {row.reviewer_note && <p className="tw-p" style={{ fontSize: '0.8rem' }}>Motivo: {row.reviewer_note}</p>}
       </div>
       <div className="tw-thumbs">
         {(row.media || []).map(m => (
@@ -221,22 +391,22 @@ function ReviewCard({ row, onDecide }) {
 
 // --- Missões ---
 
-const EMPTY_MISSION = { track: 'artist', day: '', category: 'networking', partner: '', title: '', description: '', points: 20, media_count: 1, approval: 'manual', hidden: false, active: true };
+const EMPTY_MISSION = { track: 'artist', day: '', category: 'networking', partner: '', title: '', description: '', points: 20, media_count: 1, approval: 'manual', hidden: false, active: true, position: 0 };
 
-function Missions() {
+function Missions({ campaign, partners }) {
   const [rows, setRows] = useState([]);
   const [edit, setEdit] = useState(null);
   const [surprise, setSurprise] = useState({ track: 'artist', title: '', description: '', points: 30, minutes: 20, media_count: 1 });
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from('tw_missions').select('*').order('track').order('day').order('position');
+    const { data } = await supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).order('track').order('day').order('position');
     setRows(data || []);
-  }, []);
+  }, [campaign.id]);
   useEffect(() => { load(); }, [load]);
 
   const save = async (e) => {
     e.preventDefault();
-    const row = { ...edit, day: edit.day ? Number(edit.day) : null, partner: edit.partner || null, points: Number(edit.points), media_count: Number(edit.media_count) };
+    const row = { ...edit, campaign_id: campaign.id, day: edit.day ? Number(edit.day) : null, partner: edit.partner || null, points: Number(edit.points), media_count: Number(edit.media_count) };
     const { error } = row.id
       ? await supabase.from('tw_missions').update(row).eq('id', row.id)
       : await supabase.from('tw_missions').insert([row]);
@@ -249,6 +419,7 @@ function Missions() {
     e.preventDefault();
     const now = new Date();
     const { error } = await supabase.from('tw_missions').insert([{
+      campaign_id: campaign.id,
       track: surprise.track,
       category: 'surpresa',
       title: surprise.title,
@@ -272,7 +443,7 @@ function Missions() {
 
   const groups = [
     ['Surpresas', rows.filter(m => m.category === 'surpresa')],
-    ...[1, 2, 3].map(d => [`Público · Dia ${d} — ${DAY_NAMES[d]}`, rows.filter(m => m.track === 'public' && m.category === 'dia' && m.day === d)]),
+    ...[1, 2, 3].map(d => [`Público · Dia ${d} — ${dayName(campaign, d)}`, rows.filter(m => m.track === 'public' && m.category === 'dia' && m.day === d)]),
     ['Artist Challenge', rows.filter(m => m.track === 'artist' && m.category !== 'surpresa')],
   ];
 
@@ -303,11 +474,11 @@ function Missions() {
           <h3 className="tw-h3">{edit.id ? 'Editar missão' : 'Nova missão'}</h3>
           <input className="tw-input" placeholder="Título" value={edit.title} onChange={e => setEdit({ ...edit, title: e.target.value })} required />
           <textarea className="tw-input" placeholder="Descrição / instruções" value={edit.description || ''} onChange={e => setEdit({ ...edit, description: e.target.value })} />
-          <div className="tw-grid tw-grid-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
+          <div className="tw-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
             <label className="tw-field"><span>Trilha</span><select className="tw-input" value={edit.track} onChange={e => setEdit({ ...edit, track: e.target.value })}><option value="public">Público</option><option value="artist">Artist Challenge</option></select></label>
             <label className="tw-field"><span>Categoria</span><select className="tw-input" value={edit.category} onChange={e => setEdit({ ...edit, category: e.target.value })}>{Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
             <label className="tw-field"><span>Dia</span><select className="tw-input" value={edit.day ?? ''} onChange={e => setEdit({ ...edit, day: e.target.value })}><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
-            <label className="tw-field"><span>Parceiro</span><select className="tw-input" value={edit.partner || ''} onChange={e => setEdit({ ...edit, partner: e.target.value })}><option value="">—</option>{Object.entries(PARTNERS).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select></label>
+            <label className="tw-field"><span>Parceiro</span><select className="tw-input" value={edit.partner || ''} onChange={e => setEdit({ ...edit, partner: e.target.value })}><option value="">—</option>{Object.values(partners).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
             <label className="tw-field"><span>Pontos</span><input className="tw-input" type="number" value={edit.points} onChange={e => setEdit({ ...edit, points: e.target.value })} /></label>
             <label className="tw-field"><span>Registros</span><input className="tw-input" type="number" min="1" max="3" value={edit.media_count} onChange={e => setEdit({ ...edit, media_count: e.target.value })} /></label>
             <label className="tw-field"><span>Aprovação</span><select className="tw-input" value={edit.approval} onChange={e => setEdit({ ...edit, approval: e.target.value })}><option value="auto">Automática</option><option value="manual">Manual</option></select></label>
@@ -329,7 +500,7 @@ function Missions() {
                     <td style={{ width: '50%' }}>
                       <b>{m.title}</b>
                       <div className="tw-row" style={{ gap: '0.3rem', marginTop: 4, flexWrap: 'wrap' }}>
-                        {m.partner && <span className="tw-chip" style={{ color: PARTNERS[m.partner]?.color }}>{PARTNERS[m.partner]?.name}</span>}
+                        {m.partner && <span className="tw-chip" style={{ color: partners[m.partner]?.color }}>{partners[m.partner]?.name || m.partner}</span>}
                         {m.hidden && <span className="tw-chip tw-chip-gold">Secreta</span>}
                         {m.ends_at && <span className="tw-chip tw-chip-bad">até {new Date(m.ends_at).toLocaleString('pt-BR', { day: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>}
                       </div>
@@ -354,21 +525,21 @@ function Missions() {
 
 // --- Credenciais NFC ---
 
-function Artists() {
+function Artists({ campaign }) {
   const [rows, setRows] = useState([]);
   const [missions, setMissions] = useState([]);
   const [saving, setSaving] = useState(null);
   const [print, setPrint] = useState(false);
-  const base = window.location.origin;
+  const base = `${window.location.origin}${campaignBase(campaign)}`;
 
   const load = useCallback(async () => {
     const [a, m] = await Promise.all([
-      supabase.from('tw_artists').select('*').order('slug'),
-      supabase.from('tw_missions').select('id, title').eq('hidden', true),
+      supabase.from('tw_artists').select('*').eq('campaign_id', campaign.id).order('slug'),
+      supabase.from('tw_missions').select('id, title').eq('campaign_id', campaign.id).eq('hidden', true),
     ]);
     setRows(a.data || []);
     setMissions(m.data || []);
-  }, []);
+  }, [campaign.id]);
   useEffect(() => { load(); }, [load]);
 
   const set = (id, patch) => setRows(rs => rs.map(r => (r.id === id ? { ...r, ...patch } : r)));
@@ -381,13 +552,19 @@ function Artists() {
     setSaving(null);
   };
 
+  const addSlot = async () => {
+    const n = rows.length + 1;
+    const slug = `artista-${String(n).padStart(2, '0')}`;
+    await supabase.from('tw_artists').insert([{ campaign_id: campaign.id, slug, name: `Artista ${String(n).padStart(2, '0')}` }]);
+    load();
+  };
+
   const uploadPhoto = async (r, file) => {
-    const path = `artists/${r.slug}-${Date.now()}.${file.name.split('.').pop()}`;
-    const { error } = await supabase.storage.from('tattooweek').upload(path, file, { contentType: file.type });
-    if (error) { alert(error.message); return; }
-    const url = supabase.storage.from('tattooweek').getPublicUrl(path).data.publicUrl;
-    set(r.id, { photo_url: url });
-    await supabase.from('tw_artists').update({ photo_url: url }).eq('id', r.id);
+    try {
+      const m = await uploadMedia(file, `artists/${campaign.id}`);
+      set(r.id, { photo_url: m.url });
+      await supabase.from('tw_artists').update({ photo_url: m.url }).eq('id', r.id);
+    } catch (e) { alert(e.message); }
   };
 
   if (print) {
@@ -399,13 +576,13 @@ function Artists() {
         </div>
         <p className="tw-p tw-noprint" style={{ fontSize: '0.85rem' }}>QR Code alternativo para quem não tem NFC. Grave no adesivo NFC a URL sem o “?src=qr”.</p>
         <div className="tw-badges">
-          {rows.map(r => (
+          {rows.filter(r => r.active).map(r => (
             <div key={r.id} className="tw-badge">
               <img src="/fotos artistas/logo mestres.png" alt="" style={{ height: 28, filter: 'invert(1)' }} />
               <h4>{r.name}</h4>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#a07800', marginBottom: 8 }}>TATTOO WEEK EXPERIENCE</div>
-              <QRCodeSVG value={`${base}/tattooweek/nfc/${r.slug}?src=qr`} size={140} />
-              <small>{base}/tattooweek/nfc/{r.slug}</small>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#a07800', marginBottom: 8 }}>{campaign.name.toUpperCase()}</div>
+              <QRCodeSVG value={`${base}/nfc/${r.slug}?src=qr`} size={140} />
+              <small>{base}/nfc/{r.slug}</small>
             </div>
           ))}
         </div>
@@ -416,11 +593,14 @@ function Artists() {
   return (
     <div className="tw-stack">
       <div className="tw-between" style={{ flexWrap: 'wrap' }}>
-        <h1 className="tw-h2">Credenciais NFC</h1>
-        <button className="tw-btn tw-btn-sm" onClick={() => setPrint(true)}><Printer size={14} /> Credenciais com QR para imprimir</button>
+        <h1 className="tw-h2">Credenciais NFC ({rows.length})</h1>
+        <div className="tw-row">
+          <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={addSlot}><Plus size={14} /> Credencial</button>
+          <button className="tw-btn tw-btn-sm" onClick={() => setPrint(true)}><Printer size={14} /> Imprimir com QR</button>
+        </div>
       </div>
       <div className="tw-notice">
-        Grave em cada adesivo NFC a URL da credencial (ex.: <b>{base}/tattooweek/nfc/artista-01</b>) com um app como “NFC Tools”, tipo de registro <b>URL</b>. A leitura abre a página do artista, registra a interação e pede a foto para o carimbo — não conta pontos sozinha.
+        Grave em cada adesivo NFC a URL da credencial (ex.: <b>{base}/nfc/artista-01</b>) com um app como “NFC Tools”, tipo de registro <b>URL</b>. A leitura abre a página do artista, registra a interação e pede a foto para o carimbo — não conta pontos sozinha.
       </div>
       {rows.map(r => (
         <div key={r.id} className="tw-card tw-stack">
@@ -432,10 +612,10 @@ function Artists() {
               </label>
               <div>
                 <span className="tw-chip tw-chip-gold">{r.slug}</span>
-                <div style={{ fontSize: '0.75rem', marginTop: 4 }}><a href={`/tattooweek/nfc/${r.slug}`} target="_blank" rel="noreferrer" className="tw-gold">{base}/tattooweek/nfc/{r.slug}</a></div>
+                <div style={{ fontSize: '0.75rem', marginTop: 4 }}><a href={`${base}/nfc/${r.slug}`} target="_blank" rel="noreferrer" className="tw-gold">{base}/nfc/{r.slug}</a></div>
               </div>
             </div>
-            <div style={{ background: '#fff', padding: 6, borderRadius: 8 }}><QRCodeSVG value={`${base}/tattooweek/nfc/${r.slug}?src=qr`} size={64} /></div>
+            <div style={{ background: '#fff', padding: 6, borderRadius: 8 }}><QRCodeSVG value={`${base}/nfc/${r.slug}?src=qr`} size={64} /></div>
           </div>
           <div className="tw-grid tw-grid-3">
             <input className="tw-input" placeholder="Nome" value={r.name || ''} onChange={e => set(r.id, { name: e.target.value })} />
@@ -463,52 +643,48 @@ function Artists() {
 // --- Participantes + exportação ---
 
 function toCsv(rows) {
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  if (Array.isArray(rows[0])) return rows.map(r => r.map(esc).join(';')).join('\n');
   if (!rows.length) return '';
   const cols = Object.keys(rows[0]);
-  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   return [cols.join(';'), ...rows.map(r => cols.map(c => esc(r[c])).join(';'))].join('\n');
 }
 
-function download(name, text) {
-  const blob = new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  a.click();
-}
-
-function People() {
+function People({ campaign }) {
   const navigate = useNavigate();
   const [rows, setRows] = useState(null);
   const [q, setQ] = useState('');
 
   useEffect(() => {
     (async () => {
-      const [p, r] = await Promise.all([
-        supabase.from('tw_participants').select('*').order('created_at', { ascending: false }),
-        supabase.from('tw_ranking').select('participant_id, track, points, missions_done'),
+      const [en, r] = await Promise.all([
+        supabase.from('tw_enrollments').select('track, created_at, participant:tw_participants(*)').eq('campaign_id', campaign.id),
+        supabase.from('tw_ranking').select('participant_id, track, points').eq('campaign_id', campaign.id),
       ]);
       const pts = {};
-      (r.data || []).forEach(x => { pts[`${x.participant_id}:${x.track}`] = x; });
-      setRows((p.data || []).map(x => ({
-        ...x,
-        public_points: pts[`${x.id}:public`]?.points || 0,
-        artist_points: pts[`${x.id}:artist`]?.points || 0,
-      })));
+      (r.data || []).forEach(x => { pts[`${x.participant_id}:${x.track}`] = x.points; });
+      const byId = {};
+      (en.data || []).forEach(e => {
+        if (!e.participant) return;
+        byId[e.participant.id] ||= { ...e.participant, tracks: [], joined: e.created_at };
+        byId[e.participant.id].tracks.push(e.track);
+      });
+      setRows(Object.values(byId).map(x => ({ ...x, public_points: pts[`${x.id}:public`] || 0, artist_points: pts[`${x.id}:artist`] || 0 }))
+        .sort((a, b) => b.joined.localeCompare(a.joined)));
     })();
-  }, []);
+  }, [campaign.id]);
 
   if (!rows) return <p className="tw-p">Carregando...</p>;
 
   const list = rows.filter(r => !q || `${r.name} ${r.email} ${r.instagram} ${r.phone}`.toLowerCase().includes(q.toLowerCase()));
 
-  const exportCsv = () => download('tattooweek-participantes.csv', toCsv(rows.map(r => ({
-    nome: r.name, email: r.email, telefone: r.phone, instagram: r.instagram, cidade: r.city,
-    publico: r.in_public ? 'sim' : 'não', artist_challenge: r.in_challenge ? 'sim' : 'não',
+  const exportCsv = () => downloadBlob(new Blob(['﻿' + toCsv(rows.map(r => ({
+    nome: r.name, email: r.email, telefone: r.phone, instagram: r.instagram, cidade: r.city, estudio: r.studio,
+    publico: r.tracks.includes('public') ? 'sim' : 'não', artist_challenge: r.tracks.includes('artist') ? 'sim' : 'não',
     pontos_publico: r.public_points, pontos_challenge: r.artist_points,
     ranking_publico: r.show_in_ranking ? 'sim' : 'não', autoriza_divulgacao: r.consent_marketing ? 'sim' : 'não',
-    cadastro: new Date(r.created_at).toLocaleString('pt-BR'),
-  }))));
+    inscricao: new Date(r.joined).toLocaleString('pt-BR'),
+  })))], { type: 'text/csv;charset=utf-8' }), `participantes-${campaign.slug}.csv`);
 
   return (
     <div className="tw-stack">
@@ -525,11 +701,14 @@ function People() {
               <tr key={r.id}>
                 <td><b>{r.name}</b><div className="tw-p" style={{ fontSize: '0.75rem' }}>{r.instagram} {r.city}</div></td>
                 <td style={{ fontSize: '0.78rem' }}>{r.email}<br />{r.phone}</td>
-                <td>{r.in_public && <span className="tw-chip">Público</span>} {r.in_challenge && <span className="tw-chip tw-chip-gold">Challenge</span>}</td>
+                <td>{r.tracks.includes('public') && <span className="tw-chip">Público</span>} {r.tracks.includes('artist') && <span className="tw-chip tw-chip-gold">Challenge</span>}</td>
                 <td>{r.public_points}</td>
                 <td>{r.artist_points}</td>
                 <td>{r.consent_marketing ? <span className="tw-chip tw-chip-ok">Sim</span> : <span className="tw-chip">Não</span>}</td>
-                <td><button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`/tattooweek/retrospectiva?p=${r.id}`)} title="Ver retrospectiva"><Film size={14} /></button></td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`${campaignBase(campaign)}/retrospectiva?p=${r.id}`)} title="Ver retrospectiva"><Film size={14} /></button>{' '}
+                  <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`/experience/perfil/${r.id}`)} title="Ver perfil"><Users size={14} /></button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -539,46 +718,231 @@ function People() {
   );
 }
 
-// --- Configuração ---
+// --- Campanha: editar, criar, duplicar ---
 
-function Config() {
-  const [cfg, setCfg] = useState(null);
+const EMPTY_CAMPAIGN = {
+  name: '', slug: '', event_name: '', tagline: '3 dias. 2 experiências. 1 grande história.', description: '', venue: '', city: '',
+  hero_image: '', event_days: ['', '', ''], day_names: DEFAULT_DAY_NAMES, unlock_all: false, music_url: '', partners: [],
+  prize_title: 'O Kit dos Mestres', prize_items: [], status: 'draft',
+};
+
+function slugify(s) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+async function copyCampaignContent(fromId, toId, copyArtists) {
+  const { data: missions } = await supabase.from('tw_missions').select('*').eq('campaign_id', fromId).neq('category', 'surpresa');
+  const idMap = {};
+  const newMissions = (missions || []).map(m => {
+    const { id, created_at, starts_at, ends_at, ...rest } = m;
+    void created_at; void starts_at; void ends_at;
+    idMap[id] = `${toId}-${id}`.slice(0, 120);
+    return { ...rest, id: idMap[id], campaign_id: toId };
+  });
+  if (newMissions.length) {
+    const { error } = await supabase.from('tw_missions').insert(newMissions);
+    if (error) throw error;
+  }
+  if (copyArtists) {
+    const { data: artists } = await supabase.from('tw_artists').select('slug, reveals_mission_id').eq('campaign_id', fromId).order('slug');
+    const slots = (artists || []).map((a, i) => ({
+      campaign_id: toId,
+      slug: a.slug,
+      name: `Artista ${String(i + 1).padStart(2, '0')}`,
+      reveals_mission_id: a.reveals_mission_id ? idMap[a.reveals_mission_id] || null : null,
+    }));
+    if (slots.length) {
+      const { error } = await supabase.from('tw_artists').insert(slots);
+      if (error) throw error;
+    }
+  }
+}
+
+function CampaignEditor({ campaign, partners, reload, isNew, onCreated }) {
+  const [f, setF] = useState(() => {
+    const src = isNew ? EMPTY_CAMPAIGN : campaign;
+    const days = [...(src.event_days || [])];
+    while (days.length < 3) days.push('');
+    return { ...src, event_days: days, day_names: { ...DEFAULT_DAY_NAMES, ...(src.day_names || {}) }, prizeText: (src.prize_items || []).join('\n') };
+  });
+  const [copy, setCopy] = useState({ from: campaign?.id || '', artists: true });
+  const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
-  useEffect(() => { loadConfig().then(setCfg); }, []);
-  if (!cfg) return <p className="tw-p">Carregando...</p>;
-
-  const save = async () => {
-    await Promise.all([
-      saveConfig('event_days', cfg.event_days),
-      saveConfig('unlock_all', cfg.unlock_all),
-      saveConfig('music_url', cfg.music_url || ''),
-    ]);
-    setMsg('Salvo!');
-    setTimeout(() => setMsg(''), 2000);
+  const upload = async (file) => {
+    try {
+      const m = await uploadMedia(file, 'campaigns');
+      setF(x => ({ ...x, hero_image: m.url }));
+    } catch (e) { setMsg(e.message); }
   };
 
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMsg('');
+    const { prizeText, id, created_at, ...rest } = f;
+    void created_at;
+    const row = {
+      ...rest,
+      slug: slugify(f.slug || f.name),
+      event_days: f.event_days.filter(Boolean),
+      prize_items: prizeText.split('\n').map(s => s.trim()).filter(Boolean),
+    };
+    try {
+      if (isNew) {
+        const newId = row.slug;
+        const { error } = await supabase.from('tw_campaigns').insert([{ ...row, id: newId }]);
+        if (error) throw error;
+        if (copy.from) await copyCampaignContent(copy.from, newId, copy.artists);
+        onCreated(newId);
+      } else {
+        const { error } = await supabase.from('tw_campaigns').update(row).eq('id', id);
+        if (error) throw error;
+        await reload();
+        setMsg('Salvo!');
+      }
+    } catch (err) {
+      setMsg(err.message);
+    }
+    setSaving(false);
+  };
+
+  const togglePartner = (pid) => setF(x => ({ ...x, partners: x.partners.includes(pid) ? x.partners.filter(p => p !== pid) : [...x.partners, pid] }));
+
   return (
-    <div className="tw-stack" style={{ maxWidth: 640 }}>
-      <h1 className="tw-h2">Configuração</h1>
+    <form className="tw-stack" style={{ maxWidth: 760 }} onSubmit={save}>
+      <h1 className="tw-h2">{isNew ? 'Nova campanha' : 'Campanha'}</h1>
+      {isNew && (
+        <div className="tw-card tw-card-gold tw-stack">
+          <h3 className="tw-h3"><Copy size={16} style={{ verticalAlign: -2 }} /> Reaproveitar uma campanha</h3>
+          <p className="tw-p" style={{ fontSize: '0.85rem' }}>Copia as missões (público e Artist Challenge) e as vagas de credenciais. Depois é só trocar identidade, parceiros e prêmios.</p>
+          <select className="tw-input" value={copy.from} onChange={e => setCopy({ ...copy, from: e.target.value })}>
+            <option value="">Começar do zero</option>
+            {campaign && <option value={campaign.id}>Copiar de: {campaign.name}</option>}
+          </select>
+          {copy.from && <label className="tw-check"><input type="checkbox" checked={copy.artists} onChange={e => setCopy({ ...copy, artists: e.target.checked })} /><span>Copiar também as vagas de credenciais NFC (com nomes zerados)</span></label>}
+        </div>
+      )}
+
       <div className="tw-card tw-stack">
-        <h3 className="tw-h3">Datas do evento</h3>
+        <h3 className="tw-h3">Identidade</h3>
+        <div className="tw-grid tw-grid-2">
+          <label className="tw-field"><span>Nome da experiência</span><input className="tw-input" placeholder="Masters Ink Experience" value={f.name} onChange={e => setF({ ...f, name: e.target.value, slug: isNew ? slugify(e.target.value) : f.slug })} required /></label>
+          <label className="tw-field"><span>Endereço (/experience/…)</span><input className="tw-input" value={f.slug} onChange={e => setF({ ...f, slug: slugify(e.target.value) })} required disabled={!isNew && f.slug === 'tattooweek'} /></label>
+          <label className="tw-field"><span>Nome do evento (“Meu …”)</span><input className="tw-input" placeholder="Masters Ink" value={f.event_name || ''} onChange={e => setF({ ...f, event_name: e.target.value })} required /></label>
+          <label className="tw-field"><span>Status</span><select className="tw-input" value={f.status} onChange={e => setF({ ...f, status: e.target.value })}><option value="draft">Rascunho (só admin vê na lista)</option><option value="active">Ativa</option><option value="finished">Encerrada (só leitura)</option></select></label>
+        </div>
+        <label className="tw-field"><span>Frase de efeito</span><input className="tw-input" value={f.tagline || ''} onChange={e => setF({ ...f, tagline: e.target.value })} /></label>
+        <label className="tw-field"><span>Descrição</span><textarea className="tw-input" value={f.description || ''} onChange={e => setF({ ...f, description: e.target.value })} /></label>
+        <div className="tw-grid tw-grid-2">
+          <label className="tw-field"><span>Local</span><input className="tw-input" value={f.venue || ''} onChange={e => setF({ ...f, venue: e.target.value })} /></label>
+          <label className="tw-field"><span>Cidade</span><input className="tw-input" value={f.city || ''} onChange={e => setF({ ...f, city: e.target.value })} /></label>
+        </div>
+        <div className="tw-row" style={{ flexWrap: 'wrap' }}>
+          {f.hero_image && <img src={f.hero_image} alt="" style={{ height: 80, borderRadius: 8 }} />}
+          <label className="tw-btn tw-btn-sm">Imagem de capa<input type="file" accept="image/*" hidden onChange={e => e.target.files[0] && upload(e.target.files[0])} /></label>
+          <input className="tw-input" style={{ flex: 1, minWidth: 200 }} placeholder="ou URL da imagem" value={f.hero_image || ''} onChange={e => setF({ ...f, hero_image: e.target.value })} />
+        </div>
+      </div>
+
+      <div className="tw-card tw-stack">
+        <h3 className="tw-h3">Datas e dias</h3>
         <p className="tw-p" style={{ fontSize: '0.85rem' }}>As missões de cada dia são liberadas à meia-noite da data.</p>
         <div className="tw-grid tw-grid-3">
           {[0, 1, 2].map(i => (
-            <label key={i} className="tw-field"><span>Dia {i + 1}</span>
-              <input className="tw-input" type="date" value={cfg.event_days[i] || ''} onChange={e => { const d = [...cfg.event_days]; d[i] = e.target.value; setCfg({ ...cfg, event_days: d }); }} />
+            <div key={i} className="tw-stack" style={{ gap: 0 }}>
+              <label className="tw-field"><span>Dia {i + 1}</span>
+                <input className="tw-input" type="date" value={f.event_days[i] || ''} onChange={e => { const d = [...f.event_days]; d[i] = e.target.value; setF({ ...f, event_days: d }); }} />
+              </label>
+              <input className="tw-input" placeholder="Nome do dia" value={f.day_names[i + 1] || ''} onChange={e => setF({ ...f, day_names: { ...f.day_names, [i + 1]: e.target.value } })} />
+            </div>
+          ))}
+        </div>
+        <label className="tw-check"><input type="checkbox" checked={!!f.unlock_all} onChange={e => setF({ ...f, unlock_all: e.target.checked })} /><span>Liberar os 3 dias agora (para testes antes do evento — desligue depois).</span></label>
+      </div>
+
+      <div className="tw-card tw-stack">
+        <h3 className="tw-h3">Parceiros desta campanha</h3>
+        <div className="tw-row" style={{ flexWrap: 'wrap' }}>
+          {Object.values(partners).map(p => (
+            <label key={p.id} className="tw-check" style={{ padding: '0.5rem 0.75rem' }}>
+              <input type="checkbox" checked={f.partners.includes(p.id)} onChange={() => togglePartner(p.id)} />
+              <span style={{ color: p.color, fontWeight: 800 }}>{p.name}</span>
             </label>
           ))}
         </div>
-        <label className="tw-check"><input type="checkbox" checked={!!cfg.unlock_all} onChange={e => setCfg({ ...cfg, unlock_all: e.target.checked })} /><span>Liberar os 3 dias agora (use para testes antes do evento — desligue depois).</span></label>
       </div>
+
+      <div className="tw-card tw-stack">
+        <h3 className="tw-h3">Premiação</h3>
+        <label className="tw-field"><span>Nome do grande prêmio</span><input className="tw-input" value={f.prize_title || ''} onChange={e => setF({ ...f, prize_title: e.target.value })} /></label>
+        <label className="tw-field"><span>Itens (um por linha)</span><textarea className="tw-input" style={{ minHeight: 110 }} value={f.prizeText} onChange={e => setF({ ...f, prizeText: e.target.value })} /></label>
+      </div>
+
       <div className="tw-card tw-stack">
         <h3 className="tw-h3">Trilha do vídeo</h3>
-        <p className="tw-p" style={{ fontSize: '0.85rem' }}>URL de um MP3 com licença para uso (suba no Storage do Supabase, bucket “tattooweek”). Vazio = vídeo sem música.</p>
-        <input className="tw-input" placeholder="https://...mp3" value={cfg.music_url || ''} onChange={e => setCfg({ ...cfg, music_url: e.target.value })} />
+        <p className="tw-p" style={{ fontSize: '0.85rem' }}>URL de um MP3 com licença para uso. Vazio = vídeo sem música.</p>
+        <input className="tw-input" placeholder="https://...mp3" value={f.music_url || ''} onChange={e => setF({ ...f, music_url: e.target.value })} />
       </div>
-      <div className="tw-row"><button className="tw-btn tw-btn-primary" onClick={save}><Save size={16} /> Salvar</button><span className="tw-gold">{msg}</span></div>
+
+      <div className="tw-row">
+        <button className="tw-btn tw-btn-primary" disabled={saving}><Save size={16} /> {saving ? 'Salvando...' : isNew ? 'Criar campanha' : 'Salvar'}</button>
+        <span className="tw-gold">{msg}</span>
+      </div>
+    </form>
+  );
+}
+
+// --- Parceiros ---
+
+function Partners({ partners, reload }) {
+  const [rows, setRows] = useState(() => Object.values(partners).map(p => ({ ...p })));
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => { setRows(Object.values(partners).map(p => ({ ...p }))); }, [partners]);
+
+  const set = (i, patch) => setRows(rs => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+
+  const save = async (r) => {
+    const { created_at, ...row } = r;
+    void created_at;
+    const id = r.id || slugify(r.name);
+    const { error } = await supabase.from('tw_partners').upsert({ ...row, id });
+    setMsg(error ? error.message : `${r.name} salvo!`);
+    if (!error) reload();
+  };
+
+  const uploadLogo = async (i, file) => {
+    try {
+      const m = await uploadMedia(file, 'partners');
+      set(i, { logo_url: m.url });
+    } catch (e) { setMsg(e.message); }
+  };
+
+  return (
+    <div className="tw-stack" style={{ maxWidth: 820 }}>
+      <div className="tw-between">
+        <h1 className="tw-h2">Parceiros</h1>
+        <button className="tw-btn tw-btn-sm" onClick={() => setRows(rs => [...rs, { id: '', name: '', color: '#eec358', url: '', role: '', logo_url: '', active: true }])}><Plus size={14} /> Novo parceiro</button>
+      </div>
+      <p className="tw-p" style={{ fontSize: '0.85rem' }}>Os parceiros ficam disponíveis para todas as campanhas. Escolha quais participam de cada uma na aba Campanha.</p>
+      {msg && <div className="tw-notice">{msg}</div>}
+      {rows.map((r, i) => (
+        <div key={r.id || `new-${i}`} className="tw-card tw-stack">
+          <div className="tw-grid tw-grid-3">
+            <input className="tw-input" placeholder="Nome" value={r.name} onChange={e => set(i, { name: e.target.value })} />
+            <input className="tw-input" placeholder="Site ou Instagram (https://...)" value={r.url || ''} onChange={e => set(i, { url: e.target.value })} />
+            <div className="tw-row"><input type="color" value={r.color || '#eec358'} onChange={e => set(i, { color: e.target.value })} style={{ width: 46, height: 46, border: 0, background: 'none' }} /><span className="tw-p" style={{ fontSize: '0.8rem' }}>Cor</span></div>
+          </div>
+          <input className="tw-input" placeholder="Papel na experiência (ex.: Desafios técnicos e produtos para premiação)" value={r.role || ''} onChange={e => set(i, { role: e.target.value })} />
+          <div className="tw-row" style={{ flexWrap: 'wrap' }}>
+            {r.logo_url && <img src={r.logo_url} alt="" style={{ height: 36 }} />}
+            <label className="tw-btn tw-btn-sm tw-btn-ghost">Logo<input type="file" accept="image/*" hidden onChange={e => e.target.files[0] && uploadLogo(i, e.target.files[0])} /></label>
+            <button className="tw-btn tw-btn-sm tw-btn-primary" onClick={() => save(r)} disabled={!r.name}><Save size={14} /> Salvar</button>
+            {r.id && <span className="tw-chip">{r.id}</span>}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

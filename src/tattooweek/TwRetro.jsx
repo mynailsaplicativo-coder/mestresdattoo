@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, Pause, Download, Share2, Loader2, Film } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate } from './TwShell';
-import { useTwParticipant, loadConfig, isAdmin, trackEvent, DAY_NAMES } from './twData';
+import { useTwParticipant, useCampaign, isAdmin, trackEvent, dayName, campaignPartners } from './twData';
 
 // Vídeo vertical 720x1280, ~30–60s: abertura, dia 1, dia 2, dia 3, encerramento.
 const W = 720;
@@ -15,15 +15,18 @@ const VIDEO_SEC = 4;
 
 export default function TwRetro() {
   const tw = useTwParticipant();
+  const { campaign } = useCampaign();
   const [params] = useSearchParams();
   const adminView = params.get('p') && isAdmin(tw.user);
+  // Quem está só no Artist Challenge também tem retrospectiva
+  const enrolledArtist = tw.participant && tw.isEnrolled(campaign.id, 'artist');
 
   return (
     <TwShell>
-      {adminView
-        ? <RetroLoader participantId={params.get('p')} />
+      {adminView || enrolledArtist
+        ? <RetroLoader participantId={adminView ? params.get('p') : tw.participant.id} />
         : (
-          <JoinGate tw={tw} mode="public">
+          <JoinGate tw={tw} track="public">
             {tw.participant && <RetroLoader participantId={tw.participant.id} />}
           </JoinGate>
         )}
@@ -33,14 +36,14 @@ export default function TwRetro() {
 
 function RetroLoader({ participantId }) {
   const navigate = useNavigate();
+  const { campaign: cfg, partners, base } = useCampaign();
   const [state, setState] = useState(null);
 
   useEffect(() => {
     (async () => {
-      const [cfg, p, s] = await Promise.all([
-        loadConfig(),
+      const [p, s] = await Promise.all([
         supabase.from('tw_participants').select('*').eq('id', participantId).single(),
-        supabase.from('tw_submissions').select('*, mission:tw_missions(*)').eq('participant_id', participantId).eq('status', 'approved').order('created_at'),
+        supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participantId).eq('mission.campaign_id', cfg.id).eq('status', 'approved').order('created_at'),
       ]);
       const dayOf = (sub) => {
         if (sub.mission?.day) return sub.mission.day;
@@ -61,9 +64,13 @@ function RetroLoader({ participantId }) {
           byDay[d] = byDay[d].length ? Array.from({ length: keep }, (_, i) => byDay[d][Math.floor(i * step)]) : [];
         });
       }
-      setState({ participant: p.data, byDay, total, musicUrl: cfg.music_url });
+      setState({
+        participant: p.data, byDay, total, musicUrl: cfg.music_url,
+        campaign: cfg,
+        partnerLine: campaignPartners(cfg, partners).filter(x => x.id !== 'mestres').map(x => x.name.toUpperCase()).join('  ·  '),
+      });
     })();
-  }, [participantId]);
+  }, [participantId, cfg, partners]);
 
   if (!state) return <div className="tw-center-screen">Montando sua retrospectiva...</div>;
 
@@ -73,8 +80,8 @@ function RetroLoader({ participantId }) {
         <div style={{ maxWidth: 380 }}>
           <Film size={48} color="var(--tw-gold)" />
           <h1 className="tw-h2" style={{ marginTop: '1rem' }}>Seu vídeo começa aqui</h1>
-          <p className="tw-p" style={{ margin: '0.5rem 0 1.5rem' }}>Cumpra as missões do Meu Tattoo Week. Cada foto ou vídeo aprovado vira uma cena da sua retrospectiva.</p>
-          <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => navigate('/tattooweek/meu')}>Ir para as missões</button>
+          <p className="tw-p" style={{ margin: '0.5rem 0 1.5rem' }}>Cumpra as missões do Meu {cfg.event_name}. Cada foto ou vídeo aprovado vira uma cena da sua retrospectiva.</p>
+          <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => navigate(`${base}/meu`)}>Ir para as missões</button>
         </div>
       </div>
     );
@@ -134,6 +141,17 @@ function text(ctx, str, x, y, size, color = '#fff', weight = 900, align = 'cente
   ctx.fillText(str, x, y);
 }
 
+// Diminui a fonte até caber na largura (nomes de eventos longos)
+function fitText(ctx, str, x, y, size, color = '#fff', weight = 900) {
+  let s = size;
+  ctx.font = `${weight} ${s}px Inter, system-ui, sans-serif`;
+  while (s > 18 && ctx.measureText(str).width > W - 80) {
+    s -= 4;
+    ctx.font = `${weight} ${s}px Inter, system-ui, sans-serif`;
+  }
+  text(ctx, str, x, y, s, color, weight);
+}
+
 function wrap(ctx, str, maxW) {
   const words = (str || '').split(' ');
   const lines = [];
@@ -146,7 +164,7 @@ function wrap(ctx, str, maxW) {
   return lines;
 }
 
-function RetroPlayer({ participant, byDay, musicUrl }) {
+function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine }) {
   const canvasRef = useRef(null);
   const assetsRef = useRef(new Map());
   const logoRef = useRef(null);
@@ -226,17 +244,19 @@ function RetroPlayer({ participant, byDay, musicUrl }) {
           ctx.drawImage(logoRef.current, (W - lw) / 2, 330, lw, lh);
         }
         text(ctx, 'MEU', W / 2, 640, 64, GOLD);
-        text(ctx, 'TATTOO WEEK', W / 2, 730, 92);
+        fitText(ctx, (campaign.event_name || 'EVENTO').toUpperCase(), W / 2, 730, 92);
         text(ctx, (scene.name || '').toUpperCase(), W / 2, 830, 40, 'rgba(255,255,255,0.7)', 700);
       } else if (scene.kind === 'day') {
         text(ctx, `DIA ${scene.day}`, W / 2, 600, 150, GOLD);
-        text(ctx, DAY_NAMES[scene.day].toUpperCase(), W / 2, 700, 56);
+        fitText(ctx, dayName(campaign, scene.day).toUpperCase(), W / 2, 700, 56);
       } else if (scene.kind === 'outro') {
-        text(ctx, 'TATTOO WEEK', W / 2, 560, 80);
-        text(ctx, 'EXPERIENCE', W / 2, 640, 80, GOLD);
+        const words = campaign.name.toUpperCase().split(' ');
+        const last = words.length > 1 ? words.pop() : '';
+        fitText(ctx, words.join(' '), W / 2, 560, 80);
+        if (last) fitText(ctx, last, W / 2, 640, 80, GOLD);
         text(ctx, 'uma realização Mestres da Tattoo', W / 2, 730, 32, 'rgba(255,255,255,0.75)', 600);
-        if (scene.branded) {
-          text(ctx, 'BRONC  ·  STENCILFLOW  ·  INK AUTHORITY', W / 2, 1080, 26, 'rgba(255,255,255,0.5)', 800);
+        if (scene.branded && partnerLine) {
+          fitText(ctx, partnerLine, W / 2, 1080, 26, 'rgba(255,255,255,0.5)', 800);
         }
       }
       ctx.globalAlpha = 1;
@@ -254,7 +274,7 @@ function RetroPlayer({ participant, byDay, musicUrl }) {
         ctx.fillRect(x, 24, bw * fill, 5);
       });
     }
-  }, [scenes]);
+  }, [scenes, campaign, partnerLine]);
 
   // Primeiro quadro
   useEffect(() => { if (ready) draw(0, true); }, [ready, draw]);
@@ -321,7 +341,7 @@ function RetroPlayer({ participant, byDay, musicUrl }) {
       const ext = type.includes('mp4') ? 'mp4' : 'webm';
       setOutput({ url: URL.createObjectURL(blob), blob, ext, type });
       setRecording(false);
-      trackEvent('video_generated', branded ? 'branded' : 'clean', participant?.id);
+      trackEvent('video_generated', branded ? 'branded' : 'clean', participant?.id, campaign.id);
     };
     recRef.current = rec;
     rec.start(250);
@@ -332,20 +352,20 @@ function RetroPlayer({ participant, byDay, musicUrl }) {
 
   useEffect(() => () => { cancelAnimationFrame(rafRef.current); audioRef.current?.pause(); }, []);
 
-  const fileName = `meu-tattoo-week.${output?.ext}`;
+  const fileName = `meu-${campaign.slug}.${output?.ext}`;
   const canShareFile = output && navigator.canShare?.({ files: [new File([output.blob], fileName, { type: output.type })] });
 
   const share = async () => {
     try {
-      await navigator.share({ files: [new File([output.blob], fileName, { type: output.type })], title: 'Meu Tattoo Week' });
-      trackEvent('video_shared', 'native', participant?.id);
+      await navigator.share({ files: [new File([output.blob], fileName, { type: output.type })], title: `Meu ${campaign.event_name}` });
+      trackEvent('video_shared', 'native', participant?.id, campaign.id);
     } catch { /* usuário cancelou */ }
   };
 
   return (
     <div className="tw-wrap" style={{ maxWidth: 520 }}>
       <span className="tw-kicker">Minha retrospectiva</span>
-      <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem' }}>Meu Tattoo Week</h1>
+      <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem' }}>Meu {campaign.event_name}</h1>
 
       <div className="tw-retro-stage">
         <canvas ref={canvasRef} width={W} height={H} />
@@ -382,7 +402,7 @@ function RetroPlayer({ participant, byDay, musicUrl }) {
             <h3 className="tw-h3">Seu vídeo está pronto 🎬</h3>
             <video src={output.url} controls playsInline style={{ width: '100%', borderRadius: 10, maxHeight: 420, background: '#000' }} />
             {canShareFile && <button className="tw-btn tw-btn-primary tw-btn-block" onClick={share}><Share2 size={18} /> Compartilhar</button>}
-            <a className="tw-btn tw-btn-block" href={output.url} download={fileName} onClick={() => trackEvent('video_shared', 'download', participant?.id)}><Download size={18} /> Baixar vídeo</a>
+            <a className="tw-btn tw-btn-block" href={output.url} download={fileName} onClick={() => trackEvent('video_shared', 'download', participant?.id, campaign.id)}><Download size={18} /> Baixar vídeo</a>
             <button className="tw-btn tw-btn-ghost tw-btn-sm" onClick={() => setOutput(null)}>Gerar de novo</button>
           </div>
         )}

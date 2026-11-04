@@ -1,77 +1,88 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
-import { Home, Camera, Swords, Trophy, Film, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap } from 'lucide-react';
+import { Home, Camera, Swords, Trophy, Film, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { submitMission, useCountdown, CATEGORY_LABELS, PARTNERS } from './twData';
+import { submitMission, useCountdown, useCampaign, CATEGORY_LABELS, DEFAULT_PARTNERS } from './twData';
 import './tattooweek.css';
-
-const NAV = [
-  { to: '/tattooweek', label: 'Início', icon: Home },
-  { to: '/tattooweek/meu', label: 'Meu TW', icon: Camera },
-  { to: '/tattooweek/artist', label: 'Challenge', icon: Swords },
-  { to: '/tattooweek/ranking', label: 'Ranking', icon: Trophy },
-  { to: '/tattooweek/retrospectiva', label: 'Vídeo', icon: Film },
-];
 
 export function TwShell({ children }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const ctx = useCampaign();
+  const base = ctx?.base;
 
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+
+  const nav = base
+    ? [
+      { to: base, label: 'Início', icon: Home },
+      { to: `${base}/meu`, label: 'Missões', icon: Camera },
+      { to: `${base}/artist`, label: 'Challenge', icon: Swords },
+      { to: `${base}/ranking`, label: 'Ranking', icon: Trophy },
+      { to: `${base}/retrospectiva`, label: 'Vídeo', icon: Film },
+    ]
+    : [{ to: '/experience', label: 'Experiências', icon: Home }];
+
+  const [first, ...rest] = (ctx?.campaign.name || 'Mestres Experience').split(' ');
 
   return (
     <div className="tw">
       <header className="tw-top">
-        <button className="tw-top-brand" onClick={() => navigate('/tattooweek')}>
+        <button className="tw-top-brand" onClick={() => navigate(base || '/experience')}>
           <img src="/fotos artistas/logo mestres.png" alt="Mestres da Tattoo" />
-          <span>Tattoo Week<br />Experience</span>
+          <span>{rest.length ? <>{first}<br />{rest.join(' ')}</> : first}</span>
         </button>
         <nav className="tw-top-links">
-          {NAV.map(n => (
+          {nav.map(n => (
             <button key={n.to} className={pathname === n.to ? 'on' : ''} onClick={() => navigate(n.to)}>{n.label}</button>
           ))}
-          <button className={pathname === '/tattooweek/premiacao' ? 'on' : ''} onClick={() => navigate('/tattooweek/premiacao')}>Premiação</button>
+          {base && <button className={pathname === `${base}/premiacao` ? 'on' : ''} onClick={() => navigate(`${base}/premiacao`)}>Premiação</button>}
         </nav>
         <div className="tw-row">
           <SignedOut>
             <SignInButton mode="modal"><button className="tw-btn tw-btn-sm">Entrar</button></SignInButton>
           </SignedOut>
-          <SignedIn><UserButton /></SignedIn>
+          <SignedIn>
+            <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate('/experience/perfil')} aria-label="Meu perfil"><UserRound size={16} /></button>
+            <UserButton />
+          </SignedIn>
         </div>
       </header>
       {children}
-      <nav className="tw-bottom">
-        {NAV.map(n => (
-          <button key={n.to} className={pathname === n.to ? 'on' : ''} onClick={() => navigate(n.to)}>
-            <n.icon size={20} />{n.label}
-          </button>
-        ))}
-      </nav>
+      {base && (
+        <nav className="tw-bottom">
+          {nav.map(n => (
+            <button key={n.to} className={pathname === n.to ? 'on' : ''} onClick={() => navigate(n.to)}>
+              <n.icon size={20} />{n.label}
+            </button>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }
 
-// Tela de entrada: login (Clerk) + cadastro simples na campanha
-export function JoinGate({ tw, mode, children }) {
-  const { user, isSignedIn, loading, participant, setParticipant } = tw;
+// Tela de entrada: login (Clerk) + cadastro (uma vez) + inscrição na campanha
+export function JoinGate({ tw, track, children }) {
+  const { campaign } = useCampaign();
+  const { user, isSignedIn, loading, participant, setParticipant, isEnrolled, setEnrollments } = tw;
   const [form, setForm] = useState({ name: '', phone: '', instagram: '', city: '', show_in_ranking: true, consent_media: false, consent_marketing: false });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const label = track === 'artist' ? 'Artist Challenge' : `Meu ${campaign.event_name || 'evento'}`;
 
   useEffect(() => {
     if (user) setForm(f => ({ ...f, name: f.name || user.fullName || '' }));
   }, [user]);
 
-  const joined = participant && (mode === 'artist' ? participant.in_challenge : participant.in_public);
-
-  if (loading) return <div className="tw-center-screen"><Loader2 className="tw-spin" /> Carregando...</div>;
+  if (loading) return <div className="tw-center-screen"><Loader2 className="tw-spin" /></div>;
 
   if (!isSignedIn) {
     return (
       <div className="tw-center-screen">
         <div style={{ maxWidth: 420 }}>
-          <span className="tw-kicker">{mode === 'artist' ? 'Artist Challenge' : 'Meu Tattoo Week'}</span>
+          <span className="tw-kicker">{label}</span>
           <h1 className="tw-h2" style={{ marginTop: '0.5rem' }}>Entre para participar</h1>
           <p className="tw-p" style={{ margin: '0.5rem 0 1.5rem' }}>Sem aplicativo. Use seu e-mail ou Google e comece em menos de um minuto.</p>
           <SignInButton mode="modal"><button className="tw-btn tw-btn-primary tw-btn-block">Entrar / Criar conta</button></SignInButton>
@@ -80,47 +91,55 @@ export function JoinGate({ tw, mode, children }) {
     );
   }
 
-  if (joined) return children;
+  if (participant && isEnrolled(campaign.id, track)) return children;
 
   const handleJoin = async (e) => {
     e.preventDefault();
     if (!participant && !form.consent_media) { setError('Precisamos da sua autorização para usar suas fotos no seu vídeo.'); return; }
     setSaving(true);
     setError('');
-    const flags = mode === 'artist' ? { in_challenge: true } : { in_public: true };
-    let res;
-    if (participant) {
-      res = await supabase.from('tw_participants').update({ ...flags }).eq('id', participant.id).select().single();
-    } else {
-      res = await supabase.from('tw_participants').insert([{
+    let p = participant;
+    const flag = track === 'artist' ? { in_challenge: true } : { in_public: true };
+    if (!p) {
+      const res = await supabase.from('tw_participants').insert([{
         clerk_id: user.id,
         email: user.primaryEmailAddress?.emailAddress,
         name: form.name,
         phone: form.phone,
         instagram: form.instagram,
         city: form.city,
+        photo_url: user.imageUrl,
         show_in_ranking: form.show_in_ranking,
         consent_media: form.consent_media,
         consent_marketing: form.consent_marketing,
-        in_public: mode !== 'artist',
-        in_challenge: mode === 'artist',
+        in_public: track !== 'artist',
+        in_challenge: track === 'artist',
       }]).select().single();
+      if (res.error) { setSaving(false); setError(res.error.message); return; }
+      p = res.data;
+    } else if (!p[track === 'artist' ? 'in_challenge' : 'in_public']) {
+      const res = await supabase.from('tw_participants').update(flag).eq('id', p.id).select().single();
+      if (res.data) p = res.data;
     }
+    const en = await supabase.from('tw_enrollments')
+      .upsert({ participant_id: p.id, campaign_id: campaign.id, track }, { onConflict: 'participant_id,campaign_id,track' })
+      .select().single();
     setSaving(false);
-    if (res.error) { setError(res.error.message); return; }
-    setParticipant(res.data);
+    if (en.error) { setError(en.error.message); return; }
+    setEnrollments(list => [...list, en.data]);
+    setParticipant(p);
   };
 
-  // Já tem cadastro em uma experiência: só confirma a entrada na outra
+  // Já tem cadastro: só confirma a inscrição nesta campanha/trilha
   if (participant) {
     return (
       <div className="tw-center-screen">
         <form onSubmit={handleJoin} style={{ maxWidth: 420, width: '100%' }} className="tw-stack">
-          <span className="tw-kicker">{mode === 'artist' ? 'Artist Challenge' : 'Meu Tattoo Week'}</span>
+          <span className="tw-kicker">{label}</span>
           <h1 className="tw-h2">Olá, {participant.name.split(' ')[0]}!</h1>
-          <p className="tw-p">{mode === 'artist'
+          <p className="tw-p">{track === 'artist'
             ? 'O Artist Challenge é a competição dos tatuadores: networking, conteúdo e desafios dos parceiros.'
-            : 'Entre também no Meu Tattoo Week: 30 missões em 3 dias e um vídeo só seu no final.'}</p>
+            : `Entre no ${label}: missões todos os dias e um vídeo só seu no final.`}</p>
           {error && <div className="tw-error">{error}</div>}
           <button className="tw-btn tw-btn-primary tw-btn-block" disabled={saving}>{saving ? 'Entrando...' : 'Quero participar'}</button>
         </form>
@@ -131,15 +150,15 @@ export function JoinGate({ tw, mode, children }) {
   return (
     <div className="tw-wrap" style={{ maxWidth: 520 }}>
       <form onSubmit={handleJoin} className="tw-stack">
-        <span className="tw-kicker">{mode === 'artist' ? 'Inscrição — Artist Challenge' : 'Inscrição — Meu Tattoo Week'}</span>
+        <span className="tw-kicker">Inscrição — {label}</span>
         <h1 className="tw-h2">Seu cadastro</h1>
-        <p className="tw-p">Rapidinho: só o necessário para acompanhar seu progresso e te entregar o vídeo.</p>
+        <p className="tw-p">Rapidinho: só o necessário para acompanhar seu progresso e te entregar o vídeo. Vale para as próximas experiências também.</p>
         <label className="tw-field"><span>Nome</span><input className="tw-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></label>
         <label className="tw-field"><span>E-mail</span><input className="tw-input" value={user.primaryEmailAddress?.emailAddress || ''} disabled /></label>
         <label className="tw-field"><span>Telefone / WhatsApp</span><input className="tw-input" type="tel" inputMode="tel" placeholder="(11) 99999-9999" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required /></label>
         <div className="tw-grid tw-grid-2">
-          <label className="tw-field"><span>Instagram {mode === 'artist' ? '' : '(opcional)'}</span><input className="tw-input" placeholder="@seuperfil" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} required={mode === 'artist'} /></label>
-          <label className="tw-field"><span>Cidade / Estado</span><input className="tw-input" placeholder="São Paulo, SP" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} required={mode === 'artist'} /></label>
+          <label className="tw-field"><span>Instagram {track === 'artist' ? '' : '(opcional)'}</span><input className="tw-input" placeholder="@seuperfil" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} required={track === 'artist'} /></label>
+          <label className="tw-field"><span>Cidade / Estado</span><input className="tw-input" placeholder="São Paulo, SP" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} required={track === 'artist'} /></label>
         </div>
         <label className="tw-check">
           <input type="checkbox" checked={form.consent_media} onChange={e => setForm({ ...form, consent_media: e.target.checked })} />
@@ -151,7 +170,7 @@ export function JoinGate({ tw, mode, children }) {
         </label>
         <label className="tw-check">
           <input type="checkbox" checked={!form.show_in_ranking} onChange={e => setForm({ ...form, show_in_ranking: !e.target.checked })} />
-          <span>Participação privada: não mostrar meu nome no ranking público.</span>
+          <span>Participação privada: não mostrar meu nome no ranking nem meu perfil público.</span>
         </label>
         {error && <div className="tw-error">{error}</div>}
         <button className="tw-btn tw-btn-primary tw-btn-block" disabled={saving}>{saving ? 'Salvando...' : 'Começar'}</button>
@@ -162,6 +181,7 @@ export function JoinGate({ tw, mode, children }) {
 
 // Envio de missão: escolhe/captura fotos ou vídeos e envia
 export function MissionSheet({ mission, participant, artist, onClose, onDone }) {
+  const partners = useCampaign()?.partners || DEFAULT_PARTNERS;
   const slots = Math.max(1, mission.media_count || 1);
   const [files, setFiles] = useState([]);
   const [note, setNote] = useState('');
@@ -189,7 +209,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
     setSending(false);
   };
 
-  const partner = mission.partner && PARTNERS[mission.partner];
+  const partner = mission.partner && partners[mission.partner];
 
   return (
     <div className="tw-sheet-bg" onClick={onClose}>
@@ -257,12 +277,10 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
   );
 }
 
-export function PartnerStrip() {
+export function PartnerStrip({ list }) {
   return (
     <div className="tw-partners">
-      {['bronc', 'stencilflow', 'inkauthority'].map(k => (
-        <span key={k} className="tw-partner" style={{ color: PARTNERS[k].color }}>{PARTNERS[k].name}</span>
-      ))}
+      {list.map(p => <span key={p.id} className="tw-partner" style={{ color: p.color }}>{p.name}</span>)}
     </div>
   );
 }
@@ -277,9 +295,26 @@ export function SurpriseCard({ mission, sub, onOpen }) {
       </div>
       <h3 className="tw-h3" style={{ margin: '0.5rem 0' }}>{mission.title}</h3>
       {mission.description && <p className="tw-p" style={{ fontSize: '0.88rem', marginBottom: '0.7rem' }}>{mission.description}</p>}
-      {sub
+      {sub && sub.status !== 'rejected'
         ? <span className="tw-chip tw-chip-ok"><Check size={12} /> Enviada</span>
         : <button className="tw-btn tw-btn-primary tw-btn-sm" onClick={onOpen}>Cumprir agora · +{mission.points} pts</button>}
+    </div>
+  );
+}
+
+export function BadgeGrid({ badges, all, small }) {
+  const earned = new Set(badges.map(b => b.id));
+  const list = all || badges;
+  if (!list.length) return <div className="tw-empty" style={{ padding: '1.25rem' }}>Cumpra missões para ganhar selos.</div>;
+  return (
+    <div className={`tw-badge-grid ${small ? 'small' : ''}`}>
+      {list.map(b => (
+        <div key={b.id} className={`tw-seal ${earned.has(b.id) ? 'on' : ''}`} title={b.desc}>
+          <span className="tw-seal-icon">{b.icon}</span>
+          <b>{b.title}</b>
+          {!small && <small>{b.desc}</small>}
+        </div>
+      ))}
     </div>
   );
 }

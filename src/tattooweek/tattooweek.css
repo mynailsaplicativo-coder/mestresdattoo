@@ -243,3 +243,33 @@ select.tw-input option { background: #111; }
 
 .tw-empty { text-align: center; padding: 2.5rem 1rem; color: var(--tw-muted); border: 1px dashed var(--tw-line); border-radius: 14px; }
 .tw-center-screen { min-height: 70vh; display: grid; place-items: center; padding: 2rem 1rem; text-align: center; }
+
+/* Selos digitais */
+.tw-badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; }
+.tw-badge-grid.small { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.tw-seal { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.25rem; padding: 0.8rem 0.5rem; border-radius: 12px; background: var(--tw-card); border: 1px solid var(--tw-line); opacity: 0.35; filter: grayscale(1); }
+.tw-seal.on { opacity: 1; filter: none; border-color: rgba(238, 195, 88, 0.45); background: linear-gradient(160deg, rgba(238, 195, 88, 0.12), var(--tw-card) 70%); }
+.tw-seal-icon { font-size: 1.8rem; line-height: 1; }
+.tw-seal b { font-size: 0.74rem; font-weight: 800; line-height: 1.2; }
+.tw-seal small { font-size: 0.66rem; color: var(--tw-muted); line-height: 1.3; }
+.tw-badge-grid.small .tw-seal-icon { font-size: 1.4rem; }
+
+/* Perfil */
+.tw-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 2px solid var(--tw-gold); background: #111; flex: 0 0 96px; display: grid; place-items: center; font-size: 2rem; font-weight: 900; color: var(--tw-gold); overflow: hidden; }
+.tw-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.tw-history { display: flex; gap: 0.9rem; align-items: center; }
+.tw-history-img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: #111; flex: 0 0 64px; }
+
+/* Card de resultado */
+.tw-result-stage { width: 100%; max-width: 360px; margin: 0 auto; aspect-ratio: 9 / 16; border-radius: 18px; overflow: hidden; border: 1px solid rgba(238, 195, 88, 0.3); background: #000; }
+.tw-result-stage canvas { width: 100%; height: 100%; display: block; }
+
+/* Relatório para impressão */
+.tw-report h2 { margin-top: 1.5rem; }
+.tw-report-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.tw-report-table td, .tw-report-table th { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--tw-line); text-align: left; }
+.tw-report-table td:last-child, .tw-report-table th:last-child { text-align: right; }
+@media print {
+  .tw-report, .tw-report * { color: #000 !important; background: #fff !important; border-color: #ddd !important; }
+  .tw-report .tw-card { border: 1px solid #ddd; break-inside: avoid; }
+}

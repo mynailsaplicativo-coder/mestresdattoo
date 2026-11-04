@@ -1,18 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { useUser } from '@clerk/clerk-react';
 import { supabase } from '../supabaseClient';
 
 export const ADMIN_EMAILS = ['yurilojavirtual@gmail.com'];
 
-// url vazia = sem botão de link (preencha com o site oficial do parceiro)
-export const PARTNERS = {
-  bronc: { name: 'Bronc', url: '', color: '#e4572e', role: 'Desafios técnicos e produtos para premiação' },
-  stencilflow: { name: 'STENCILFLOW', url: 'https://stencilflowapp.com.br', color: '#00ff80', role: 'Desafios criativos e acesso Pro' },
-  inkauthority: { name: 'Ink Authority', url: '', color: '#7aa2ff', role: 'Desafios educativos e aulas' },
-  mestres: { name: 'Mestres da Tattoo', url: '/', color: '#eec358', role: 'Idealização e realização' },
+// Usado só se a tabela tw_partners estiver vazia
+export const DEFAULT_PARTNERS = {
+  bronc: { id: 'bronc', name: 'Bronc', url: '', color: '#e4572e', role: 'Desafios técnicos e produtos para premiação' },
+  stencilflow: { id: 'stencilflow', name: 'STENCILFLOW', url: 'https://stencilflowapp.com.br', color: '#00ff80', role: 'Desafios criativos e acesso Pro' },
+  inkauthority: { id: 'inkauthority', name: 'Ink Authority', url: '', color: '#7aa2ff', role: 'Desafios educativos e aulas' },
+  mestres: { id: 'mestres', name: 'Mestres da Tattoo', url: '/', color: '#eec358', role: 'Idealização e realização' },
 };
 
-export const DAY_NAMES = { 1: 'A chegada', 2: 'A conexão', 3: 'A despedida' };
+export const DEFAULT_DAY_NAMES = { 1: 'A chegada', 2: 'A conexão', 3: 'A despedida' };
 
 export const CATEGORY_LABELS = {
   networking: 'Networking',
@@ -30,32 +30,62 @@ export function isAdmin(user) {
   return ADMIN_EMAILS.includes(user?.primaryEmailAddress?.emailAddress);
 }
 
-// --- Config ---
+// --- Campanha ---
 
-export async function loadConfig() {
-  const { data } = await supabase.from('tw_config').select('*');
-  const cfg = { event_days: ['2026-11-20', '2026-11-21', '2026-11-22'], unlock_all: false, music_url: '' };
-  (data || []).forEach(row => { cfg[row.key] = row.value; });
-  return cfg;
+export const CampaignContext = createContext(null);
+
+export function useCampaign() {
+  return useContext(CampaignContext);
 }
 
-export async function saveConfig(key, value) {
-  return supabase.from('tw_config').upsert({ key, value });
+// A Tattoo Week mantém /tattooweek (URL gravada nos adesivos NFC); as demais ficam em /experience/<slug>
+export function campaignBase(c) {
+  return c.slug === 'tattooweek' ? '/tattooweek' : `/experience/${c.slug}`;
+}
+
+export async function loadPartners() {
+  const { data } = await supabase.from('tw_partners').select('*').order('created_at');
+  if (!data?.length) return DEFAULT_PARTNERS;
+  return Object.fromEntries(data.map(p => [p.id, p]));
+}
+
+export async function loadCampaign(slug) {
+  const [c, partners] = await Promise.all([
+    supabase.from('tw_campaigns').select('*').eq('slug', slug).maybeSingle(),
+    loadPartners(),
+  ]);
+  return c.data ? { campaign: c.data, partners } : null;
+}
+
+export function dayName(c, d) {
+  return c?.day_names?.[d] || DEFAULT_DAY_NAMES[d];
+}
+
+export function campaignPartners(c, partners) {
+  return (c?.partners || []).map(id => partners[id]).filter(Boolean);
 }
 
 // Dia liberado = a data do dia já chegou (horário local) ou o admin liberou tudo.
-export function isDayUnlocked(cfg, day) {
-  if (cfg.unlock_all) return true;
-  const date = cfg.event_days?.[day - 1];
+export function isDayUnlocked(c, day) {
+  if (c.unlock_all) return true;
+  const date = c.event_days?.[day - 1];
   if (!date) return false;
   return new Date() >= new Date(`${date}T00:00:00`);
 }
 
-export function currentDay(cfg) {
+export function currentDay(c) {
   for (let d = 3; d >= 1; d--) {
-    if (isDayUnlocked(cfg, d)) return d;
+    if (isDayUnlocked(c, d)) return d;
   }
   return 1;
+}
+
+export function formatDays(c) {
+  const days = (c.event_days || []).filter(Boolean);
+  if (!days.length) return '';
+  const fmt = (d, opts) => new Date(`${d}T00:00:00`).toLocaleDateString('pt-BR', opts);
+  if (days.length === 1) return fmt(days[0], { day: '2-digit', month: 'long', year: 'numeric' });
+  return `${fmt(days[0], { day: '2-digit' })} a ${fmt(days[days.length - 1], { day: '2-digit', month: 'long', year: 'numeric' })}`;
 }
 
 // Missões surpresa só aparecem dentro da janela starts_at/ends_at.
@@ -71,12 +101,17 @@ export function isMissionLive(m, now = new Date()) {
 export function useTwParticipant() {
   const { user, isLoaded, isSignedIn } = useUser();
   const [participant, setParticipant] = useState(null);
+  const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     if (!user) return;
     const { data } = await supabase.from('tw_participants').select('*').eq('clerk_id', user.id).maybeSingle();
     setParticipant(data || null);
+    if (data) {
+      const e = await supabase.from('tw_enrollments').select('*').eq('participant_id', data.id);
+      setEnrollments(e.data || []);
+    }
     setLoading(false);
   }, [user]);
 
@@ -86,11 +121,13 @@ export function useTwParticipant() {
     else setLoading(false);
   }, [isLoaded, isSignedIn, user, reload]);
 
-  return { user, isSignedIn, loading: !isLoaded || loading, participant, setParticipant, reload };
+  const isEnrolled = (campaignId, track) => enrollments.some(e => e.campaign_id === campaignId && e.track === track);
+
+  return { user, isSignedIn, loading: !isLoaded || loading, participant, setParticipant, enrollments, setEnrollments, isEnrolled, reload };
 }
 
-export async function trackEvent(type, ref, participantId) {
-  await supabase.from('tw_events').insert([{ type, ref, participant_id: participantId || null }]);
+export async function trackEvent(type, ref, participantId, campaignId) {
+  await supabase.from('tw_events').insert([{ type, ref, participant_id: participantId || null, campaign_id: campaignId || null }]);
 }
 
 // --- Upload ---
@@ -98,7 +135,7 @@ export async function trackEvent(type, ref, participantId) {
 const MAX_VIDEO_MB = 50;
 
 // Reduz fotos do celular para ~1600px: o upload fica rápido no 4G da convenção.
-function compressImage(file, maxSize = 1600, quality = 0.82) {
+export function compressImage(file, maxSize = 1600, quality = 0.82) {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -118,14 +155,14 @@ function compressImage(file, maxSize = 1600, quality = 0.82) {
   });
 }
 
-export async function uploadMedia(file, participantId, missionId) {
+export async function uploadMedia(file, folder) {
   const isVideo = file.type.startsWith('video/');
   if (isVideo && file.size > MAX_VIDEO_MB * 1024 * 1024) {
     throw new Error(`Vídeo muito grande (máx. ${MAX_VIDEO_MB}MB). Grave um trecho mais curto.`);
   }
   const body = isVideo ? file : await compressImage(file);
   const ext = isVideo ? (file.name.split('.').pop() || 'mp4').toLowerCase() : 'jpg';
-  const path = `${participantId}/${missionId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
   const { error } = await supabase.storage.from('tattooweek').upload(path, body, {
     contentType: isVideo ? file.type : 'image/jpeg',
     upsert: false,
@@ -138,7 +175,7 @@ export async function uploadMedia(file, participantId, missionId) {
 export async function submitMission({ participant, mission, artistId, files, note }) {
   const media = [];
   for (const f of files) {
-    media.push(await uploadMedia(f, participant.id, mission.id));
+    media.push(await uploadMedia(f, `${participant.id}/${mission.id}`));
   }
   // Envio recusado pode ser refeito: remove o antigo antes de inserir o novo
   let old = supabase.from('tw_submissions').delete()
@@ -180,4 +217,12 @@ export function useCountdown(target) {
   const m = Math.floor(ms / 60000);
   const s = Math.floor((ms % 60000) / 1000);
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+export function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }

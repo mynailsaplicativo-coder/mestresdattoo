@@ -4,14 +4,15 @@ import { SignInButton } from '@clerk/clerk-react';
 import { AtSign, MapPin, Nfc, KeyRound, Check, Camera } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, MissionSheet } from './TwShell';
-import { useTwParticipant, trackEvent, instagramUrl } from './twData';
+import { useTwParticipant, useCampaign, trackEvent, instagramUrl } from './twData';
 
 export default function TwNfc() {
-  const { slug } = useParams();
+  const { artistSlug: slug } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { campaign, base } = useCampaign();
   const tw = useTwParticipant();
-  const { participant, isSignedIn, loading } = tw;
+  const { participant, isSignedIn, loading, isEnrolled } = tw;
   const [artist, setArtist] = useState(undefined);
   const [passport, setPassport] = useState(null);
   const [secret, setSecret] = useState(null);
@@ -20,24 +21,24 @@ export default function TwNfc() {
   const tracked = useRef('');
 
   useEffect(() => {
-    supabase.from('tw_artists').select('*, secret:tw_missions!tw_artists_reveals_mission_id_fkey(*)').eq('slug', slug).maybeSingle()
+    supabase.from('tw_artists').select('*, secret:tw_missions!tw_artists_reveals_mission_id_fkey(*)').eq('campaign_id', campaign.id).eq('slug', slug).maybeSingle()
       .then(({ data }) => setArtist(data || null));
-    supabase.from('tw_missions').select('*').eq('category', 'passaporte').eq('active', true).limit(1).maybeSingle()
+    supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).eq('category', 'passaporte').eq('active', true).limit(1).maybeSingle()
       .then(({ data }) => setPassport(data));
-  }, [slug]);
+  }, [slug, campaign.id]);
 
   // Registra a leitura (uma vez por sessão do navegador por credencial). Não conta pontos.
   useEffect(() => {
     if (loading || !artist) return;
-    const key = `tw-scan-${slug}-${participant?.id || 'anon'}`;
+    const key = `tw-scan-${campaign.id}-${slug}-${participant?.id || 'anon'}`;
     if (tracked.current === key) return; // re-registra se a pessoa entrar na conta depois de ler
     tracked.current = key;
     try {
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, '1');
     } catch { /* modo privado */ }
-    trackEvent(params.get('src') === 'qr' ? 'qr_scan' : 'nfc_scan', slug, participant?.id);
-  }, [loading, artist, slug, participant, params]);
+    trackEvent(params.get('src') === 'qr' ? 'qr_scan' : 'nfc_scan', slug, participant?.id, campaign.id);
+  }, [loading, artist, slug, participant, params, campaign.id]);
 
   useEffect(() => {
     if (!participant || !artist) return;
@@ -54,7 +55,7 @@ export default function TwNfc() {
           <div>
             <Nfc size={48} color="var(--tw-gold)" />
             <h1 className="tw-h2" style={{ marginTop: '1rem' }}>Credencial não encontrada</h1>
-            <button className="tw-btn" style={{ marginTop: '1rem' }} onClick={() => navigate('/tattooweek')}>Ir para a Tattoo Week Experience</button>
+            <button className="tw-btn" style={{ marginTop: '1rem' }} onClick={() => navigate(base)}>Ir para {campaign.name}</button>
           </div>
         </div>
       </TwShell>
@@ -63,7 +64,8 @@ export default function TwNfc() {
 
   const stamp = passport && subs.find(s => s.mission_id === passport.id && s.artist_id === artist.id);
   const secretSub = secret && subs.find(s => s.mission_id === secret.id);
-  const inChallenge = participant?.in_challenge;
+  const inChallenge = participant && isEnrolled(campaign.id, 'artist');
+  const open_ = campaign.status !== 'finished';
   const ig = instagramUrl(artist.instagram);
 
   return (
@@ -93,7 +95,7 @@ export default function TwNfc() {
           </div>
         )}
 
-        {secret && (
+        {secret && open_ && (
           <div className="tw-surprise" style={{ animation: 'none', borderColor: 'rgba(238,195,88,0.6)', background: 'linear-gradient(120deg, rgba(238,195,88,0.18), #0d0f13 70%)' }}>
             <span className="tw-kicker"><KeyRound size={12} style={{ verticalAlign: -1 }} /> Você encontrou a missão secreta</span>
             <h3 className="tw-h3" style={{ margin: '0.5rem 0' }}>{secret.title}</h3>
@@ -106,7 +108,7 @@ export default function TwNfc() {
           </div>
         )}
 
-        {inChallenge && passport && (
+        {inChallenge && passport && open_ && (
           <div className="tw-card">
             <span className="tw-kicker">Passaporte NFC</span>
             <h3 className="tw-h3" style={{ margin: '0.4rem 0 0.8rem' }}>Registre seu encontro com {artist.name.split(' ')[0]}</h3>
@@ -116,9 +118,9 @@ export default function TwNfc() {
           </div>
         )}
 
-        {!loading && !inChallenge && (
+        {!loading && !inChallenge && open_ && (
           <div className="tw-card tw-stack">
-            <h3 className="tw-h3">Isto faz parte da Tattoo Week Experience</h3>
+            <h3 className="tw-h3">Isto faz parte da {campaign.name}</h3>
             <p className="tw-p" style={{ fontSize: '0.9rem' }}>
               {isSignedIn
                 ? 'Você é tatuador? Entre no Artist Challenge para colecionar carimbos de todos os artistas credenciados.'
@@ -126,8 +128,8 @@ export default function TwNfc() {
             </p>
             {isSignedIn
               ? <div className="tw-cta-row">
-                  <button className="tw-btn tw-btn-primary" onClick={() => navigate('/tattooweek/artist')}>Sou tatuador</button>
-                  <button className="tw-btn" onClick={() => navigate('/tattooweek/meu')}>Sou visitante</button>
+                  <button className="tw-btn tw-btn-primary" onClick={() => navigate(`${base}/artist`)}>Sou tatuador</button>
+                  <button className="tw-btn" onClick={() => navigate(`${base}/meu`)}>Sou visitante</button>
                 </div>
               : <SignInButton mode="modal"><button className="tw-btn tw-btn-primary tw-btn-block">Entrar</button></SignInButton>}
           </div>

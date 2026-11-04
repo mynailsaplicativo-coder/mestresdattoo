@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Check, Film } from 'lucide-react';
+import { Lock, Check, Film, Share2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard } from './TwShell';
-import { useTwParticipant, loadConfig, isDayUnlocked, currentDay, isMissionLive, DAY_NAMES, DAY_BONUS } from './twData';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, BadgeGrid } from './TwShell';
+import { useTwParticipant, useCampaign, isDayUnlocked, currentDay, isMissionLive, dayName, DAY_BONUS } from './twData';
+import { computeBadges, sumPoints, BADGES } from './badges';
+
+const PUBLIC_BADGES = ['primeira', 'dia1', 'dia2', 'dia3', 'maratona', 'explorador', 'relampago'];
 
 export default function TwPublic() {
   const tw = useTwParticipant();
   return (
     <TwShell>
-      <JoinGate tw={tw} mode="public">
+      <JoinGate tw={tw} track="public">
         <PublicPanel participant={tw.participant} />
       </JoinGate>
     </TwShell>
@@ -18,63 +21,57 @@ export default function TwPublic() {
 
 function PublicPanel({ participant }) {
   const navigate = useNavigate();
-  const [cfg, setCfg] = useState(null);
-  const [missions, setMissions] = useState([]);
+  const { campaign, base } = useCampaign();
+  const [missions, setMissions] = useState(null);
   const [subs, setSubs] = useState([]);
-  const [day, setDay] = useState(1);
+  const [day, setDay] = useState(() => currentDay(campaign));
   const [open, setOpen] = useState(null);
 
   const load = useCallback(async () => {
-    const [c, m, s] = await Promise.all([
-      loadConfig(),
-      supabase.from('tw_missions').select('*').eq('track', 'public').eq('active', true).order('day').order('position'),
-      supabase.from('tw_submissions').select('*').eq('participant_id', participant.id),
+    const [m, s] = await Promise.all([
+      supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).eq('track', 'public').eq('active', true).order('day').order('position'),
+      supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participant.id).eq('mission.campaign_id', campaign.id),
     ]);
-    setCfg(c);
     setMissions(m.data || []);
     setSubs(s.data || []);
-    return c;
-  }, [participant.id]);
+  }, [participant.id, campaign.id]);
 
   useEffect(() => {
-    load().then(c => setDay(currentDay(c)));
+    load();
     const t = setInterval(load, 60000); // missões surpresa aparecem sem recarregar
     return () => clearInterval(t);
   }, [load]);
 
-  if (!cfg) return <div className="tw-center-screen">Carregando missões...</div>;
+  if (!missions) return <div className="tw-center-screen">Carregando missões...</div>;
 
   const subByMission = Object.fromEntries(subs.map(s => [s.mission_id, s]));
   const dayMissions = missions.filter(m => m.category === 'dia' && m.day === day);
   const surprises = missions.filter(m => m.category === 'surpresa' && isMissionLive(m));
-  const counted = subs.filter(s => s.status === 'approved');
+  const approved = subs.filter(s => s.status === 'approved');
   const allDayMissions = missions.filter(m => m.category === 'dia');
-  const daysComplete = [1, 2, 3].filter(d => {
-    const list = allDayMissions.filter(m => m.day === d);
-    return list.length > 0 && list.every(m => subByMission[m.id]?.status === 'approved');
-  }).length;
-  const points = counted.reduce((a, s) => a + (s.points || 0), 0) + daysComplete * DAY_BONUS;
+  const badges = computeBadges({ approved, missions, artistsCount: 0, ranks: {} }).filter(b => PUBLIC_BADGES.includes(b.id));
+  const daysComplete = badges.filter(b => b.id.startsWith('dia')).length;
+  const points = sumPoints(approved, missions, 'public');
   const doneToday = dayMissions.filter(m => subByMission[m.id] && subByMission[m.id].status !== 'rejected').length;
-  const unlocked = isDayUnlocked(cfg, day);
+  const unlocked = isDayUnlocked(campaign, day);
+  const finished = campaign.status === 'finished';
 
   return (
     <div className="tw-wrap">
-      <div className="tw-between" style={{ alignItems: 'flex-end', marginBottom: '1rem' }}>
-        <div>
-          <span className="tw-kicker">Meu Tattoo Week</span>
-          <h1 className="tw-h2" style={{ marginTop: '0.3rem' }}>Olá, {participant.name.split(' ')[0]}</h1>
-        </div>
-      </div>
+      <span className="tw-kicker">Meu {campaign.event_name}</span>
+      <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem' }}>Olá, {participant.name.split(' ')[0]}</h1>
 
       <div className="tw-card tw-card-gold">
         <div className="tw-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           <div className="tw-stat"><b>{points}</b><span>Pontos</span></div>
-          <div className="tw-stat"><b>{counted.filter(s => allDayMissions.some(m => m.id === s.mission_id)).length}/{allDayMissions.length}</b><span>Missões</span></div>
+          <div className="tw-stat"><b>{approved.filter(s => allDayMissions.some(m => m.id === s.mission_id)).length}/{allDayMissions.length}</b><span>Missões</span></div>
           <div className="tw-stat"><b>{daysComplete}</b><span>Dias completos</span></div>
         </div>
       </div>
 
-      {surprises.length > 0 && (
+      {finished && <div className="tw-notice" style={{ marginTop: '1rem' }}>Esta experiência foi encerrada. Seu vídeo e seus selos continuam disponíveis.</div>}
+
+      {!finished && surprises.length > 0 && (
         <div className="tw-stack" style={{ marginTop: '1rem' }}>
           {surprises.map(m => <SurpriseCard key={m.id} mission={m} sub={subByMission[m.id]} onOpen={() => setOpen(m)} />)}
         </div>
@@ -83,8 +80,8 @@ function PublicPanel({ participant }) {
       <div className="tw-tabs" style={{ marginTop: '1.25rem' }}>
         {[1, 2, 3].map(d => (
           <button key={d} className={`tw-tab ${day === d ? 'on' : ''}`} onClick={() => setDay(d)}>
-            {!isDayUnlocked(cfg, d) && <Lock size={11} style={{ verticalAlign: -1, marginRight: 3 }} />}Dia {d}
-            <small>{DAY_NAMES[d]}</small>
+            {!isDayUnlocked(campaign, d) && <Lock size={11} style={{ verticalAlign: -1, marginRight: 3 }} />}Dia {d}
+            <small>{dayName(campaign, d)}</small>
           </button>
         ))}
       </div>
@@ -97,9 +94,9 @@ function PublicPanel({ participant }) {
         <div className="tw-progress"><div style={{ width: `${dayMissions.length ? (doneToday / dayMissions.length) * 100 : 0}%` }} /></div>
       </div>
 
-      {!unlocked && (
+      {!unlocked && campaign.event_days?.[day - 1] && (
         <div className="tw-notice" style={{ marginBottom: '0.75rem' }}>
-          <Lock size={14} style={{ verticalAlign: -2 }} /> As missões do Dia {day} são liberadas em {new Date(`${cfg.event_days[day - 1]}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}.
+          <Lock size={14} style={{ verticalAlign: -2 }} /> As missões do Dia {day} são liberadas em {new Date(`${campaign.event_days[day - 1]}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}.
         </div>
       )}
 
@@ -110,8 +107,8 @@ function PublicPanel({ participant }) {
           return (
             <button
               key={m.id}
-              className={`tw-mission ${done ? 'done' : ''} ${!unlocked ? 'locked' : ''}`}
-              disabled={!unlocked || (s && s.status !== 'rejected')}
+              className={`tw-mission ${done ? 'done' : ''} ${!unlocked || finished ? 'locked' : ''}`}
+              disabled={!unlocked || finished || (s && s.status !== 'rejected')}
               onClick={() => setOpen(m)}
             >
               <span className="tw-mission-num">{done ? <Check size={18} /> : String(i + 1).padStart(2, '0')}</span>
@@ -130,13 +127,30 @@ function PublicPanel({ participant }) {
         {dayMissions.length === 0 && <div className="tw-empty">Nenhuma missão cadastrada para este dia.</div>}
       </div>
 
-      <div className="tw-card" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <Film color="var(--tw-gold)" size={32} />
-        <div style={{ flex: '1 1 200px' }}>
-          <h3 className="tw-h3">Sua retrospectiva</h3>
-          <p className="tw-p" style={{ fontSize: '0.88rem' }}>{counted.length} registros até agora. Quanto mais missões, melhor fica o vídeo.</p>
+      <section className="tw-section">
+        <span className="tw-kicker">Seus selos</span>
+        <div style={{ marginTop: '0.7rem' }}>
+          <BadgeGrid badges={badges} all={BADGES.filter(b => PUBLIC_BADGES.includes(b.id))} small />
         </div>
-        <button className="tw-btn tw-btn-sm" onClick={() => navigate('/tattooweek/retrospectiva')}>Ver meu vídeo</button>
+      </section>
+
+      <div className="tw-grid tw-grid-2" style={{ marginTop: '1.5rem' }}>
+        <div className="tw-card" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <Film color="var(--tw-gold)" size={30} />
+          <div style={{ flex: 1 }}>
+            <h3 className="tw-h3">Sua retrospectiva</h3>
+            <p className="tw-p" style={{ fontSize: '0.85rem' }}>{approved.length} registros até agora.</p>
+          </div>
+          <button className="tw-btn tw-btn-sm" onClick={() => navigate(`${base}/retrospectiva`)}>Ver vídeo</button>
+        </div>
+        <div className="tw-card" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <Share2 color="var(--tw-gold)" size={30} />
+          <div style={{ flex: 1 }}>
+            <h3 className="tw-h3">Card de resultado</h3>
+            <p className="tw-p" style={{ fontSize: '0.85rem' }}>Pontos e selos para o Stories.</p>
+          </div>
+          <button className="tw-btn tw-btn-sm" onClick={() => navigate(`${base}/resultado`)}>Gerar</button>
+        </div>
       </div>
 
       {open && (
@@ -144,7 +158,7 @@ function PublicPanel({ participant }) {
           mission={open}
           participant={participant}
           onClose={() => setOpen(null)}
-          onDone={(sub) => setSubs(prev => [...prev.filter(s => s.mission_id !== sub.mission_id), sub])}
+          onDone={() => load()}
         />
       )}
     </div>
