@@ -183,15 +183,16 @@ export async function submitMission({ participant, mission, artistId, files, not
   old = artistId ? old.eq('artist_id', artistId) : old.is('artist_id', null);
   await old;
 
-  const auto = mission.approval === 'auto';
+  // Todo envio entra aprovado na hora; a equipe só recusa depois, se precisar
   const row = {
     participant_id: participant.id,
     mission_id: mission.id,
     artist_id: artistId || null,
     media,
     note: note || null,
-    status: auto ? 'approved' : 'pending',
-    points: auto ? mission.points : 0,
+    status: 'approved',
+    points: mission.points,
+    reviewed_at: new Date().toISOString(),
   };
   const { data, error } = await supabase.from('tw_submissions').insert([row]).select().single();
   if (error) {

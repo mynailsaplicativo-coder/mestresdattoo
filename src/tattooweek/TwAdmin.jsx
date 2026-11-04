@@ -568,7 +568,6 @@ function Missions({ campaign, partners }) {
             <label className="tw-field"><span>Parceiro</span><select className="tw-input" value={edit.partner || ''} onChange={e => setEdit({ ...edit, partner: e.target.value })}><option value="">—</option>{Object.values(partners).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
             <label className="tw-field"><span>Pontos</span><input className="tw-input" type="number" value={edit.points} onChange={e => setEdit({ ...edit, points: e.target.value })} /></label>
             <label className="tw-field"><span>Registros</span><input className="tw-input" type="number" min="1" max="3" value={edit.media_count} onChange={e => setEdit({ ...edit, media_count: e.target.value })} /></label>
-            <label className="tw-field"><span>Aprovação</span><select className="tw-input" value={edit.approval} onChange={e => setEdit({ ...edit, approval: e.target.value })}><option value="auto">Automática</option><option value="manual">Manual</option></select></label>
             <label className="tw-field"><span>Posição</span><input className="tw-input" type="number" value={edit.position ?? 0} onChange={e => setEdit({ ...edit, position: Number(e.target.value) })} /></label>
           </div>
           <label className="tw-check"><input type="checkbox" checked={!!edit.hidden} onChange={e => setEdit({ ...edit, hidden: e.target.checked })} /><span>Secreta: só aparece para quem ler a credencial que a revela (configure em Credenciais NFC).</span></label>
@@ -595,7 +594,6 @@ function Missions({ campaign, partners }) {
                     </td>
                     <td>{m.points} pts</td>
                     <td>{m.media_count}×</td>
-                    <td>{m.approval === 'auto' ? 'Auto' : 'Manual'}</td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => setEdit({ ...m })}>Editar</button>{' '}
                       <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => toggle(m)}>{m.active ? 'Desativar' : 'Ativar'}</button>{' '}
