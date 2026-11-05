@@ -44,16 +44,16 @@ export default function TwLanding() {
         <div className="tw-grid tw-grid-2">
           <article className="tw-card tw-card-gold tw-exp">
             <span className="tw-exp-letter">A</span>
-            <span className="tw-kicker">Experiência A · Público</span>
+            <span className="tw-kicker">Público</span>
             <h2 className="tw-h2" style={{ marginTop: '0.4rem' }}>Meu {eventLabel}</h2>
-            <p className="tw-p">10 missões por dia, 30 no total. Registre seus momentos com fotos e vídeos, ganhe selos e receba no final uma retrospectiva em vídeo só sua.</p>
+            <p className="tw-p">Missões rápidas abertas o evento todo: venha 1 dia ou os 3. Fotos, perguntas, selos secretos e uma retrospectiva em vídeo só sua.</p>
             <button className="tw-btn tw-btn-primary" style={{ marginTop: '1rem', alignSelf: 'flex-start' }} onClick={() => navigate(`${base}/meu`)}>Participar</button>
           </article>
           <article className="tw-card tw-exp">
             <span className="tw-exp-letter">B</span>
-            <span className="tw-kicker">Experiência B · Tatuadores</span>
+            <span className="tw-kicker">Tatuadores</span>
             <h2 className="tw-h2" style={{ marginTop: '0.4rem' }}>Artist Challenge</h2>
-            <p className="tw-p">Competição de networking, conteúdo e desafios dos parceiros. Artistas carregam credenciais NFC secretas — encontre todos e complete seu passaporte.</p>
+            <p className="tw-p">Aberto a todos os tatuadores do evento: networking, conteúdo e desafios dos parceiros. Ative no stand da Bronc e comece a pontuar.</p>
             <button className="tw-btn" style={{ marginTop: '1rem', alignSelf: 'flex-start' }} onClick={() => navigate(`${base}/artist`)}>Entrar na competição</button>
           </article>
         </div>
@@ -63,17 +63,17 @@ export default function TwLanding() {
           <h2 className="tw-h2" style={{ margin: '0.4rem 0 1rem' }}>Simples assim</h2>
           <div className="tw-steps">
             <div className="tw-step">Entre com seu e-mail e faça um cadastro rápido.</div>
-            <div className="tw-step">Todo dia, 10 novas missões são liberadas.</div>
-            <div className="tw-step">Envie fotos ou vídeos para cumprir cada missão.</div>
-            <div className="tw-step">No final, assista e compartilhe o seu vídeo.</div>
+            <div className="tw-step">Escolha uma missão e cumpra em minutos.</div>
+            <div className="tw-step">Encoste o celular nos adesivos NFC e ache os selos secretos.</div>
+            <div className="tw-step">Suba no ranking do dia: os 3 primeiros levam prêmio.</div>
           </div>
         </section>
 
         <section className="tw-section tw-grid tw-grid-3">
           <div className="tw-card">
             <Nfc color="var(--tw-gold)" />
-            <h3 className="tw-h3" style={{ margin: '0.6rem 0 0.3rem' }}>Credenciais NFC</h3>
-            <p className="tw-p" style={{ fontSize: '0.9rem' }}>Aproxime o celular da credencial de um artista participante (ou leia o QR Code) para abrir o perfil e a missão dele.</p>
+            <h3 className="tw-h3" style={{ margin: '0.6rem 0 0.3rem' }}>Selos secretos NFC</h3>
+            <p className="tw-p" style={{ fontSize: '0.9rem' }}>5 adesivos secretos estão escondidos no evento. Encostou o celular, ganhou o selo e os pontos na hora.</p>
           </div>
           <div className="tw-card">
             <Film color="var(--tw-gold)" />
@@ -120,7 +120,7 @@ export default function TwLanding() {
         )}
         <p className="tw-p" style={{ fontSize: '0.8rem', marginTop: '1.5rem' }}>
           Idealização e realização: Mestres da Tattoo. Sua participação pode ser privada — nada é publicado sem sua autorização.{' '}
-          <a href="/experience" onClick={e => { e.preventDefault(); navigate('/experience'); }} className="tw-gold">Outras experiências</a>
+          <a href="/desafios" onClick={e => { e.preventDefault(); navigate('/desafios'); }} className="tw-gold">Outros desafios</a>
         </p>
       </div>
     </TwShell>

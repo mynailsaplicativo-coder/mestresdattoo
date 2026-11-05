@@ -33,9 +33,9 @@ export default function CampaignApp({ slug: fixedSlug }) {
   if (ctx === null) {
     return (
       <div className="tw"><div className="tw-center-screen"><div>
-        <h1 className="tw-h2">Experiência não encontrada</h1>
-        <p className="tw-p" style={{ margin: '0.5rem 0 1.25rem' }}>Confira o endereço ou veja as experiências disponíveis.</p>
-        <button className="tw-btn" onClick={() => navigate('/experience')}>Ver experiências</button>
+        <h1 className="tw-h2">Desafio não encontrado</h1>
+        <p className="tw-p" style={{ margin: '0.5rem 0 1.25rem' }}>Confira o endereço ou veja os desafios disponíveis.</p>
+        <button className="tw-btn" onClick={() => navigate('/desafios')}>Ver desafios</button>
       </div></div></div>
     );
   }

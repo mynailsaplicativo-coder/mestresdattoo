@@ -4,51 +4,51 @@ import { DAY_BONUS, loadAdjustments } from './twData';
 // Selos digitais: calculados a partir dos envios aprovados, sem tabela própria.
 export const BADGES = [
   { id: 'primeira', icon: '🎟️', title: 'Primeira missão', desc: 'Cumpriu a primeira missão' },
-  { id: 'dia1', icon: '🌅', title: 'Dia 1 completo', desc: 'Todas as missões do Dia 1' },
-  { id: 'dia2', icon: '🤝', title: 'Dia 2 completo', desc: 'Todas as missões do Dia 2' },
-  { id: 'dia3', icon: '🏁', title: 'Dia 3 completo', desc: 'Todas as missões do Dia 3' },
-  { id: 'maratona', icon: '🔥', title: 'Maratonista', desc: 'Completou os 3 dias' },
-  { id: 'explorador', icon: '🧭', title: 'Explorador', desc: '30 fotos ou vídeos aprovados' },
+  { id: 'completo', icon: '🔥', title: 'Zerou o jogo', desc: 'Todas as missões da sua trilha' },
+  { id: 'detetive', icon: '🕵️', title: 'Detetive', desc: 'Acertou todas as perguntas' },
+  { id: 'selo1', icon: '🗝️', title: 'Caçador', desc: 'Encontrou um selo secreto' },
+  { id: 'cacador', icon: '👑', title: 'Lenda dos selos', desc: 'Encontrou os 5 selos secretos' },
   { id: 'relampago', icon: '⚡', title: 'Relâmpago', desc: 'Cumpriu uma missão surpresa' },
-  { id: 'secreta', icon: '🗝️', title: 'Decifrador', desc: 'Cumpriu a missão secreta' },
-  { id: 'conector', icon: '📡', title: 'Conector', desc: '5 carimbos no Passaporte NFC' },
-  { id: 'superconector', icon: '🛰️', title: 'Super conector', desc: '10 carimbos no Passaporte NFC' },
-  { id: 'passaporte', icon: '🛂', title: 'Passaporte completo', desc: 'Carimbo de todos os artistas credenciados' },
-  { id: 'parceiros', icon: '🤜', title: 'Amigo dos parceiros', desc: 'Completou o desafio de todos os parceiros' },
+  { id: 'conector', icon: '📡', title: 'Conector', desc: '5 Pontos NFC encontrados' },
+  { id: 'superconector', icon: '🛰️', title: 'Super conector', desc: '10 Pontos NFC encontrados' },
+  { id: 'passaporte', icon: '🛂', title: 'Passaporte completo', desc: 'Todos os Pontos NFC' },
+  { id: 'parceiros', icon: '🤜', title: 'Amigo dos parceiros', desc: 'Todos os desafios dos parceiros' },
   { id: 'criador', icon: '🎙️', title: 'Criador', desc: 'Todas as missões de conteúdo' },
+  { id: 'explorador', icon: '🧭', title: 'Explorador', desc: '15 fotos ou vídeos aprovados' },
   { id: 'podio', icon: '🏆', title: 'Pódio', desc: 'Top 3 do ranking' },
   { id: 'cineasta', icon: '🎬', title: 'Cineasta', desc: 'Gerou sua retrospectiva em vídeo' },
-  { id: 'veterano', icon: '🎖️', title: 'Veterano', desc: 'Participou de 2 ou mais experiências', global: true },
+  { id: 'veterano', icon: '🎖️', title: 'Veterano', desc: 'Jogou em 2 ou mais eventos', global: true },
 ];
 
 export const BADGE_BY_ID = Object.fromEntries(BADGES.map(b => [b.id, b]));
 
 // approved: envios aprovados com .mission; missions: missões ativas da campanha
-export function computeBadges({ approved, missions, artistsCount, ranks, videoGenerated }) {
+export function computeBadges({ approved, missions, artistsCount, ranks, videoGenerated, secretCount = 5 }) {
   const got = new Set();
   const doneIds = new Set(approved.map(s => s.mission_id));
   const byCat = (cat) => approved.filter(s => s.mission?.category === cat);
+  // Só conta missões das trilhas em que a pessoa joga
+  const tracks = new Set(approved.map(s => s.mission?.track).filter(Boolean));
+  const mine = missions.filter(m => tracks.has(m.track) && m.active !== false);
+  const all = (list) => list.length > 0 && list.every(m => doneIds.has(m.id));
 
   if (approved.length) got.add('primeira');
-  const daysDone = [1, 2, 3].filter(d => {
-    const list = missions.filter(m => m.track === 'public' && m.category === 'dia' && m.day === d);
-    return list.length > 0 && list.every(m => doneIds.has(m.id));
-  });
-  daysDone.forEach(d => got.add(`dia${d}`));
-  if (daysDone.length === 3) got.add('maratona');
-  if (approved.reduce((a, s) => a + (s.media?.length || 0), 0) >= 30) got.add('explorador');
+  if (all(mine.filter(m => !m.hidden && ['geral', 'quiz', 'parceiros', 'networking', 'conteudo', 'dia'].includes(m.category)))) got.add('completo');
+  if (all(mine.filter(m => m.category === 'quiz'))) got.add('detetive');
+
+  const seals = new Set(byCat('selo').map(s => s.artist_id)).size;
+  if (seals >= 1) got.add('selo1');
+  if (secretCount > 0 && seals >= secretCount) got.add('cacador');
   if (byCat('surpresa').length) got.add('relampago');
-  if (byCat('secreta').length) got.add('secreta');
 
   const stamps = new Set(byCat('passaporte').map(s => s.artist_id)).size;
   if (stamps >= 5) got.add('conector');
   if (stamps >= 10) got.add('superconector');
   if (artistsCount > 0 && stamps >= artistsCount) got.add('passaporte');
 
-  const partnerMissions = missions.filter(m => m.category === 'parceiros');
-  if (partnerMissions.length && partnerMissions.every(m => doneIds.has(m.id))) got.add('parceiros');
-  const contentMissions = missions.filter(m => m.category === 'conteudo');
-  if (contentMissions.length && contentMissions.every(m => doneIds.has(m.id))) got.add('criador');
+  if (all(mine.filter(m => m.category === 'parceiros'))) got.add('parceiros');
+  if (all(mine.filter(m => m.category === 'conteudo'))) got.add('criador');
+  if (approved.reduce((acc, s) => acc + (s.media?.length || 0), 0) >= 15) got.add('explorador');
 
   if (Object.values(ranks || {}).some(r => r && r <= 3)) got.add('podio');
   if (videoGenerated) got.add('cineasta');
@@ -60,7 +60,7 @@ export async function loadCampaignProgress(participantId, campaignId) {
   const [s, m, a, r, e, adj] = await Promise.all([
     supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participantId).eq('mission.campaign_id', campaignId),
     supabase.from('tw_missions').select('*').eq('campaign_id', campaignId).eq('active', true),
-    supabase.from('tw_artists').select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('active', true),
+    supabase.from('tw_artists').select('id, kind').eq('campaign_id', campaignId).eq('active', true),
     supabase.from('tw_ranking').select('participant_id, track, points').eq('campaign_id', campaignId).order('points', { ascending: false }).order('last_at'),
     supabase.from('tw_events').select('id').eq('participant_id', participantId).eq('campaign_id', campaignId).eq('type', 'video_generated').limit(1),
     loadAdjustments(participantId, campaignId),
@@ -76,8 +76,11 @@ export async function loadCampaignProgress(participantId, campaignId) {
     ranks[track] = pos >= 0 ? pos + 1 : null;
     points[track] = pos >= 0 ? list[pos].points : sumPoints(approved, missions, track) + (adj[track] || 0);
   });
-  const badges = computeBadges({ approved, missions, artistsCount: a.count || 0, ranks, videoGenerated: (e.data || []).length > 0 });
-  return { subs, approved, missions, ranks, points, badges, artistsCount: a.count || 0 };
+  const tags = a.data || [];
+  const pointsCount = tags.filter(t => (t.kind || 'point') === 'point').length;
+  const secretCount = tags.filter(t => t.kind === 'secret').length;
+  const badges = computeBadges({ approved, missions, artistsCount: pointsCount, secretCount, ranks, videoGenerated: (e.data || []).length > 0 });
+  return { subs, approved, missions, ranks, points, badges, artistsCount: pointsCount, secretCount };
 }
 
 // Pontos calculados localmente (participação privada não aparece na view tw_ranking)

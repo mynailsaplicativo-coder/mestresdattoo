@@ -386,7 +386,7 @@ export function ParticipantSheet({ participantId, campaign, role, onClose, onCha
 
             <div className="tw-row" style={{ flexWrap: 'wrap' }}>
               <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`${campaignBase(campaign)}/retrospectiva?p=${p.id}`)}>Ver retrospectiva</button>
-              <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`/experience/perfil/${p.id}`)}><ExternalLink size={14} /> Perfil</button>
+              <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`/desafios/perfil/${p.id}`)}><ExternalLink size={14} /> Perfil</button>
               <button className="tw-btn tw-btn-sm tw-btn-bad" onClick={toggleBlock}><Ban size={14} /> {p.blocked ? 'Reativar' : 'Desclassificar'}</button>
               {role === 'admin' && <button className="tw-btn tw-btn-sm tw-btn-bad" onClick={removeFromCampaign}><Trash2 size={14} /> Remover da campanha</button>}
             </div>
@@ -400,6 +400,7 @@ export function ParticipantSheet({ participantId, campaign, role, onClose, onCha
 // --- Premiação ---
 
 const RULES = {
+  day_rank: 'Ranking do dia',
   artist_rank: 'Ranking Artist Challenge',
   public_rank: 'Ranking público',
   passport: 'Mais carimbos NFC',
@@ -432,10 +433,11 @@ export function Awards({ campaign, reload, onOpenParticipant }) {
 
   // Sugere vencedores pelas regras de cada prêmio (sem repetir pessoa entre prêmios)
   const suggest = async () => {
-    const [r, pass] = await Promise.all([
+    const [r, pass, daily] = await Promise.all([
       supabase.from('tw_ranking').select('participant_id, track, points').eq('campaign_id', campaign.id).order('points', { ascending: false }).order('last_at'),
       supabase.from('tw_submissions').select('participant_id, created_at, participant:tw_participants!inner(show_in_ranking, blocked), mission:tw_missions!inner(campaign_id, category)')
         .eq('mission.campaign_id', campaign.id).eq('mission.category', 'passaporte').eq('status', 'approved'),
+      supabase.from('tw_ranking_daily').select('participant_id, day, points').eq('campaign_id', campaign.id).order('points', { ascending: false }).order('last_at'),
     ]);
     const stampCount = {};
     const lastAt = {};
@@ -451,8 +453,12 @@ export function Awards({ campaign, reload, onOpenParticipant }) {
     const used = new Set(rows.filter(a => a.participant_id && a.status !== 'open').map(a => a.participant_id));
     let changed = 0;
     for (const a of rows) {
-      if (a.status !== 'open' || a.rule === 'manual' || !lists[a.rule]) continue;
-      const pick = lists[a.rule].filter(id => !used.has(id))[(a.rank || 1) - 1];
+      if (a.status !== 'open' || a.rule === 'manual') continue;
+      // Prêmio do dia: ranking da data do Dia N da campanha
+      const date = a.rule === 'day_rank' ? (campaign.event_days || [])[(a.day || 1) - 1] : null;
+      const list = a.rule === 'day_rank' ? (daily.data || []).filter(x => x.day === date).map(x => x.participant_id) : lists[a.rule];
+      if (!list) continue;
+      const pick = list.filter(id => !used.has(id))[(a.rank || 1) - 1];
       if (!pick) continue;
       used.add(pick);
       await supabase.from('tw_awards').update({ participant_id: pick }).eq('id', a.id);
@@ -504,7 +510,7 @@ export function Awards({ campaign, reload, onOpenParticipant }) {
         <div className="tw-row" style={{ flexWrap: 'wrap' }}>
           <button className="tw-btn tw-btn-sm" onClick={suggest}><Wand2 size={14} /> Sugerir vencedores</button>
           <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={exportCsv}><Download size={14} /> CSV</button>
-          <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => setEdit({ title: '', description: '', rule: 'manual', rank: 1, position: rows.length + 1, status: 'open' })}><Plus size={14} /> Prêmio</button>
+          <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => setEdit({ title: '', description: '', rule: 'day_rank', day: 1, rank: 1, position: rows.length + 1, status: 'open' })}><Plus size={14} /> Prêmio</button>
         </div>
       </div>
       <label className="tw-check">
@@ -520,6 +526,7 @@ export function Awards({ campaign, reload, onOpenParticipant }) {
           </div>
           <div className="tw-row" style={{ flexWrap: 'wrap' }}>
             <select className="tw-input" style={{ width: 'auto' }} value={edit.rule} onChange={e => setEdit({ ...edit, rule: e.target.value })}>{Object.entries(RULES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+            {edit.rule === 'day_rank' && <label className="tw-row" style={{ gap: '0.3rem', fontSize: '0.85rem' }}>Dia <select className="tw-input" style={{ width: 70 }} value={edit.day || 1} onChange={e => setEdit({ ...edit, day: Number(e.target.value) })}><option value={1}>1</option><option value={2}>2</option><option value={3}>3</option></select></label>}
             {edit.rule !== 'manual' && <label className="tw-row" style={{ gap: '0.3rem', fontSize: '0.85rem' }}>Posição <input className="tw-input" type="number" min="1" style={{ width: 70 }} value={edit.rank} onChange={e => setEdit({ ...edit, rank: e.target.value })} /></label>}
             <label className="tw-row" style={{ gap: '0.3rem', fontSize: '0.85rem' }}>Ordem <input className="tw-input" type="number" style={{ width: 70 }} value={edit.position} onChange={e => setEdit({ ...edit, position: e.target.value })} /></label>
           </div>
@@ -533,7 +540,7 @@ export function Awards({ campaign, reload, onOpenParticipant }) {
           <div className="tw-between" style={{ flexWrap: 'wrap' }}>
             <div>
               <h3 className="tw-h3"><Trophy size={16} color="var(--tw-gold)" style={{ verticalAlign: -2 }} /> {a.title}</h3>
-              <div className="tw-p" style={{ fontSize: '0.8rem' }}>{a.description} · {RULES[a.rule]}{a.rule !== 'manual' ? ` · ${a.rank}º` : ''}</div>
+              <div className="tw-p" style={{ fontSize: '0.8rem' }}>{a.description} · {RULES[a.rule] || a.rule}{a.rule === 'day_rank' ? ` · Dia ${a.day}` : ''}{a.rule !== 'manual' ? ` · ${a.rank}º` : ''}</div>
             </div>
             <div className="tw-row">
               <span className={`tw-chip ${a.status === 'delivered' ? 'tw-chip-ok' : a.status === 'awarded' ? 'tw-chip-gold' : ''}`}>{a.status === 'delivered' ? 'Entregue' : a.status === 'awarded' ? 'Vencedor confirmado' : 'Em aberto'}</span>

@@ -7,7 +7,7 @@ import { TwShell, BadgeGrid } from './TwShell';
 import { useTwParticipant, useStaffRole, instagramUrl, campaignBase, uploadMedia } from './twData';
 import { loadCampaignProgress, BADGES, BADGE_BY_ID } from './badges';
 
-// Perfil permanente: soma todas as experiências (histórico, pontos acumulados, selos)
+// Perfil permanente: soma todos os desafios (histórico, pontos acumulados, selos)
 export default function TwProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ export default function TwProfile() {
     return (
       <TwShell><div className="tw-center-screen"><div style={{ maxWidth: 380 }}>
         <h1 className="tw-h2">Seu perfil</h1>
-        <p className="tw-p" style={{ margin: '0.5rem 0 1.25rem' }}>Entre para ver seu histórico, pontos e selos de todas as experiências.</p>
+        <p className="tw-p" style={{ margin: '0.5rem 0 1.25rem' }}>Entre para ver seu histórico, pontos e selos de todos os desafios.</p>
         <SignInButton mode="modal"><button className="tw-btn tw-btn-primary tw-btn-block">Entrar</button></SignInButton>
       </div></div></TwShell>
     );
@@ -51,8 +51,8 @@ export default function TwProfile() {
     return (
       <TwShell><div className="tw-center-screen"><div style={{ maxWidth: 380 }}>
         <h1 className="tw-h2">Você ainda não participou</h1>
-        <p className="tw-p" style={{ margin: '0.5rem 0 1.25rem' }}>Entre em uma experiência para começar seu histórico.</p>
-        <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => navigate('/experience')}>Ver experiências</button>
+        <p className="tw-p" style={{ margin: '0.5rem 0 1.25rem' }}>Entre em um desafio para começar seu histórico.</p>
+        <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => navigate('/desafios')}>Ver desafios</button>
       </div></div></TwShell>
     );
   }
@@ -93,7 +93,7 @@ export default function TwProfile() {
         <div className="tw-card tw-card-gold" style={{ marginTop: '1.25rem' }}>
           <div className="tw-grid tw-stats-4">
             <div className="tw-stat"><b>{totalPoints}</b><span>Pontos Mestres</span></div>
-            <div className="tw-stat"><b>{history.length}</b><span>Experiências</span></div>
+            <div className="tw-stat"><b>{history.length}</b><span>Eventos</span></div>
             <div className="tw-stat"><b>{totalMissions}</b><span>Missões</span></div>
             <div className="tw-stat"><b>{earned.size}</b><span>Selos</span></div>
           </div>
@@ -107,7 +107,7 @@ export default function TwProfile() {
         <section className="tw-section">
           <span className="tw-kicker">Histórico de participações</span>
           <div className="tw-stack" style={{ marginTop: '0.7rem' }}>
-            {history.length === 0 && <div className="tw-empty">Nenhuma experiência ainda.</div>}
+            {history.length === 0 && <div className="tw-empty">Nenhum desafio ainda.</div>}
             {history.map(h => {
               const c = h.campaign;
               const pr = h.progress;

@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { 
   CalendarDays, BookOpen, UserRound, Mail, Send, Search, Archive, Earth, ListFilter, 
@@ -56,7 +56,7 @@ function Header() {
           <button className="wte-nav-btn" onClick={() => navigate('/magazine')}><BookOpen size={14} /> Magazine</button>
           <button className="wte-nav-btn" onClick={() => navigate('/artists')}><User size={14} /> Artistas</button>
           <button className="wte-nav-btn" onClick={() => navigate('/selecaomastersink')} style={{ color: 'var(--wte-gold)' }}><Star size={14} /> Seleção Masters</button>
-          <button className="wte-nav-btn" onClick={() => navigate('/tattooweek')} style={{ color: 'var(--wte-gold)' }}><Sparkles size={14} /> Tattoo Week Experience</button>
+          <button className="wte-nav-btn" onClick={() => navigate('/tattooweek')} style={{ color: 'var(--wte-gold)' }}><Sparkles size={14} /> Desafio dos Mestres</button>
           <button className="wte-nav-btn" onClick={() => navigate('/hub')}><Store size={14} /> Guest Hub</button>
           <button className="wte-nav-btn" onClick={() => navigate('/contato')}><Star size={14} /> Mídia Kit</button>
           <SignedOut>
@@ -777,6 +777,12 @@ function SubmitEventHub() {
   );
 }
 
+// Endereço antigo /experience/... vai para /desafios/...
+function RedirectExperience() {
+  const { pathname, search } = useLocation();
+  return <Navigate to={pathname.replace(/^\/experience/, '/desafios') + search} replace />;
+}
+
 // --- ROTAS DO APP ---
 
 export default function App() {
@@ -801,13 +807,14 @@ export default function App() {
         <Route path="/hub" element={<GuestHub />} />
         <Route path="/selecaomastersink" element={<MastersInkSelection />} />
 
-        {/* Mestres Experience: a Tattoo Week mantém /tattooweek (URL dos adesivos NFC) */}
+        {/* Desafios Mestres da Tattoo: a Tattoo Week fica em /tattooweek (URL dos adesivos NFC); /experience é o endereço antigo */}
         <Route path="/tattooweek/*" element={<CampaignApp slug="tattooweek" />} />
-        <Route path="/experience" element={<TwHub />} />
-        <Route path="/experience/perfil" element={<TwProfile />} />
-        <Route path="/experience/perfil/:id" element={<TwProfile />} />
-        <Route path="/experience/admin" element={<TwAdmin />} />
-        <Route path="/experience/:campaignSlug/*" element={<CampaignApp />} />
+        <Route path="/desafios" element={<TwHub />} />
+        <Route path="/desafios/perfil" element={<TwProfile />} />
+        <Route path="/desafios/perfil/:id" element={<TwProfile />} />
+        <Route path="/desafios/admin" element={<TwAdmin />} />
+        <Route path="/desafios/:campaignSlug/*" element={<CampaignApp />} />
+        <Route path="/experience/*" element={<RedirectExperience />} />
       </Routes>
     </Router>
   );

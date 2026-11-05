@@ -22,10 +22,10 @@ export function TwShell({ children }) {
       { to: `${base}/ranking`, label: 'Ranking', icon: Trophy },
       { to: `${base}/retrospectiva`, label: 'Vídeo', icon: Film },
     ]
-    : [{ to: '/experience', label: 'Experiências', icon: Home }];
+    : [{ to: '/desafios', label: 'Desafios', icon: Home }];
 
-  // Quebra antes da última palavra: "Tattoo Week" / "Experience"
-  const words = (ctx?.campaign.name || 'Mestres Experience').split(' ');
+  // Quebra antes da última palavra: "Desafio dos" / "Mestres"
+  const words = (ctx?.campaign.name || 'Desafio dos Mestres').split(' ');
   const last = words.length > 1 ? words.pop() : '';
 
   const theme = ctx ? campaignTheme(ctx.campaign) : null;
@@ -33,7 +33,7 @@ export function TwShell({ children }) {
   return (
     <div className={`tw ${theme?.accents?.length ? 'tw-themed' : ''}`} style={theme ? themeStyle(theme) : undefined}>
       <header className="tw-top">
-        <button className="tw-top-brand" onClick={() => navigate(base || '/experience')}>
+        <button className="tw-top-brand" onClick={() => navigate(base || '/desafios')}>
           <img src="/fotos artistas/logo mestres.png" alt="Mestres da Tattoo" />
           <span>{words.join(' ')}{last && <><br />{last}</>}</span>
         </button>
@@ -48,7 +48,7 @@ export function TwShell({ children }) {
             <SignInButton mode="modal"><button className="tw-btn tw-btn-sm">Entrar</button></SignInButton>
           </SignedOut>
           <SignedIn>
-            <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate('/experience/perfil')} aria-label="Meu perfil"><UserRound size={16} /></button>
+            <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate('/desafios/perfil')} aria-label="Meu perfil"><UserRound size={16} /></button>
             <UserButton />
           </SignedIn>
         </div>
@@ -168,7 +168,7 @@ export function JoinGate({ tw, track, children }) {
       <form onSubmit={handleJoin} className="tw-stack">
         <span className="tw-kicker">Inscrição — {label}</span>
         <h1 className="tw-h2">Seu cadastro</h1>
-        <p className="tw-p">Rapidinho: só o necessário para acompanhar seu progresso e te entregar o vídeo. Vale para as próximas experiências também.</p>
+        <p className="tw-p">Rapidinho: só o necessário para acompanhar seu progresso e te entregar o vídeo. Vale para os próximos desafios também.</p>
         <label className="tw-field"><span>Nome</span><input className="tw-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></label>
         <label className="tw-field"><span>E-mail</span><input className="tw-input" value={user.primaryEmailAddress?.emailAddress || ''} disabled /></label>
         <label className="tw-field"><span>Telefone / WhatsApp</span><input className="tw-input" type="tel" inputMode="tel" placeholder="(11) 99999-9999" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required /></label>
@@ -198,9 +198,13 @@ export function JoinGate({ tw, track, children }) {
 // Envio de missão: escolhe/captura fotos ou vídeos e envia
 export function MissionSheet({ mission, participant, artist, onClose, onDone }) {
   const partners = useCampaign()?.partners || DEFAULT_PARTNERS;
-  const slots = Math.max(1, mission.media_count || 1);
+  // media_count 0 = só resposta (pergunta)
+  const slots = Math.max(0, mission.media_count ?? 1);
+  const isQuiz = !!mission.answer_hash || mission.category === 'quiz';
+  const quizReady = !!mission.answer_hash; // pergunta sem resposta cadastrada no admin fica fechada
   const [files, setFiles] = useState([]);
   const [note, setNote] = useState('');
+  const [answer, setAnswer] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
@@ -216,7 +220,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
     setSending(true);
     setError('');
     try {
-      const sub = await submitMission({ participant, mission, artistId: artist?.id, files, note });
+      const sub = await submitMission({ participant, mission, artistId: artist?.id, files, note, answer: isQuiz ? answer : undefined });
       setDone(sub);
       onDone?.(sub);
     } catch (e) {
@@ -244,21 +248,29 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
             <CheckCircle2 size={56} color="#22c55e" />
             <h2 className="tw-h2" style={{ marginTop: '0.8rem' }}>{done.status === 'approved' ? `+${done.points} pontos!` : 'Enviado!'}</h2>
-            <p className="tw-p">{done.status === 'approved'
-              ? 'Missão concluída. Esse registro já entrou na sua retrospectiva.'
-              : 'Envio recebido! Os pontos entram assim que a missão for validada.'}</p>
+            <p className="tw-p">{isQuiz
+              ? 'Resposta certa! Missão concluída.'
+              : 'Missão concluída. Esse registro já entrou na sua retrospectiva.'}</p>
             <button className="tw-btn tw-btn-primary tw-btn-block" style={{ marginTop: '1.25rem' }} onClick={onClose}>Continuar</button>
           </div>
         ) : (
           <>
             <h2 className="tw-h2" style={{ fontSize: '1.4rem' }}>{mission.title}</h2>
-            {artist && <div className="tw-notice">Registro com <b>{artist.name}</b></div>}
+            {artist && <div className="tw-notice">📍 <b>{artist.name}</b></div>}
             {mission.description && <p className="tw-p">{mission.description}</p>}
-            <p className="tw-p" style={{ fontSize: '0.85rem' }}>
-              {slots === 1 ? 'Envie 1 foto ou vídeo curto.' : `Envie ${slots} registros (fotos ou vídeos curtos).`}
-            </p>
+            {isQuiz && !quizReady && <div className="tw-notice">Esta pergunta abre em breve. Fique de olho!</div>}
+            {isQuiz && quizReady && (
+              <label className="tw-field"><span>Sua resposta</span>
+                <input className="tw-input" placeholder={mission.answer_hint || 'Digite a resposta'} value={answer} onChange={e => { setAnswer(e.target.value); setError(''); }} autoComplete="off" />
+              </label>
+            )}
+            {slots > 0 && (
+              <p className="tw-p" style={{ fontSize: '0.85rem' }}>
+                {slots === 1 ? (isQuiz ? 'E envie o print que comprova.' : 'Envie 1 foto ou vídeo curto.') : `Envie ${slots} registros (fotos, vídeos ou prints).`}
+              </p>
+            )}
 
-            <div className="tw-drop" style={slots === 1 ? { gridTemplateColumns: '1fr', maxWidth: 220, margin: '0 auto' } : undefined}>
+            {slots > 0 && <div className="tw-drop" style={slots === 1 ? { gridTemplateColumns: '1fr', maxWidth: 220, margin: '0 auto' } : undefined}>
               {Array.from({ length: slots }).map((_, i) => {
                 const p = previews[i];
                 if (p) {
@@ -276,14 +288,16 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
                   </label>
                 );
               })}
-            </div>
+            </div>}
 
-            <label className="tw-field"><span>Observação (opcional)</span>
-              <textarea className="tw-input" placeholder={mission.track === 'artist' ? 'Nome do artista, @, cidade... ajuda a validar' : 'Conte o momento em uma frase'} value={note} onChange={e => setNote(e.target.value)} />
-            </label>
+            {!isQuiz && (
+              <label className="tw-field"><span>Observação (opcional)</span>
+                <textarea className="tw-input" placeholder={mission.track === 'artist' ? 'Nome do artista, @, cidade... ajuda a validar' : 'Conte o momento em uma frase'} value={note} onChange={e => setNote(e.target.value)} />
+              </label>
+            )}
 
             {error && <div className="tw-error">{error}</div>}
-            <button className="tw-btn tw-btn-primary tw-btn-block" disabled={files.length < slots || sending} onClick={send}>
+            <button className="tw-btn tw-btn-primary tw-btn-block" disabled={files.length < slots || (isQuiz && (!quizReady || !answer.trim())) || sending} onClick={send}>
               {sending ? <><Loader2 size={18} className="tw-spin" /> Enviando...</> : <><Upload size={18} /> Enviar missão</>}
             </button>
           </>
@@ -373,6 +387,24 @@ export function BadgeGrid({ badges, all, small }) {
           {!small && <small>{b.desc}</small>}
         </div>
       ))}
+    </div>
+  );
+}
+
+// Os 5 selos secretos: ícone revelado só depois de encontrado
+export function SealStrip({ seals, found }) {
+  if (!seals.length) return null;
+  return (
+    <div className="tw-seals">
+      {seals.map(s => {
+        const got = found.has(s.id);
+        return (
+          <div key={s.id} className={`tw-seal-secret ${got ? 'got' : ''}`} title={got ? s.name : 'Selo secreto'}>
+            <span>{got ? (s.seal_icon || '★') : '?'}</span>
+            <small>{got ? s.name : '???'}</small>
+          </div>
+        );
+      })}
     </div>
   );
 }

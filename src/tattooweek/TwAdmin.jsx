@@ -7,7 +7,7 @@ import {
   ArrowLeft, FileText, Handshake, ExternalLink, Copy, Activity, Images, Trophy, Megaphone, UserCog, Trash2, CopyPlus,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES, campaignTheme, themeStyle, PRESET_THEMES, DEFAULT_THEME } from './twData';
+import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES, NFC_KINDS, hashAnswers, campaignTheme, themeStyle, PRESET_THEMES, DEFAULT_THEME } from './twData';
 import { Live, Gallery, ParticipantSheet, Awards, Announcements, Staff } from './AdminExtra';
 import './tattooweek.css';
 
@@ -19,7 +19,7 @@ const TABS = [
   { id: 'gallery', label: 'Galeria', icon: Images, mod: true },
   { id: 'people', label: 'Participantes', icon: Users, mod: true },
   { id: 'missions', label: 'Missões', icon: ListChecks },
-  { id: 'artists', label: 'Credenciais NFC', icon: Nfc },
+  { id: 'artists', label: 'Adesivos NFC', icon: Nfc },
   { id: 'awards', label: 'Premiação', icon: Trophy },
   { id: 'notices', label: 'Avisos', icon: Megaphone, mod: true },
   { id: 'report', label: 'Relatório', icon: FileText },
@@ -58,7 +58,7 @@ export default function TwAdmin({ initialCampaignId }) {
       <div className="tw"><div className="tw-center-screen"><div>
         <h2 className="tw-h2">Acesso negado</h2>
         <p className="tw-p">Apenas administradores do Mestres da Tattoo.</p>
-        <button className="tw-btn" style={{ marginTop: '1rem' }} onClick={() => navigate('/experience')}>Voltar</button>
+        <button className="tw-btn" style={{ marginTop: '1rem' }} onClick={() => navigate('/desafios')}>Voltar</button>
       </div></div></div>
     );
   }
@@ -76,7 +76,7 @@ export default function TwAdmin({ initialCampaignId }) {
     <div className="tw" style={{ paddingBottom: 0 }}>
       <div className="tw-admin">
         <nav className="tw-admin-nav">
-          <button onClick={() => navigate(campaign ? campaignBase(campaign) : '/experience')}><ArrowLeft size={16} /> Site</button>
+          <button onClick={() => navigate(campaign ? campaignBase(campaign) : '/desafios')}><ArrowLeft size={16} /> Site</button>
           {tabs.map(t => (
             <button key={t.id} className={current === t.id ? 'on' : ''} onClick={() => setTab(t.id)}><t.icon size={16} /> {t.label}</button>
           ))}
@@ -187,7 +187,7 @@ async function loadStats(campaign) {
 
 function kpiList(d) {
   return [
-    ['Participantes', d.participants, 'Alcance da experiência'],
+    ['Participantes', d.participants, 'Alcance do desafio'],
     ['No público', d.publicCount, 'Inscrições Meu evento'],
     ['No Artist Challenge', d.artistCount, 'Tatuadores competindo'],
     ['Missões iniciadas', d.started, 'Interesse'],
@@ -227,7 +227,7 @@ function Overview({ campaign, partners }) {
           {d.partnerStats.length === 0 && <p className="tw-p">Nenhum parceiro nesta campanha.</p>}
         </div>
         <div className="tw-card tw-stack">
-          <h3 className="tw-h3">Leituras por credencial</h3>
+          <h3 className="tw-h3">Leituras por adesivo</h3>
           {d.scansBy.slice(0, 10).map(x => (
             <div key={x.name} className="tw-bar">
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.name}</span>
@@ -469,7 +469,10 @@ function Missions({ campaign, partners }) {
 
   const save = async (e) => {
     e.preventDefault();
-    const row = { ...edit, campaign_id: campaign.id, day: edit.day ? Number(edit.day) : null, partner: edit.partner || null, points: Number(edit.points), media_count: Number(edit.media_count) };
+    const { answerText, ...rest } = edit;
+    const row = { ...rest, campaign_id: campaign.id, day: edit.day ? Number(edit.day) : null, partner: edit.partner || null, points: Number(edit.points), media_count: Number(edit.media_count) };
+    // A resposta certa vira hash: quem olhar o site não descobre
+    if (answerText?.trim()) row.answer_hash = await hashAnswers(answerText);
     const { error } = row.id
       ? await supabase.from('tw_missions').update(row).eq('id', row.id)
       : await supabase.from('tw_missions').insert([row]);
@@ -529,8 +532,9 @@ function Missions({ campaign, partners }) {
 
   const groups = [
     ['Surpresas', rows.filter(m => m.category === 'surpresa')],
-    ...[1, 2, 3].map(d => [`Público · Dia ${d} — ${dayName(campaign, d)}`, rows.filter(m => m.track === 'public' && m.category === 'dia' && m.day === d)]),
-    ['Artist Challenge', rows.filter(m => m.track === 'artist' && m.category !== 'surpresa')],
+    ['Público', rows.filter(m => m.track === 'public' && m.category !== 'surpresa' && m.active)],
+    ['Artist Challenge', rows.filter(m => m.track === 'artist' && m.category !== 'surpresa' && m.active)],
+    ['Desativadas', rows.filter(m => !m.active && m.category !== 'surpresa')],
   ];
 
   return (
@@ -567,10 +571,18 @@ function Missions({ campaign, partners }) {
             <label className="tw-field"><span>Dia</span><select className="tw-input" value={edit.day ?? ''} onChange={e => setEdit({ ...edit, day: e.target.value })}><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
             <label className="tw-field"><span>Parceiro</span><select className="tw-input" value={edit.partner || ''} onChange={e => setEdit({ ...edit, partner: e.target.value })}><option value="">—</option>{Object.values(partners).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
             <label className="tw-field"><span>Pontos</span><input className="tw-input" type="number" value={edit.points} onChange={e => setEdit({ ...edit, points: e.target.value })} /></label>
-            <label className="tw-field"><span>Registros</span><input className="tw-input" type="number" min="1" max="3" value={edit.media_count} onChange={e => setEdit({ ...edit, media_count: e.target.value })} /></label>
+            <label className="tw-field"><span>Fotos/vídeos (0 = só resposta)</span><input className="tw-input" type="number" min="0" max="3" value={edit.media_count} onChange={e => setEdit({ ...edit, media_count: e.target.value })} /></label>
             <label className="tw-field"><span>Posição</span><input className="tw-input" type="number" value={edit.position ?? 0} onChange={e => setEdit({ ...edit, position: Number(e.target.value) })} /></label>
           </div>
-          <label className="tw-check"><input type="checkbox" checked={!!edit.hidden} onChange={e => setEdit({ ...edit, hidden: e.target.checked })} /><span>Secreta: só aparece para quem ler a credencial que a revela (configure em Credenciais NFC).</span></label>
+          {edit.category === 'quiz' && (
+            <div className="tw-card tw-stack">
+              <b>Resposta certa</b>
+              <p className="tw-p" style={{ fontSize: '0.8rem' }}>{edit.answer_hash ? '✓ Resposta cadastrada. Digite de novo só se quiser trocar.' : '⚠ Sem resposta a pergunta fica fechada no site.'} Aceita várias separadas por “;” (ex.: Fulano da Silva; Fulano). Maiúsculas, acentos e @ não importam.</p>
+              <input className="tw-input" placeholder="Resposta certa" value={edit.answerText || ''} onChange={e => setEdit({ ...edit, answerText: e.target.value })} autoComplete="off" />
+              <input className="tw-input" placeholder="Dica no campo (opcional, ex.: nome e sobrenome)" value={edit.answer_hint || ''} onChange={e => setEdit({ ...edit, answer_hint: e.target.value })} />
+            </div>
+          )}
+          <label className="tw-check"><input type="checkbox" checked={!!edit.hidden} onChange={e => setEdit({ ...edit, hidden: e.target.checked })} /><span>Escondida: só aparece para quem ler o Ponto NFC que a revela (configure em Pontos NFC).</span></label>
           <div className="tw-row"><button className="tw-btn tw-btn-primary tw-btn-sm"><Save size={14} /> Salvar</button><button type="button" className="tw-btn tw-btn-ghost tw-btn-sm" onClick={() => setEdit(null)}>Cancelar</button></div>
         </form>
       )}
@@ -587,7 +599,8 @@ function Missions({ campaign, partners }) {
                       <b>{m.title}</b>
                       <div className="tw-row" style={{ gap: '0.3rem', marginTop: 4, flexWrap: 'wrap' }}>
                         {m.partner && <span className="tw-chip" style={{ color: partners[m.partner]?.color }}>{partners[m.partner]?.name || m.partner}</span>}
-                        {m.hidden && <span className="tw-chip tw-chip-gold">Secreta</span>}
+                        {m.hidden && <span className="tw-chip tw-chip-gold">Escondida</span>}
+                        {m.category === 'quiz' && <span className={`tw-chip ${m.answer_hash ? 'tw-chip-ok' : 'tw-chip-bad'}`}>{m.answer_hash ? 'Resposta ✓' : 'Falta a resposta'}</span>}
                         {m.category === 'surpresa' && <span className={`tw-chip ${surpriseState(m)[1]}`}>{surpriseState(m)[0]}</span>}
                         {m.starts_at && <span className="tw-chip">{new Date(m.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}{m.ends_at && ` → ${new Date(m.ends_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}</span>}
                       </div>
@@ -611,14 +624,22 @@ function Missions({ campaign, partners }) {
   );
 }
 
-// --- Credenciais NFC ---
+// --- Adesivos NFC: pontos, selos secretos e ativação ---
+
+const KIND_HELP = {
+  point: 'Cole pelos stands e lugares do evento. A pessoa registra com uma foto e ganha os pontos do “Ponto NFC encontrado”.',
+  secret: 'Esconda bem! Quem encostar o celular ganha o selo e os pontos na hora, sem foto.',
+  activation: 'Cole no stand da Bronc. Libera o Artist Challenge para o tatuador que escanear.',
+};
 
 function Artists({ campaign }) {
   const [rows, setRows] = useState([]);
   const [missions, setMissions] = useState([]);
   const [saving, setSaving] = useState(null);
   const [print, setPrint] = useState(false);
+  const [filter, setFilter] = useState('all');
   const base = `${window.location.origin}${campaignBase(campaign)}`;
+  const kindOf = (r) => r.kind || 'point';
 
   const load = useCallback(async () => {
     const [a, m] = await Promise.all([
@@ -636,22 +657,26 @@ function Artists({ campaign }) {
     setSaving(r.id);
     const { id, created_at, ...patch } = r;
     void created_at;
-    await supabase.from('tw_artists').update({ ...patch, reveals_mission_id: patch.reveals_mission_id || null }).eq('id', id);
+    const { error } = await supabase.from('tw_artists').update({ ...patch, reveals_mission_id: patch.reveals_mission_id || null }).eq('id', id);
+    if (error) alert(error.message);
     setSaving(null);
   };
 
-  const addSlot = async () => {
-    // Próximo número livre (credenciais podem ter sido excluídas)
+  const add = async (kind) => {
+    const prefix = kind === 'secret' ? 'selo' : kind === 'activation' ? 'ativacao' : 'ponto';
     const used = new Set(rows.map(r => r.slug));
     let n = 1;
-    while (used.has(`artista-${String(n).padStart(2, '0')}`)) n++;
-    const slug = `artista-${String(n).padStart(2, '0')}`;
-    await supabase.from('tw_artists').insert([{ campaign_id: campaign.id, slug, name: `Artista ${String(n).padStart(2, '0')}` }]);
+    while (used.has(`${prefix}-${String(n).padStart(2, '0')}`)) n++;
+    const num = String(n).padStart(2, '0');
+    const row = { campaign_id: campaign.id, slug: `${prefix}-${num}`, kind, name: kind === 'secret' ? `Selo secreto ${num}` : kind === 'activation' ? 'Ativação Artist Challenge' : `Ponto NFC ${num}` };
+    if (kind === 'secret') row.seal_icon = '⭐';
+    const { error } = await supabase.from('tw_artists').insert([row]);
+    if (error) alert(error.message);
     load();
   };
 
   const remove = async (r) => {
-    if (!confirm(`Excluir a credencial ${r.slug} (${r.name})? Se o adesivo já foi gravado, ele para de funcionar. Prefira desmarcar “Ativa”.`)) return;
+    if (!confirm(`Excluir ${r.slug} (${r.name})? Se o adesivo já foi gravado, ele para de funcionar. Prefira desmarcar “Ativo”.`)) return;
     await supabase.from('tw_artists').delete().eq('id', r.id);
     load();
   };
@@ -664,24 +689,40 @@ function Artists({ campaign }) {
     } catch (e) { alert(e.message); }
   };
 
+  const order = { activation: 0, secret: 1, point: 2 };
+  const list = rows.filter(r => filter === 'all' || kindOf(r) === filter)
+    .sort((x, y) => order[kindOf(x)] - order[kindOf(y)] || x.slug.localeCompare(y.slug));
+  const count = (k) => rows.filter(r => kindOf(r) === k).length;
+
   if (print) {
     return (
       <div className="tw-stack">
-        <div className="tw-row tw-noprint">
+        <div className="tw-row tw-noprint" style={{ flexWrap: 'wrap' }}>
           <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => setPrint(false)}><ArrowLeft size={14} /> Voltar</button>
           <button className="tw-btn tw-btn-sm tw-btn-primary" onClick={() => window.print()}><Printer size={14} /> Imprimir</button>
         </div>
-        <p className="tw-p tw-noprint" style={{ fontSize: '0.85rem' }}>QR Code alternativo para quem não tem NFC. Grave no adesivo NFC a URL sem o “?src=qr”.</p>
-        <div className="tw-badges">
-          {rows.filter(r => r.active).map(r => (
-            <div key={r.id} className="tw-badge">
-              <img src="/fotos artistas/logo mestres.png" alt="" style={{ height: 28, filter: 'invert(1)' }} />
-              <h4>{r.name}</h4>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#a07800', marginBottom: 8 }}>{campaign.name.toUpperCase()}</div>
-              <QRCodeSVG value={`${base}/nfc/${r.slug}?src=qr`} size={140} />
-              <small>{base}/nfc/{r.slug}</small>
-            </div>
-          ))}
+        <p className="tw-p tw-noprint" style={{ fontSize: '0.85rem' }}>
+          Adesivos redondos de 6 cm: cole o NFC atrás e o QR fica como alternativa para quem não tem NFC. Grave no NFC a URL sem o “?src=qr”.
+          Os selos secretos saem sem nome, para não entregar o segredo.
+        </p>
+        <div className="tw-stickers">
+          {list.filter(r => r.active).map(r => {
+            const k = kindOf(r);
+            return (
+              <div key={r.id} className={`tw-sticker tw-sticker-${k}`}>
+                <div className="tw-sticker-top">{k === 'activation' ? 'ATIVE O ARTIST CHALLENGE' : k === 'secret' ? 'SELO SECRETO' : 'ENCOSTE O CELULAR'}</div>
+                <div className="tw-sticker-qr"><QRCodeSVG value={`${base}/nfc/${r.slug}?src=qr`} size={92} /></div>
+                <div className="tw-sticker-name">{k === 'secret' ? '???' : k === 'point' ? `PONTO ${r.slug.replace(/\D/g, '')}` : (r.location || 'STAND BRONC').toUpperCase()}</div>
+                <div className="tw-sticker-brand">{campaign.name.toUpperCase()}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="tw-noprint tw-table-wrap">
+          <table className="tw-table tw-table-stack">
+            <thead><tr><th>Adesivo</th><th>URL para gravar no NFC</th></tr></thead>
+            <tbody>{list.map(r => <tr key={r.id}><td>{r.name}</td><td style={{ fontSize: '0.78rem', wordBreak: 'break-all' }}>{base}/nfc/{r.slug}</td></tr>)}</tbody>
+          </table>
         </div>
       </div>
     );
@@ -690,50 +731,71 @@ function Artists({ campaign }) {
   return (
     <div className="tw-stack">
       <div className="tw-between" style={{ flexWrap: 'wrap' }}>
-        <h1 className="tw-h2">Credenciais NFC ({rows.length})</h1>
-        <div className="tw-row">
-          <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={addSlot}><Plus size={14} /> Credencial</button>
-          <button className="tw-btn tw-btn-sm" onClick={() => setPrint(true)}><Printer size={14} /> Imprimir com QR</button>
+        <h1 className="tw-h2">Adesivos NFC ({rows.length})</h1>
+        <div className="tw-row" style={{ flexWrap: 'wrap' }}>
+          <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => add('point')}><Plus size={14} /> Ponto</button>
+          <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => add('secret')}><Plus size={14} /> Selo secreto</button>
+          <button className="tw-btn tw-btn-sm" onClick={() => setPrint(true)}><Printer size={14} /> Imprimir adesivos</button>
         </div>
+      </div>
+      <div className="tw-tabs">
+        {[['all', `Todos (${rows.length})`], ['point', `Pontos (${count('point')})`], ['secret', `Selos (${count('secret')})`], ['activation', `Ativação (${count('activation')})`]].map(([k, l]) => (
+          <button key={k} className={`tw-tab ${filter === k ? 'on' : ''}`} onClick={() => setFilter(k)}>{l}</button>
+        ))}
       </div>
       <div className="tw-notice">
-        Grave em cada adesivo NFC a URL da credencial (ex.: <b>{base}/nfc/artista-01</b>) com um app como “NFC Tools”, tipo de registro <b>URL</b>. A leitura abre a página do artista, registra a interação e pede a foto para o carimbo — não conta pontos sozinha.
+        Grave em cada adesivo NFC a URL dele (ex.: <b>{base}/nfc/ponto-01</b>) com o app “NFC Tools”, registro do tipo <b>URL</b>. Depois encoste o celular para testar.
+        {filter !== 'all' && <><br />{KIND_HELP[filter]}</>}
       </div>
-      {rows.map(r => (
-        <div key={r.id} className="tw-card tw-stack">
-          <div className="tw-between" style={{ flexWrap: 'wrap' }}>
-            <div className="tw-row">
-              <label style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: '#1a1a1a', cursor: 'pointer', flex: '0 0 56px', display: 'grid', placeItems: 'center' }} title="Trocar foto">
-                {r.photo_url ? <img src={r.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Plus size={18} color="#888" />}
-                <input type="file" accept="image/*" hidden onChange={e => e.target.files[0] && uploadPhoto(r, e.target.files[0])} />
-              </label>
-              <div>
-                <span className="tw-chip tw-chip-gold">{r.slug}</span>
-                <div style={{ fontSize: '0.75rem', marginTop: 4 }}><a href={`${base}/nfc/${r.slug}`} target="_blank" rel="noreferrer" className="tw-gold">{base}/nfc/{r.slug}</a></div>
+      {list.map(r => {
+        const k = kindOf(r);
+        return (
+          <div key={r.id} className="tw-card tw-stack">
+            <div className="tw-between" style={{ flexWrap: 'wrap' }}>
+              <div className="tw-row">
+                {k === 'secret'
+                  ? <div className="tw-seal-secret got" style={{ width: 56 }}><span style={{ fontSize: '1.5rem' }}>{r.seal_icon || '★'}</span></div>
+                  : (
+                    <label style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: '#1a1a1a', cursor: 'pointer', flex: '0 0 56px', display: 'grid', placeItems: 'center' }} title="Trocar foto">
+                      {r.photo_url ? <img src={r.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Plus size={18} color="#888" />}
+                      <input type="file" accept="image/*" hidden onChange={e => e.target.files[0] && uploadPhoto(r, e.target.files[0])} />
+                    </label>
+                  )}
+                <div style={{ minWidth: 0 }}>
+                  <span className={`tw-chip ${k === 'secret' ? 'tw-chip-quiz' : k === 'activation' ? 'tw-chip-bad' : 'tw-chip-gold'}`}>{NFC_KINDS[k]}</span>
+                  <div style={{ fontSize: '0.75rem', marginTop: 4, wordBreak: 'break-all' }}><a href={`${base}/nfc/${r.slug}`} target="_blank" rel="noreferrer" className="tw-gold">{base}/nfc/{r.slug}</a></div>
+                </div>
               </div>
+              <div style={{ background: '#fff', padding: 6, borderRadius: 8 }}><QRCodeSVG value={`${base}/nfc/${r.slug}?src=qr`} size={64} /></div>
             </div>
-            <div style={{ background: '#fff', padding: 6, borderRadius: 8 }}><QRCodeSVG value={`${base}/nfc/${r.slug}?src=qr`} size={64} /></div>
+            <div className="tw-grid tw-grid-3">
+              <input className="tw-input" placeholder="Nome" value={r.name || ''} onChange={e => set(r.id, { name: e.target.value })} />
+              <input className="tw-input" placeholder="Onde está colado (ex.: Stand Bronc)" value={r.location || ''} onChange={e => set(r.id, { location: e.target.value })} />
+              {k === 'secret'
+                ? <input className="tw-input" placeholder="Emoji do selo (ex.: 🐉)" value={r.seal_icon || ''} onChange={e => set(r.id, { seal_icon: e.target.value })} />
+                : <input className="tw-input" placeholder="@instagram (opcional)" value={r.instagram || ''} onChange={e => set(r.id, { instagram: e.target.value })} />}
+            </div>
+            <textarea className="tw-input" placeholder={k === 'secret' ? 'Mensagem ao encontrar o selo' : 'Descrição (aparece ao encostar o celular)'} value={r.bio || ''} onChange={e => set(r.id, { bio: e.target.value })} />
+            {k === 'point' && (
+              <div className="tw-grid tw-grid-2">
+                <input className="tw-input" placeholder="Desafio deste ponto (opcional)" value={r.mission_text || ''} onChange={e => set(r.id, { mission_text: e.target.value })} />
+                <select className="tw-input" value={r.reveals_mission_id || ''} onChange={e => set(r.id, { reveals_mission_id: e.target.value })}>
+                  <option value="">Não revela missão escondida</option>
+                  {missions.map(m => <option key={m.id} value={m.id}>Revela: {m.title}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="tw-row" style={{ flexWrap: 'wrap' }}>
+              <button className="tw-btn tw-btn-sm tw-btn-primary" onClick={() => save(r)} disabled={saving === r.id}><Save size={14} /> {saving === r.id ? 'Salvando...' : 'Salvar'}</button>
+              <select className="tw-input" style={{ width: 'auto' }} value={k} onChange={e => set(r.id, { kind: e.target.value })}>
+                {Object.entries(NFC_KINDS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <label className="tw-row" style={{ gap: '0.4rem', fontSize: '0.85rem' }}><input type="checkbox" checked={r.active} onChange={e => set(r.id, { active: e.target.checked })} /> Ativo</label>
+              <button className="tw-icon-btn" style={{ marginLeft: 'auto' }} onClick={() => remove(r)} title="Excluir"><Trash2 size={13} /></button>
+            </div>
           </div>
-          <div className="tw-grid tw-grid-3">
-            <input className="tw-input" placeholder="Nome" value={r.name || ''} onChange={e => set(r.id, { name: e.target.value })} />
-            <input className="tw-input" placeholder="@instagram" value={r.instagram || ''} onChange={e => set(r.id, { instagram: e.target.value })} />
-            <input className="tw-input" placeholder="Estilos (ex.: Realismo, Old School)" value={r.styles || ''} onChange={e => set(r.id, { styles: e.target.value })} />
-            <input className="tw-input" placeholder="Cidade / Estado" value={r.city || ''} onChange={e => set(r.id, { city: e.target.value })} />
-            <input className="tw-input" placeholder="País" value={r.country || ''} onChange={e => set(r.id, { country: e.target.value })} />
-            <select className="tw-input" value={r.reveals_mission_id || ''} onChange={e => set(r.id, { reveals_mission_id: e.target.value })}>
-              <option value="">Não revela missão secreta</option>
-              {missions.map(m => <option key={m.id} value={m.id}>Revela: {m.title}</option>)}
-            </select>
-          </div>
-          <textarea className="tw-input" placeholder="Apresentação rápida" value={r.bio || ''} onChange={e => set(r.id, { bio: e.target.value })} />
-          <input className="tw-input" placeholder="Missão relacionada a este artista (ex.: Peça para ele contar como começou a tatuar)" value={r.mission_text || ''} onChange={e => set(r.id, { mission_text: e.target.value })} />
-          <div className="tw-row">
-            <button className="tw-btn tw-btn-sm tw-btn-primary" onClick={() => save(r)} disabled={saving === r.id}><Save size={14} /> {saving === r.id ? 'Salvando...' : 'Salvar'}</button>
-            <label className="tw-row" style={{ gap: '0.4rem', fontSize: '0.85rem' }}><input type="checkbox" checked={r.active} onChange={e => set(r.id, { active: e.target.checked })} /> Ativa</label>
-            <button className="tw-icon-btn" style={{ marginLeft: 'auto' }} onClick={() => remove(r)} title="Excluir credencial"><Trash2 size={13} /></button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -809,7 +871,7 @@ function People({ campaign, onOpenParticipant }) {
                 <td data-label="Divulgação">{r.consent_marketing ? <span className="tw-chip tw-chip-ok">Sim</span> : <span className="tw-chip">Não</span>}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`${campaignBase(campaign)}/retrospectiva?p=${r.id}`)} title="Ver retrospectiva"><Film size={14} /></button>{' '}
-                  <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`/experience/perfil/${r.id}`)} title="Ver perfil"><Users size={14} /></button>
+                  <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => navigate(`/desafios/perfil/${r.id}`)} title="Ver perfil"><Users size={14} /></button>
                 </td>
               </tr>
             ))}
@@ -823,7 +885,7 @@ function People({ campaign, onOpenParticipant }) {
 // --- Campanha: editar, criar, duplicar ---
 
 const EMPTY_CAMPAIGN = {
-  name: '', slug: '', event_name: '', tagline: '3 dias. 2 experiências. 1 grande história.', description: '', venue: '', city: '',
+  name: '', slug: '', event_name: '', tagline: 'Missões rápidas. Selos secretos. Prêmios todo dia.', description: '', venue: '', city: '',
   hero_image: '', event_days: ['', '', ''], day_names: DEFAULT_DAY_NAMES, unlock_all: false, music_url: '', partners: [],
   prize_title: 'O Kit dos Mestres', prize_items: [], status: 'draft',
 };
@@ -933,8 +995,8 @@ function CampaignEditor({ campaign, partners, reload, isNew, onCreated }) {
       <div className="tw-card tw-stack">
         <h3 className="tw-h3">Identidade</h3>
         <div className="tw-grid tw-grid-2">
-          <label className="tw-field"><span>Nome da experiência</span><input className="tw-input" placeholder="Masters Ink Experience" value={f.name} onChange={e => setF({ ...f, name: e.target.value, slug: isNew ? slugify(e.target.value) : f.slug })} required /></label>
-          <label className="tw-field"><span>Endereço (/experience/…)</span><input className="tw-input" value={f.slug} onChange={e => setF({ ...f, slug: slugify(e.target.value) })} required disabled={!isNew && f.slug === 'tattooweek'} /></label>
+          <label className="tw-field"><span>Nome do desafio</span><input className="tw-input" placeholder="Desafio Masters Ink" value={f.name} onChange={e => setF({ ...f, name: e.target.value, slug: isNew ? slugify(e.target.value) : f.slug })} required /></label>
+          <label className="tw-field"><span>Endereço (/desafios/…)</span><input className="tw-input" value={f.slug} onChange={e => setF({ ...f, slug: slugify(e.target.value) })} required disabled={!isNew && f.slug === 'tattooweek'} /></label>
           <label className="tw-field"><span>Nome do evento (“Meu …”)</span><input className="tw-input" placeholder="Masters Ink" value={f.event_name || ''} onChange={e => setF({ ...f, event_name: e.target.value })} required /></label>
           <label className="tw-field"><span>Status</span><select className="tw-input" value={f.status} onChange={e => setF({ ...f, status: e.target.value })}><option value="draft">Rascunho (só admin vê na lista)</option><option value="active">Ativa</option><option value="finished">Encerrada (só leitura)</option></select></label>
         </div>
@@ -1066,7 +1128,7 @@ function Partners({ partners, reload }) {
             <input className="tw-input" placeholder="Site ou Instagram (https://...)" value={r.url || ''} onChange={e => set(i, { url: e.target.value })} />
             <div className="tw-row"><input type="color" value={r.color || '#eec358'} onChange={e => set(i, { color: e.target.value })} style={{ width: 46, height: 46, border: 0, background: 'none' }} /><span className="tw-p" style={{ fontSize: '0.8rem' }}>Cor</span></div>
           </div>
-          <input className="tw-input" placeholder="Papel na experiência (ex.: Desafios técnicos e produtos para premiação)" value={r.role || ''} onChange={e => set(i, { role: e.target.value })} />
+          <input className="tw-input" placeholder="Papel no desafio (ex.: Desafios técnicos e produtos para premiação)" value={r.role || ''} onChange={e => set(i, { role: e.target.value })} />
           <div className="tw-row" style={{ flexWrap: 'wrap' }}>
             {r.logo_url && <img src={r.logo_url} alt="" style={{ height: 36 }} />}
             <label className="tw-btn tw-btn-sm tw-btn-ghost">Logo<input type="file" accept="image/*" hidden onChange={e => e.target.files[0] && uploadLogo(i, e.target.files[0])} /></label>

@@ -170,7 +170,7 @@ function ResultCard({ participant }) {
         )}
         {data && (
           <section className="tw-section">
-            <span className="tw-kicker">Seus selos nesta experiência</span>
+            <span className="tw-kicker">Seus selos neste desafio</span>
             <div style={{ marginTop: '0.7rem' }}><BadgeGrid badges={data.badges} /></div>
           </section>
         )}

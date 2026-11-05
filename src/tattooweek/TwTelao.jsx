@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../supabaseClient';
-import { useCampaign, campaignTheme, themeStyle } from './twData';
+import { useCampaign, campaignTheme, themeStyle, todaySP } from './twData';
 
 // Tela cheia para a TV do stand: rankings, números ao vivo, QR para entrar e fotos autorizadas
 export default function TwTelao() {
@@ -11,20 +11,21 @@ export default function TwTelao() {
 
   useEffect(() => {
     const load = async () => {
-      const [r, en, s, e] = await Promise.all([
+      const [r, en, s, e, today] = await Promise.all([
         supabase.from('tw_ranking').select('participant_id, name, track, points').eq('campaign_id', campaign.id).order('points', { ascending: false }).order('last_at'),
         supabase.from('tw_enrollments').select('id', { count: 'exact', head: true }).eq('campaign_id', campaign.id),
         supabase.from('tw_submissions').select('media, created_at, participant:tw_participants!inner(name, consent_marketing), mission:tw_missions!inner(campaign_id, title)')
           .eq('mission.campaign_id', campaign.id).eq('status', 'approved').eq('participant.consent_marketing', true)
           .order('created_at', { ascending: false }).limit(30),
         supabase.from('tw_events').select('id', { count: 'exact', head: true }).eq('campaign_id', campaign.id).in('type', ['nfc_scan', 'qr_scan']),
+        supabase.from('tw_ranking_daily').select('participant_id, name, points').eq('campaign_id', campaign.id).eq('day', todaySP()).order('points', { ascending: false }).order('last_at').limit(10),
       ]);
       const rows = r.data || [];
       const photos = (s.data || []).flatMap(x => (x.media || []).filter(m => m.type === 'image').map(m => ({ url: m.url, name: x.participant?.name, title: x.mission?.title })));
       const total = await supabase.from('tw_submissions').select('id, mission:tw_missions!inner(campaign_id)', { count: 'exact', head: true }).eq('mission.campaign_id', campaign.id).eq('status', 'approved');
       setD({
         artist: rows.filter(x => x.track === 'artist').slice(0, 10),
-        public: rows.filter(x => x.track === 'public').slice(0, 10),
+        today: today.data || [],
         people: en.count || 0,
         missions: total.count || 0,
         scans: e.count || 0,
@@ -77,7 +78,7 @@ export default function TwTelao() {
 
       <div className="tw-tv-cols">
         <List title="Artist Challenge" rows={d.artist} />
-        <List title={`Meu ${campaign.event_name || 'evento'}`} rows={d.public} />
+        <List title="Hoje · prêmio do dia" rows={d.today} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2vh' }}>
           {current
             ? <div style={{ position: 'relative' }}>

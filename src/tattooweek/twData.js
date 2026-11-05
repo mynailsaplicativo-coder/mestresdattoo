@@ -22,7 +22,41 @@ export const CATEGORY_LABELS = {
   surpresa: 'Missão surpresa',
   secreta: 'Missão secreta',
   dia: 'Missão do dia',
+  geral: 'Missão',
+  quiz: 'Pergunta',
+  selo: 'Selo secreto',
 };
+
+// Tipos de adesivo NFC
+export const NFC_KINDS = {
+  point: 'Ponto NFC',
+  secret: 'Selo secreto',
+  activation: 'Ativação do Artist Challenge',
+};
+
+// --- Respostas de perguntas: só o hash fica no banco ---
+
+export function normalizeAnswer(s) {
+  return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/@/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export async function hashAnswer(s) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalizeAnswer(s)));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Várias respostas aceitas separadas por ";" (ex.: "Fulano Silva; Fulano")
+export async function hashAnswers(text) {
+  const list = (text || '').split(';').map(x => x.trim()).filter(Boolean);
+  return (await Promise.all(list.map(hashAnswer))).join(',');
+}
+
+export async function checkAnswer(mission, answer) {
+  if (!mission.answer_hash) return true;
+  const h = await hashAnswer(answer);
+  return mission.answer_hash.split(',').includes(h);
+}
 
 export const DAY_BONUS = 50;
 
@@ -38,9 +72,9 @@ export function useCampaign() {
   return useContext(CampaignContext);
 }
 
-// A Tattoo Week mantém /tattooweek (URL gravada nos adesivos NFC); as demais ficam em /experience/<slug>
+// A Tattoo Week mantém /tattooweek (URL gravada nos adesivos NFC); as demais ficam em /desafios/<slug>
 export function campaignBase(c) {
-  return c.slug === 'tattooweek' ? '/tattooweek' : `/experience/${c.slug}`;
+  return c.slug === 'tattooweek' ? '/tattooweek' : `/desafios/${c.slug}`;
 }
 
 export async function loadPartners() {
@@ -172,7 +206,13 @@ export async function uploadMedia(file, folder) {
   return { url: data.publicUrl, path, type: isVideo ? 'video' : 'image' };
 }
 
-export async function submitMission({ participant, mission, artistId, files, note }) {
+export async function submitMission({ participant, mission, artistId, files, note, answer }) {
+  // Pergunta: confere antes de subir qualquer arquivo
+  if (mission.answer_hash && !(await checkAnswer(mission, answer))) {
+    throw new Error('Resposta incorreta. Investigue mais e tente de novo!');
+  }
+  if (answer) note = [`Resposta: ${answer}`, note].filter(Boolean).join(' · ');
+
   const media = [];
   for (const f of files) {
     media.push(await uploadMedia(f, `${participant.id}/${mission.id}`));
@@ -298,4 +338,14 @@ export function themeStyle(t) {
     '--tw-accent-2': a[1] || a[0],
     '--tw-accent-3': a[2] || a[0],
   };
+}
+
+// Leitura do adesivo de ativação guardada no navegador (ativa assim que a pessoa entrar no Challenge)
+export function activationKey(campaignId) {
+  return `tw-activation-${campaignId}`;
+}
+
+// Data de hoje no fuso de São Paulo (YYYY-MM-DD), igual ao ranking do dia no banco
+export function todaySP() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 }

@@ -1,4 +1,4 @@
-/* Tattoo Week Experience — mobile-first, mesma paleta do site (void + gold) */
+/* Desafio dos Mestres — mobile-first, tema por campanha */
 .tw, .tw-tv {
   /* Tema padrão (Mestres da Tattoo). Cada campanha pode sobrescrever via themeStyle() */
   --tw-bg: #050608;
@@ -395,3 +395,32 @@ select.tw-input option { background: #111; }
 .tw-themed .tw-h1 .tw-gold { background: linear-gradient(90deg, var(--tw-accent-1), var(--tw-accent-2), var(--tw-accent-3), var(--tw-gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .tw-themed .tw-bottom { border-top: 2px solid transparent; border-image: linear-gradient(90deg, var(--tw-accent-1), var(--tw-accent-2), var(--tw-accent-3)) 1; }
 .tw-themed .tw-tab.on { background: linear-gradient(135deg, color-mix(in srgb, var(--tw-accent-1) 30%, transparent), color-mix(in srgb, var(--tw-accent-2) 20%, transparent)); }
+
+/* Selos secretos */
+.tw-seals { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.45rem; }
+.tw-seal-secret { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; text-align: center; }
+.tw-seal-secret span { width: 100%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-size: 1.7rem; font-weight: 900; color: var(--tw-muted); background: var(--tw-card); border: 2px dashed rgba(255,255,255,0.15); }
+.tw-seal-secret small { font-size: 0.6rem; font-weight: 800; color: var(--tw-muted); line-height: 1.15; text-transform: uppercase; letter-spacing: 0.3px; }
+.tw-seal-secret.got span { border: 2px solid transparent; background: linear-gradient(var(--tw-card), var(--tw-card)) padding-box, linear-gradient(135deg, var(--tw-accent-1), var(--tw-accent-2), var(--tw-accent-3), var(--tw-gold)) border-box; box-shadow: 0 0 18px rgba(var(--tw-gold-rgb), 0.25); }
+.tw-seal-secret.got small { color: var(--tw-text); }
+
+/* Revelação de selo secreto */
+.tw-reveal { text-align: center; padding: 2rem 1rem 1rem; }
+.tw-reveal-icon { width: 160px; height: 160px; margin: 0 auto 1rem; border-radius: 50%; display: grid; place-items: center; font-size: 5rem; border: 3px solid transparent; background: linear-gradient(var(--tw-card), var(--tw-card)) padding-box, conic-gradient(var(--tw-accent-1), var(--tw-accent-2), var(--tw-accent-3), var(--tw-gold), var(--tw-accent-1)) border-box; animation: tw-pop 0.7s cubic-bezier(.2,1.6,.4,1) both, tw-glow 2.4s ease-in-out infinite; }
+@keyframes tw-pop { 0% { transform: scale(0.2) rotate(-30deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes tw-glow { 0%, 100% { box-shadow: 0 0 30px rgba(var(--tw-gold-rgb), 0.25); } 50% { box-shadow: 0 0 60px rgba(var(--tw-gold-rgb), 0.55); } }
+.tw-chip-quiz { color: var(--tw-accent-1); border-color: var(--tw-accent-1); }
+
+/* Adesivos redondos para imprimir (6 cm) */
+.tw-stickers { display: grid; grid-template-columns: repeat(auto-fill, minmax(6cm, 1fr)); gap: 0.6cm; justify-items: center; }
+.tw-sticker { width: 6cm; height: 6cm; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.12cm; color: #fff; text-align: center; padding: 0.4cm; background: radial-gradient(circle at 50% 35%, #2b2468, #0c0a24 70%); border: 0.15cm solid #f4e14d; break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.tw-sticker-secret { background: conic-gradient(from 210deg, #a995ff, #ff8fd8, #7fe7f2, #f4e14d, #a995ff); border-color: #0c0a24; color: #0c0a24; }
+.tw-sticker-activation { border-color: #e4572e; }
+.tw-sticker-top { font-size: 0.24cm; font-weight: 900; letter-spacing: 0.05cm; }
+.tw-sticker-qr { background: #fff; padding: 0.1cm; border-radius: 0.15cm; line-height: 0; }
+.tw-sticker-name { font-size: 0.32cm; font-weight: 900; letter-spacing: 0.03cm; }
+.tw-sticker-brand { font-size: 0.18cm; font-weight: 800; opacity: 0.8; letter-spacing: 0.04cm; }
+@media print {
+  .tw-stickers { grid-template-columns: repeat(3, 6cm); }
+  .tw-sticker, .tw-sticker * { color: inherit !important; }
+}
