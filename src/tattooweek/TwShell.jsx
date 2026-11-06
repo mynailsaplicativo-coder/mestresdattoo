@@ -197,6 +197,13 @@ export function JoinGate({ tw, track, children }) {
   );
 }
 
+// Links (https://...) da descrição viram botão clicável
+function linkify(text) {
+  return text.split(/(https?://[^s)]+)/g).map((part, i) => (/^https?:///.test(part)
+    ? <a key={i} href={part} target="_blank" rel="noreferrer" className="tw-gold" style={{ fontWeight: 800, textDecoration: 'underline' }}>{part.includes('apps.apple.com') ? 'Baixar na App Store' : 'abrir link'}</a>
+    : part));
+}
+
 // Envio de missão: escolhe/captura fotos ou vídeos e envia
 export function MissionSheet({ mission, participant, artist, onClose, onDone }) {
   const ctx = useCampaign();
@@ -264,7 +271,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
           <>
             <h2 className="tw-h2" style={{ fontSize: '1.4rem' }}>{mission.title}</h2>
             {artist && <div className="tw-notice">📍 <b>{artist.name}</b></div>}
-            {mission.description && <p className="tw-p">{mission.description}</p>}
+            {mission.description && <p className="tw-p">{linkify(mission.description)}</p>}
             {isQuiz && !quizReady && <div className="tw-notice">Esta pergunta abre em breve. Fique de olho!</div>}
             {isQuiz && quizReady && (
               <label className="tw-field"><span>Sua resposta</span>
