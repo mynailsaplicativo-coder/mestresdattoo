@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
-import { Home, Camera, Swords, Trophy, Map as MapIcon, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound } from 'lucide-react';
+import { Home, Camera, Swords, Trophy, Map as MapIcon, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound, Download } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS } from './twData';
 import './tattooweek.css';
@@ -197,11 +197,19 @@ export function JoinGate({ tw, track, children }) {
   );
 }
 
-// Links (https://...) da descrição viram botão clicável
-function linkify(text) {
-  return text.split(/(https?://[^s)]+)/g).map((part, i) => (/^https?:///.test(part)
-    ? <a key={i} href={part} target="_blank" rel="noreferrer" className="tw-gold" style={{ fontWeight: 800, textDecoration: 'underline' }}>{part.includes('apps.apple.com') ? 'Baixar na App Store' : 'abrir link'}</a>
-    : part));
+// Links (https://...) saem do texto da missão e viram botões (ex.: "Baixar na App Store")
+const URL_RE = /https?:\/\/[^\s)]+/g;
+
+function splitLinks(text) {
+  const links = text.match(URL_RE) || [];
+  const clean = text.replace(/\s*\(?https?:\/\/[^\s)]+\)?/g, '').replace(/\s+([.,])/g, '$1').trim();
+  return { clean, links };
+}
+
+function linkLabel(url) {
+  if (url.includes('apps.apple.com')) return 'Baixar na App Store';
+  if (url.includes('play.google.com')) return 'Baixar no Google Play';
+  return 'Abrir link';
 }
 
 // Envio de missão: escolhe/captura fotos ou vídeos e envia
@@ -271,7 +279,19 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
           <>
             <h2 className="tw-h2" style={{ fontSize: '1.4rem' }}>{mission.title}</h2>
             {artist && <div className="tw-notice">📍 <b>{artist.name}</b></div>}
-            {mission.description && <p className="tw-p">{linkify(mission.description)}</p>}
+            {mission.description && (() => {
+              const { clean, links } = splitLinks(mission.description);
+              return (
+                <>
+                  {clean && <p className="tw-p">{clean}</p>}
+                  {links.map(url => (
+                    <a key={url} className="tw-btn tw-btn-block" href={url} target="_blank" rel="noreferrer">
+                      <Download size={18} /> {linkLabel(url)}
+                    </a>
+                  ))}
+                </>
+              );
+            })()}
             {isQuiz && !quizReady && <div className="tw-notice">Esta pergunta abre em breve. Fique de olho!</div>}
             {isQuiz && quizReady && (
               <label className="tw-field"><span>Sua resposta</span>
