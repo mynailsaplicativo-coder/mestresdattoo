@@ -2,12 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Nfc, KeyRound, Share2, HelpCircle, Lock, MapPin } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard, BadgeGrid, SealStrip } from './TwShell';
-import { useTwParticipant, useCampaign, loadAdjustments, isMissionLive, activationKey, CATEGORY_LABELS } from './twData';
-import { computeBadges, BADGES } from './badges';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip } from './TwShell';
+import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS } from './twData';
+import { PatchSash } from './TwArt';
 
 const SECTIONS = ['quiz', 'parceiros', 'networking', 'conteudo', 'geral', 'secreta'];
-const ARTIST_BADGES = ['primeira', 'completo', 'detetive', 'selo1', 'cacador', 'relampago', 'conector', 'superconector', 'parceiros', 'criador', 'podio'];
 const ACTIVATION_TTL = 3 * 3600 * 1000;
 
 export default function TwChallenge() {
@@ -45,15 +44,19 @@ function ChallengeGate({ tw }) {
   }, [enrollment, activation, campaign.id, tw]);
 
   if (activation === undefined) return <div className="tw-center-screen">Carregando...</div>;
+  // Passo 1: seguir os perfis dos parceiros
+  if (enrollment && !enrollment.followed_at && (campaign.follow_partners || []).length) {
+    return <FollowStep enrollment={enrollment} setEnrollments={tw.setEnrollments} participantId={tw.participant.id} />;
+  }
   if (activation && !enrollment?.activated_at) {
     return (
       <div className="tw-center-screen">
         <div style={{ maxWidth: 420 }}>
           <div className="tw-reveal-icon" style={{ width: 120, height: 120, fontSize: '3rem', animation: 'tw-glow 2.4s ease-in-out infinite' }}><Lock size={48} color="var(--tw-gold)" /></div>
-          <span className="tw-kicker">Artist Challenge</span>
+          <span className="tw-kicker">Artist Challenge · passo 2 de 2</span>
           <h1 className="tw-h2" style={{ margin: '0.4rem 0' }}>Falta ativar seu desafio</h1>
           <p className="tw-p">
-            Vá até o <b style={{ color: '#fff' }}>{activation.location || 'stand da Bronc'}</b> e encoste o celular no adesivo de ativação (ou leia o QR Code). Seu Artist Challenge libera na hora.
+            Vá até o <b style={{ color: 'var(--tw-text)' }}>{activation.location || 'stand da Bronc'}</b> e encoste o celular no adesivo de ativação (ou leia o QR Code). Seu Artist Challenge libera na hora.
           </p>
           <div className="tw-notice" style={{ marginTop: '1rem' }}><MapPin size={14} style={{ verticalAlign: -2 }} /> Enquanto isso, você já pode jogar o Meu {campaign.event_name} com o público.</div>
         </div>
@@ -61,6 +64,58 @@ function ChallengeGate({ tw }) {
     );
   }
   return <ChallengePanel participant={tw.participant} />;
+}
+
+// O artista precisa seguir todos os perfis antes de jogar (abre cada um no Instagram)
+function FollowStep({ enrollment, setEnrollments, participantId }) {
+  const { campaign, partners } = useCampaign();
+  const list = (campaign.follow_partners || []).map(id => partners[id]).filter(Boolean);
+  const [opened, setOpened] = useState(() => new Set());
+  const [saving, setSaving] = useState(false);
+  const handle = (p) => (p.instagram || '').replace(/^@/, '').trim();
+  const allOpened = list.every(p => !handle(p) || opened.has(p.id));
+
+  const open = (p) => {
+    setOpened(o => new Set(o).add(p.id));
+    trackEvent('follow_click', p.id, participantId, campaign.id);
+  };
+
+  const confirm = async () => {
+    setSaving(true);
+    const at = new Date().toISOString();
+    await supabase.from('tw_enrollments').update({ followed_at: at }).eq('id', enrollment.id);
+    setEnrollments(l => l.map(e => (e.id === enrollment.id ? { ...e, followed_at: at } : e)));
+    setSaving(false);
+  };
+
+  return (
+    <div className="tw-wrap" style={{ maxWidth: 520 }}>
+      <span className="tw-kicker">Artist Challenge · passo 1 de 2</span>
+      <h1 className="tw-h2" style={{ fontSize: '2.2rem', margin: '0.3rem 0 0.5rem' }}>Siga a galera</h1>
+      <p className="tw-p" style={{ marginBottom: '1rem' }}>Para participar, siga os {list.length} perfis abaixo. Toque em cada um para abrir no Instagram. Depois, cada missão precisa ser postada no seu perfil marcando todos eles.</p>
+      <div className="tw-follow">
+        {list.map(p => {
+          const h = handle(p);
+          const done = opened.has(p.id);
+          return h ? (
+            <a key={p.id} className={`tw-follow-row ${done ? 'done' : ''}`} href={`https://instagram.com/${h}`} target="_blank" rel="noreferrer" onClick={() => open(p)}>
+              <span className="tw-follow-dot" style={{ background: p.color || '#fff' }}>{done ? <Check size={18} /> : p.name.slice(0, 1)}</span>
+              <span style={{ flex: 1 }}><b>{p.name}</b><br /><small>@{h}</small></span>
+              <span className="tw-chip">{done ? 'Aberto' : 'Seguir'}</span>
+            </a>
+          ) : (
+            <div key={p.id} className="tw-follow-row">
+              <span className="tw-follow-dot" style={{ background: p.color || '#fff' }}>{p.name.slice(0, 1)}</span>
+              <span style={{ flex: 1 }}><b>{p.name}</b><br /><small>procure no Instagram</small></span>
+            </div>
+          );
+        })}
+      </div>
+      <button className="tw-btn tw-btn-primary tw-btn-block" style={{ marginTop: '1.25rem' }} disabled={!allOpened || saving} onClick={confirm}>
+        {allOpened ? 'Já sigo todos, bora!' : 'Abra todos os perfis para continuar'}
+      </button>
+    </div>
+  );
 }
 
 function ChallengePanel({ participant }) {
@@ -115,7 +170,7 @@ function ChallengePanel({ participant }) {
   const total = approved.reduce((a, s) => a + (s.points || 0), 0) + adj.artist;
   const stamps = passportMission ? missionSubs(passportMission.id) : [];
   const foundSeals = new Set(approved.filter(s => s.mission?.category === 'selo').map(s => s.artist_id));
-  const badges = computeBadges({ approved, missions, artistsCount: points.length, secretCount: seals.length, ranks: { artist: rank } }).filter(b => ARTIST_BADGES.includes(b.id));
+  const seals_ = sealItems(missions, approved);
   const finished = campaign.status === 'finished';
 
   return (
@@ -205,13 +260,11 @@ function ChallengePanel({ participant }) {
       )}
 
       <section className="tw-section">
-        <div className="tw-between">
-          <span className="tw-kicker">Seus selos</span>
+        <div className="tw-between" style={{ marginBottom: '0.8rem', flexWrap: 'wrap' }}>
+          <span className="tw-kicker">Sua faixa de selos · {seals_.filter(x => x.earned).length}/{seals_.length}</span>
           <button className="tw-btn tw-btn-sm" onClick={() => navigate(`${base}/resultado`)}><Share2 size={14} /> Card de resultado</button>
         </div>
-        <div style={{ marginTop: '0.7rem' }}>
-          <BadgeGrid badges={badges} all={BADGES.filter(b => ARTIST_BADGES.includes(b.id))} small />
-        </div>
+        <div className="tw-sash-banner"><PatchSash items={seals_} /></div>
       </section>
 
       <p className="tw-p" style={{ fontSize: '0.8rem', marginTop: '2rem' }}>

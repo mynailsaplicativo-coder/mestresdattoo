@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { SignInButton } from '@clerk/clerk-react';
-import { AtSign, MapPin, Nfc, KeyRound, Check, Camera, Unlock, Loader2 } from 'lucide-react';
+import { AtSign, MapPin, Nfc, KeyRound, Check, Camera, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, MissionSheet } from './TwShell';
 import { useTwParticipant, useCampaign, trackEvent, instagramUrl, activationKey } from './twData';
@@ -122,7 +122,7 @@ function SecretSeal({ tag, tw }) {
   );
 }
 
-// --- Ativação do Artist Challenge (stand da Bronc) ---
+// --- Cadastro/ativação do Artist Challenge (o único NFC dos artistas, no stand da Bronc) ---
 
 function Activation({ tag, tw }) {
   const navigate = useNavigate();
@@ -145,26 +145,34 @@ function Activation({ tag, tw }) {
     });
   }, [enrollment, setEnrollments]);
 
+  const go = () => navigate(`${base}/artist`);
+
   return (
-    <div className="tw-wrap" style={{ maxWidth: 480 }}>
-      <div className="tw-reveal">
-        <span className="tw-kicker">{tag.location || 'Stand da Bronc'}</span>
-        <div className="tw-reveal-icon" style={{ marginTop: '1rem' }}><Unlock size={64} color="var(--tw-gold)" /></div>
-        <h1 className="tw-h1" style={{ fontSize: 'clamp(2rem, 9vw, 3rem)' }}>{state === 'active' ? 'Challenge ativado!' : 'Artist Challenge'}</h1>
-        <p className="tw-p" style={{ margin: '0.5rem 0 1.25rem' }}>
-          {state === 'active'
-            ? 'Suas missões de artista estão liberadas. Bora jogar!'
-            : 'Tatuador: entre no Artist Challenge e sua ativação é liberada na hora.'}
-        </p>
-        {state === 'active'
-          ? <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => navigate(`${base}/artist`)}>Ver minhas missões</button>
-          : !loading && (
-            participant
-              ? <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => navigate(`${base}/artist`)}>Entrar no Artist Challenge</button>
-              : tw.isSignedIn
-                ? <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => navigate(`${base}/artist`)}>Fazer cadastro de artista</button>
-                : <SignInButton mode="modal"><button className="tw-btn tw-btn-primary tw-btn-block">Entrar</button></SignInButton>
-          )}
+    <div className="tw-bronc-hero">
+      <img className="tw-bronc-img" src="/tattooweek/bronc/welcome.jpg" alt="Welcome to the Bronc & Bigwasp" />
+      <div className="tw-wrap" style={{ maxWidth: 520, textAlign: 'center' }}>
+        <div className="tw-bronc" style={{ marginTop: '0.5rem' }}>
+          <img className="tw-bronc-img" src="/tattooweek/bronc/dragao.jpg" alt="" style={{ maxHeight: 260, objectFit: 'cover' }} />
+          <div className="tw-bronc-body">
+            <span className="tw-kicker">{tag.location || 'Stand da Bronc'}</span>
+            <h2 style={{ fontSize: '1.7rem' }}>{state === 'active' ? 'Challenge liberado!' : 'Artist Challenge'}</h2>
+            <p style={{ marginBottom: '1.2rem' }}>
+              {state === 'active'
+                ? 'Você está dentro. Poste cada missão no seu perfil marcando os parceiros e dispute o kit do tatuador do dia.'
+                : 'Tatuador: faça seu cadastro, siga os perfis dos parceiros e o desafio libera na hora. Todo dia, o melhor tatuador leva um kit.'}
+            </p>
+            {state === 'active'
+              ? <button className="tw-btn tw-btn-block" onClick={go}>Ver minhas missões</button>
+              : !loading && (
+                participant
+                  ? <button className="tw-btn tw-btn-block" onClick={go}>Entrar no Artist Challenge</button>
+                  : tw.isSignedIn
+                    ? <button className="tw-btn tw-btn-block" onClick={go}>Fazer meu cadastro</button>
+                    : <SignInButton mode="modal"><button className="tw-btn tw-btn-block">Entrar e fazer cadastro</button></SignInButton>
+              )}
+          </div>
+        </div>
+        <img src="/tattooweek/bronc/faixa.jpg" alt="Bronc · Bigwasp · Born to Bronc" style={{ width: '100%', marginTop: '1rem', borderRadius: 12 }} />
       </div>
     </div>
   );

@@ -7,8 +7,9 @@ import {
   ArrowLeft, FileText, Handshake, ExternalLink, Copy, Activity, Images, Trophy, Megaphone, UserCog, Trash2, CopyPlus,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES, NFC_KINDS, hashAnswers, campaignTheme, themeStyle, PRESET_THEMES, DEFAULT_THEME } from './twData';
+import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES, NFC_KINDS, hashAnswers, SEAL_ICON_KEYS, SEAL_COLORS, campaignTheme, themeStyle, PRESET_THEMES, DEFAULT_THEME } from './twData';
 import { Live, Gallery, ParticipantSheet, Awards, Announcements, Staff } from './AdminExtra';
+import { Patch } from './TwArt';
 import './tattooweek.css';
 
 // mod: true = moderadores também veem
@@ -428,7 +429,7 @@ function ReviewCard({ row, onDecide, checked, onToggle, onOpenParticipant }) {
         <h3 className="tw-h3">{row.mission?.title}</h3>
         <p className="tw-p" style={{ fontSize: '0.85rem' }}>
           <button style={{ background: 'none', border: 0, padding: 0, color: '#fff', font: 'inherit', fontWeight: 800, cursor: 'pointer', textDecoration: 'underline' }} onClick={() => onOpenParticipant(row.participant_id)}>{row.participant?.name}</button> {row.participant?.instagram} · {new Date(row.created_at).toLocaleString('pt-BR')}
-          {row.artist && <> · com <b style={{ color: '#fff' }}>{row.artist.name}</b></>}
+          {row.artist && <> · com <b style={{ color: 'var(--tw-text)' }}>{row.artist.name}</b></>}
         </p>
         {row.note && <p style={{ margin: '0.4rem 0 0', fontSize: '0.9rem' }}>“{row.note}”</p>}
         {row.reviewer_note && <p className="tw-p" style={{ fontSize: '0.8rem' }}>Motivo: {row.reviewer_note}</p>}
@@ -454,7 +455,7 @@ function ReviewCard({ row, onDecide, checked, onToggle, onOpenParticipant }) {
 
 // --- Missões ---
 
-const EMPTY_MISSION = { track: 'artist', day: '', category: 'networking', partner: '', title: '', description: '', points: 20, media_count: 1, approval: 'auto', hidden: false, active: true, position: 0 };
+const EMPTY_MISSION = { track: 'artist', day: '', category: 'geral', partner: '', title: '', description: '', points: 20, media_count: 1, approval: 'auto', hidden: false, active: true, position: 0, seal_name: '', seal_icon: 'star', seal_color: '#a995ff', require_post: true };
 
 function Missions({ campaign, partners }) {
   const [rows, setRows] = useState([]);
@@ -581,6 +582,24 @@ function Missions({ campaign, partners }) {
               <input className="tw-input" placeholder="Resposta certa" value={edit.answerText || ''} onChange={e => setEdit({ ...edit, answerText: e.target.value })} autoComplete="off" />
               <input className="tw-input" placeholder="Dica no campo (opcional, ex.: nome e sobrenome)" value={edit.answer_hint || ''} onChange={e => setEdit({ ...edit, answer_hint: e.target.value })} />
             </div>
+          )}
+          <div className="tw-card tw-stack">
+            <b>Selo de escoteiro desta missão</b>
+            <div className="tw-row" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ background: '#f4eeff', borderRadius: 14, padding: 6 }}><Patch name={edit.seal_name || 'Selo'} icon={edit.seal_icon || 'star'} color={edit.seal_color || '#a995ff'} size={86} /></div>
+              <div className="tw-stack" style={{ flex: '1 1 220px', gap: 0 }}>
+                <input className="tw-input" placeholder="Nome do selo (ex.: Comilão)" value={edit.seal_name || ''} onChange={e => setEdit({ ...edit, seal_name: e.target.value })} />
+                <select className="tw-input" style={{ marginTop: '0.5rem' }} value={edit.seal_icon || 'star'} onChange={e => setEdit({ ...edit, seal_icon: e.target.value })}>
+                  {SEAL_ICON_KEYS.map(k => <option key={k} value={k}>{k}</option>)}
+                </select>
+                <div className="tw-row" style={{ marginTop: '0.5rem', gap: '0.35rem' }}>
+                  {SEAL_COLORS.map(c => <button type="button" key={c} onClick={() => setEdit({ ...edit, seal_color: c })} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: edit.seal_color === c ? '3px solid #fff' : '2px solid rgba(255,255,255,0.3)', cursor: 'pointer' }} aria-label={c} />)}
+                </div>
+              </div>
+            </div>
+          </div>
+          {edit.track === 'artist' && (
+            <label className="tw-check"><input type="checkbox" checked={!!edit.require_post} onChange={e => setEdit({ ...edit, require_post: e.target.checked })} /><span>Pedir o link do post no perfil do tatuador marcando os parceiros.</span></label>
           )}
           <label className="tw-check"><input type="checkbox" checked={!!edit.hidden} onChange={e => setEdit({ ...edit, hidden: e.target.checked })} /><span>Escondida: só aparece para quem ler o Ponto NFC que a revela (configure em Pontos NFC).</span></label>
           <div className="tw-row"><button className="tw-btn tw-btn-primary tw-btn-sm"><Save size={14} /> Salvar</button><button type="button" className="tw-btn tw-btn-ghost tw-btn-sm" onClick={() => setEdit(null)}>Cancelar</button></div>
@@ -922,6 +941,57 @@ async function copyCampaignContent(fromId, toId, copyArtists) {
   }
 }
 
+// Mapa do jogo: sobe a imagem e toca nela para marcar os pinos
+const PIN_KINDS = { bronc: 'Bronc', stage: 'Palco', info: 'Info', star: 'Destaque' };
+
+function MapEditor({ f, setF, setMsg }) {
+  const pins = Array.isArray(f.map_pins) ? f.map_pins : [];
+  const setPins = (list) => setF(x => ({ ...x, map_pins: list }));
+
+  const upload = async (file) => {
+    try {
+      const m = await uploadMedia(file, 'maps');
+      setF(x => ({ ...x, map_image: m.url }));
+    } catch (e) { setMsg(e.message); }
+  };
+
+  const addAt = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(((e.clientX - r.left) / r.width) * 1000) / 10;
+    const y = Math.round(((e.clientY - r.top) / r.height) * 1000) / 10;
+    setPins([...pins, { label: 'Novo ponto', x, y, kind: 'star' }]);
+  };
+
+  return (
+    <div className="tw-card tw-stack">
+      <h3 className="tw-h3">Mapa do jogo</h3>
+      <p className="tw-p" style={{ fontSize: '0.85rem' }}>Suba o mapa oficial do evento e toque nele para colocar um pino. Os selos secretos nunca aparecem no mapa.</p>
+      <div className="tw-row" style={{ flexWrap: 'wrap' }}>
+        <label className="tw-btn tw-btn-sm">Subir mapa<input type="file" accept="image/*" hidden onChange={e => e.target.files[0] && upload(e.target.files[0])} /></label>
+        <input className="tw-input" style={{ flex: 1, minWidth: 200 }} placeholder="ou URL da imagem" value={f.map_image || ''} onChange={e => setF({ ...f, map_image: e.target.value })} />
+      </div>
+      {f.map_image && (
+        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', cursor: 'crosshair' }} onClick={addAt}>
+          <img src={f.map_image} alt="Mapa" style={{ width: '100%', display: 'block' }} />
+          {pins.map((p, i) => (
+            <span key={i} style={{ position: 'absolute', left: `${p.x}%`, top: `${p.y}%`, transform: 'translate(-50%, -50%)', width: 22, height: 22, borderRadius: '50%', background: p.kind === 'bronc' ? '#f07c2a' : '#ff4fa3', border: '3px solid #1d1646', color: '#fff', fontSize: 11, fontWeight: 900, display: 'grid', placeItems: 'center' }}>{i + 1}</span>
+          ))}
+        </div>
+      )}
+      {pins.map((p, i) => (
+        <div key={i} className="tw-row" style={{ flexWrap: 'wrap' }}>
+          <b style={{ width: 22 }}>{i + 1}</b>
+          <input className="tw-input" style={{ flex: '1 1 200px' }} value={p.label} onChange={e => setPins(pins.map((q, j) => (j === i ? { ...q, label: e.target.value } : q)))} />
+          <select className="tw-input" style={{ width: 'auto' }} value={p.kind || 'star'} onChange={e => setPins(pins.map((q, j) => (j === i ? { ...q, kind: e.target.value } : q)))}>
+            {Object.entries(PIN_KINDS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+          <button type="button" className="tw-icon-btn" onClick={() => setPins(pins.filter((_, j) => j !== i))} title="Remover"><Trash2 size={13} /></button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CampaignEditor({ campaign, partners, reload, isNew, onCreated }) {
   const [f, setF] = useState(() => {
     const src = isNew ? EMPTY_CAMPAIGN : campaign;
@@ -1047,6 +1117,24 @@ function CampaignEditor({ campaign, partners, reload, isNew, onCreated }) {
         <label className="tw-field"><span>Itens (um por linha)</span><textarea className="tw-input" style={{ minHeight: 110 }} value={f.prizeText} onChange={e => setF({ ...f, prizeText: e.target.value })} /></label>
       </div>
 
+      <MapEditor f={f} setF={setF} setMsg={setMsg} />
+
+      <div className="tw-card tw-stack">
+        <h3 className="tw-h3">Perfis que os tatuadores precisam seguir</h3>
+        <p className="tw-p" style={{ fontSize: '0.85rem' }}>Aparecem no passo 1 do Artist Challenge e como marcações obrigatórias nos posts. Confira o @ de cada um na aba Parceiros.</p>
+        <div className="tw-row" style={{ flexWrap: 'wrap' }}>
+          {Object.values(partners).map(p => {
+            const on = (f.follow_partners || []).includes(p.id);
+            return (
+              <label key={p.id} className="tw-check" style={{ padding: '0.5rem 0.75rem' }}>
+                <input type="checkbox" checked={on} onChange={() => setF(x => ({ ...x, follow_partners: on ? (x.follow_partners || []).filter(i => i !== p.id) : [...(x.follow_partners || []), p.id] }))} />
+                <span><b style={{ color: p.color }}>{p.name}</b> {p.instagram ? <small>{p.instagram}</small> : <small style={{ color: '#fca5a5' }}>sem @</small>}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="tw-card tw-stack">
         <h3 className="tw-h3">Cores da campanha</h3>
         <p className="tw-p" style={{ fontSize: '0.85rem' }}>Usadas nas páginas da campanha, no telão, no vídeo e no card de resultado. O painel admin continua dourado.</p>
@@ -1125,7 +1213,8 @@ function Partners({ partners, reload }) {
         <div key={r.id || `new-${i}`} className="tw-card tw-stack">
           <div className="tw-grid tw-grid-3">
             <input className="tw-input" placeholder="Nome" value={r.name} onChange={e => set(i, { name: e.target.value })} />
-            <input className="tw-input" placeholder="Site ou Instagram (https://...)" value={r.url || ''} onChange={e => set(i, { url: e.target.value })} />
+            <input className="tw-input" placeholder="Site (https://...)" value={r.url || ''} onChange={e => set(i, { url: e.target.value })} />
+            <input className="tw-input" placeholder="@instagram" value={r.instagram || ''} onChange={e => set(i, { instagram: e.target.value })} />
             <div className="tw-row"><input type="color" value={r.color || '#eec358'} onChange={e => set(i, { color: e.target.value })} style={{ width: 46, height: 46, border: 0, background: 'none' }} /><span className="tw-p" style={{ fontSize: '0.8rem' }}>Cor</span></div>
           </div>
           <input className="tw-input" placeholder="Papel no desafio (ex.: Desafios técnicos e produtos para premiação)" value={r.role || ''} onChange={e => set(i, { role: e.target.value })} />

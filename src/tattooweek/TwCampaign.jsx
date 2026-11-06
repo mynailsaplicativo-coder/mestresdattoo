@@ -10,6 +10,7 @@ import TwRetro from './TwRetro';
 import TwResult from './TwResult';
 import TwAdmin from './TwAdmin';
 import TwTelao from './TwTelao';
+import TwMap from './TwMap';
 import { TwRanking, TwPrizes } from './TwRanking';
 import './tattooweek.css';
 
@@ -51,6 +52,7 @@ export default function CampaignApp({ slug: fixedSlug }) {
         <Route path="retrospectiva" element={<TwRetro />} />
         <Route path="resultado" element={<TwResult />} />
         <Route path="premiacao" element={<TwPrizes />} />
+        <Route path="mapa" element={<TwMap />} />
         <Route path="telao" element={<TwTelao />} />
         <Route path="admin" element={<TwAdmin initialCampaignId={ctx.campaign.id} />} />
       </Routes>

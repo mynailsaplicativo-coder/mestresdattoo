@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Film, Share2, HelpCircle, Nfc } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard, BadgeGrid, SealStrip } from './TwShell';
-import { useTwParticipant, useCampaign, loadAdjustments, isMissionLive } from './twData';
-import { computeBadges, sumPoints, BADGES } from './badges';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip } from './TwShell';
+import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive } from './twData';
+import { sumPoints } from './badges';
+import { PatchSash } from './TwArt';
 
-const PUBLIC_BADGES = ['primeira', 'completo', 'detetive', 'selo1', 'cacador', 'relampago', 'conector', 'parceiros'];
 // Missões normais da lista (as outras têm seção própria)
 const LIST_CATEGORIES = ['geral', 'quiz', 'parceiros', 'dia', 'networking', 'conteudo'];
 
@@ -59,11 +59,11 @@ function PublicPanel({ participant }) {
   const points = tags.filter(t => (t.kind || 'point') === 'point');
   const foundSeals = new Set(approved.filter(s => s.mission?.category === 'selo').map(s => s.artist_id));
   const foundPoints = new Set(approved.filter(s => s.mission?.category === 'passaporte').map(s => s.artist_id));
-  const badges = computeBadges({ approved, missions, artistsCount: points.length, secretCount: seals.length, ranks: {} }).filter(b => PUBLIC_BADGES.includes(b.id));
   const total = sumPoints(approved, missions, 'public') + adj.public;
   const done = list.filter(m => subByMission[m.id]?.status === 'approved').length;
   const today = new Date().toDateString();
   const todayPts = approved.filter(s => new Date(s.created_at).toDateString() === today).reduce((acc, s) => acc + (s.points || 0), 0);
+  const seals_ = sealItems(missions, approved);
   const finished = campaign.status === 'finished';
 
   return (
@@ -79,7 +79,7 @@ function PublicPanel({ participant }) {
           <div className="tw-stat"><b>{foundSeals.size}/{seals.length}</b><span>Selos</span></div>
         </div>
         <div className="tw-progress" style={{ marginTop: '1rem' }}><div style={{ width: `${list.length ? (done / list.length) * 100 : 0}%` }} /></div>
-        <p className="tw-p" style={{ fontSize: '0.78rem', marginTop: '0.6rem' }}>Todo dia tem premiação para os 3 primeiros do ranking do dia. Veio só um dia? Dá pra ganhar!</p>
+        <p className="tw-p" style={{ fontSize: '0.78rem', marginTop: '0.6rem' }}>Cada missão vale um selo bordado. Complete sua faixa e gere seu vídeo no fim!</p>
       </div>
 
       {finished && <div className="tw-notice" style={{ marginTop: '1rem' }}>O jogo foi encerrado. Seu vídeo e seus selos continuam disponíveis.</div>}
@@ -142,10 +142,11 @@ function PublicPanel({ participant }) {
       )}
 
       <section className="tw-section">
-        <span className="tw-kicker">Seus selos</span>
-        <div style={{ marginTop: '0.7rem' }}>
-          <BadgeGrid badges={badges} all={BADGES.filter(b => PUBLIC_BADGES.includes(b.id))} small />
+        <div className="tw-between" style={{ marginBottom: '0.8rem' }}>
+          <span className="tw-kicker">Sua faixa de selos</span>
+          <span className="tw-chip tw-chip-gold">{seals_.filter(x => x.earned).length}/{seals_.length}</span>
         </div>
+        <div className="tw-sash-banner"><PatchSash items={seals_} /></div>
       </section>
 
       <div className="tw-grid tw-grid-2" style={{ marginTop: '1.5rem' }}>

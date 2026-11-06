@@ -437,7 +437,7 @@ export function Awards({ campaign, reload, onOpenParticipant }) {
       supabase.from('tw_ranking').select('participant_id, track, points').eq('campaign_id', campaign.id).order('points', { ascending: false }).order('last_at'),
       supabase.from('tw_submissions').select('participant_id, created_at, participant:tw_participants!inner(show_in_ranking, blocked), mission:tw_missions!inner(campaign_id, category)')
         .eq('mission.campaign_id', campaign.id).eq('mission.category', 'passaporte').eq('status', 'approved'),
-      supabase.from('tw_ranking_daily').select('participant_id, day, points').eq('campaign_id', campaign.id).order('points', { ascending: false }).order('last_at'),
+      supabase.from('tw_ranking_daily').select('participant_id, day, track, points').eq('campaign_id', campaign.id).order('points', { ascending: false }).order('last_at'),
     ]);
     const stampCount = {};
     const lastAt = {};
@@ -456,7 +456,7 @@ export function Awards({ campaign, reload, onOpenParticipant }) {
       if (a.status !== 'open' || a.rule === 'manual') continue;
       // Prêmio do dia: ranking da data do Dia N da campanha
       const date = a.rule === 'day_rank' ? (campaign.event_days || [])[(a.day || 1) - 1] : null;
-      const list = a.rule === 'day_rank' ? (daily.data || []).filter(x => x.day === date).map(x => x.participant_id) : lists[a.rule];
+      const list = a.rule === 'day_rank' ? (daily.data || []).filter(x => x.day === date && (!a.track || a.track === 'all' || x.track === a.track)).map(x => x.participant_id) : lists[a.rule];
       if (!list) continue;
       const pick = list.filter(id => !used.has(id))[(a.rank || 1) - 1];
       if (!pick) continue;

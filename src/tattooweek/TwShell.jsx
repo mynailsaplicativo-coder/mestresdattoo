@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
-import { Home, Camera, Swords, Trophy, Film, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound } from 'lucide-react';
+import { Home, Camera, Swords, Trophy, Map as MapIcon, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS } from './twData';
 import './tattooweek.css';
+import './poster.css';
 
 export function TwShell({ children }) {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export function TwShell({ children }) {
       { to: `${base}/meu`, label: 'Missões', icon: Camera },
       { to: `${base}/artist`, label: 'Challenge', icon: Swords },
       { to: `${base}/ranking`, label: 'Ranking', icon: Trophy },
-      { to: `${base}/retrospectiva`, label: 'Vídeo', icon: Film },
+      { to: `${base}/mapa`, label: 'Mapa', icon: MapIcon },
     ]
     : [{ to: '/desafios', label: 'Desafios', icon: Home }];
 
@@ -31,7 +32,7 @@ export function TwShell({ children }) {
   const theme = ctx ? campaignTheme(ctx.campaign) : null;
 
   return (
-    <div className={`tw ${theme?.accents?.length ? 'tw-themed' : ''}`} style={theme ? themeStyle(theme) : undefined}>
+    <div className={`tw ${theme?.accents?.length ? 'tw-themed' : ''} ${theme?.style === 'poster' ? 'tw-poster' : ''}`} style={theme && theme.style !== 'poster' ? themeStyle(theme) : undefined}>
       <header className="tw-top">
         <button className="tw-top-brand" onClick={() => navigate(base || '/desafios')}>
           <img src="/fotos artistas/logo mestres.png" alt="Mestres da Tattoo" />
@@ -197,7 +198,10 @@ export function JoinGate({ tw, track, children }) {
 
 // Envio de missão: escolhe/captura fotos ou vídeos e envia
 export function MissionSheet({ mission, participant, artist, onClose, onDone }) {
-  const partners = useCampaign()?.partners || DEFAULT_PARTNERS;
+  const ctx = useCampaign();
+  const partners = ctx?.partners || DEFAULT_PARTNERS;
+  const needsPost = !!mission.require_post;
+  const tags = (ctx?.campaign.follow_partners || []).map(id => partners[id]?.instagram).filter(Boolean).map(h => `@${h.replace(/^@/, '')}`);
   // media_count 0 = só resposta (pergunta)
   const slots = Math.max(0, mission.media_count ?? 1);
   const isQuiz = !!mission.answer_hash || mission.category === 'quiz';
@@ -205,6 +209,8 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
   const [files, setFiles] = useState([]);
   const [note, setNote] = useState('');
   const [answer, setAnswer] = useState('');
+  const [postUrl, setPostUrl] = useState('');
+  const postOk = !needsPost || /instagram.com/(p|reel|reels|stories|tv)//i.test(postUrl);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
@@ -220,7 +226,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
     setSending(true);
     setError('');
     try {
-      const sub = await submitMission({ participant, mission, artistId: artist?.id, files, note, answer: isQuiz ? answer : undefined });
+      const sub = await submitMission({ participant, mission, artistId: artist?.id, files, note, answer: isQuiz ? answer : undefined, postUrl: needsPost ? postUrl.trim() : undefined });
       setDone(sub);
       onDone?.(sub);
     } catch (e) {
@@ -290,6 +296,18 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
               })}
             </div>}
 
+            {needsPost && (
+              <div className="tw-card tw-stack" style={{ padding: '0.8rem' }}>
+                <b style={{ fontSize: '0.9rem' }}>Poste no seu perfil marcando:</b>
+                <div className="tw-tags">{tags.map(t => <code key={t}>{t}</code>)}</div>
+                {tags.length > 0 && <button type="button" className="tw-btn tw-btn-sm" onClick={() => navigator.clipboard?.writeText(tags.join(' '))}>Copiar marcações</button>}
+                <label className="tw-field"><span>Link do post</span>
+                  <input className="tw-input" type="url" inputMode="url" placeholder="https://www.instagram.com/p/..." value={postUrl} onChange={e => setPostUrl(e.target.value)} />
+                </label>
+                {postUrl && !postOk && <small style={{ color: '#b0123a', fontWeight: 700 }}>Cole o link do post ou reel do Instagram.</small>}
+              </div>
+            )}
+
             {!isQuiz && (
               <label className="tw-field"><span>Observação (opcional)</span>
                 <textarea className="tw-input" placeholder={mission.track === 'artist' ? 'Nome do artista, @, cidade... ajuda a validar' : 'Conte o momento em uma frase'} value={note} onChange={e => setNote(e.target.value)} />
@@ -297,7 +315,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
             )}
 
             {error && <div className="tw-error">{error}</div>}
-            <button className="tw-btn tw-btn-primary tw-btn-block" disabled={files.length < slots || (isQuiz && (!quizReady || !answer.trim())) || sending} onClick={send}>
+            <button className="tw-btn tw-btn-primary tw-btn-block" disabled={files.length < slots || (isQuiz && (!quizReady || !answer.trim())) || !postOk || sending} onClick={send}>
               {sending ? <><Loader2 size={18} className="tw-spin" /> Enviando...</> : <><Upload size={18} /> Enviar missão</>}
             </button>
           </>

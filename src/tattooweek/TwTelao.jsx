@@ -18,7 +18,7 @@ export default function TwTelao() {
           .eq('mission.campaign_id', campaign.id).eq('status', 'approved').eq('participant.consent_marketing', true)
           .order('created_at', { ascending: false }).limit(30),
         supabase.from('tw_events').select('id', { count: 'exact', head: true }).eq('campaign_id', campaign.id).in('type', ['nfc_scan', 'qr_scan']),
-        supabase.from('tw_ranking_daily').select('participant_id, name, points').eq('campaign_id', campaign.id).eq('day', todaySP()).order('points', { ascending: false }).order('last_at').limit(10),
+        supabase.from('tw_ranking_daily').select('participant_id, name, points').eq('campaign_id', campaign.id).eq('track', 'artist').eq('day', todaySP()).order('points', { ascending: false }).order('last_at').limit(10),
       ]);
       const rows = r.data || [];
       const photos = (s.data || []).flatMap(x => (x.media || []).filter(m => m.type === 'image').map(m => ({ url: m.url, name: x.participant?.name, title: x.mission?.title })));
@@ -78,7 +78,7 @@ export default function TwTelao() {
 
       <div className="tw-tv-cols">
         <List title="Artist Challenge" rows={d.artist} />
-        <List title="Hoje · prêmio do dia" rows={d.today} />
+        <List title="Tatuador do dia" rows={d.today} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2vh' }}>
           {current
             ? <div style={{ position: 'relative' }}>

@@ -206,7 +206,7 @@ export async function uploadMedia(file, folder) {
   return { url: data.publicUrl, path, type: isVideo ? 'video' : 'image' };
 }
 
-export async function submitMission({ participant, mission, artistId, files, note, answer }) {
+export async function submitMission({ participant, mission, artistId, files, note, answer, postUrl }) {
   // Pergunta: confere antes de subir qualquer arquivo
   if (mission.answer_hash && !(await checkAnswer(mission, answer))) {
     throw new Error('Resposta incorreta. Investigue mais e tente de novo!');
@@ -233,6 +233,7 @@ export async function submitMission({ participant, mission, artistId, files, not
     status: 'approved',
     points: mission.points,
     reviewed_at: new Date().toISOString(),
+    ...(postUrl ? { post_url: postUrl } : {}),
   };
   const { data, error } = await supabase.from('tw_submissions').insert([row]).select().single();
   if (error) {
@@ -306,6 +307,7 @@ export const DEFAULT_THEME = {
 // Paleta do Instagram da Tattoo Week: degradê pastel lilás/rosa/ciano, amarelo forte e azul-marinho/roxo
 export const PRESET_THEMES = {
   tattooweek: {
+    style: 'poster', // mundo claro de pôster (poster.css)
     primary: '#f4e14d', primaryStrong: '#fff176', primaryDeep: '#e3b81f',
     bg: '#0c0a24', card: '#16133a', card2: '#201c4f',
     accents: ['#a995ff', '#ff8fd8', '#7fe7f2'],
@@ -348,4 +350,20 @@ export function activationKey(campaignId) {
 // Data de hoje no fuso de São Paulo (YYYY-MM-DD), igual ao ranking do dia no banco
 export function todaySP() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
+// Selos de escoteiro: ícones e cores disponíveis no admin (desenho em TwArt.jsx)
+export const SEAL_ICON_KEYS = ['door', 'megaphone', 'flame', 'search', 'crown', 'eye', 'pen', 'heart', 'stencil', 'book', 'map', 'users', 'mic', 'lightbulb', 'utensils', 'music', 'star', 'camera', 'zap', 'key'];
+export const SEAL_COLORS = ['#a995ff', '#ff8fd8', '#7fe7f2', '#f4e14d', '#ff6fa8', '#f07c2a', '#8be3a5'];
+
+// Selos de escoteiro de uma trilha: um por nome de selo, ganho se alguma missão dele foi aprovada
+export function sealItems(missions, approved) {
+  const done = new Set(approved.map(s => s.mission_id));
+  const map = new Map();
+  missions.filter(m => m.seal_name).forEach(m => {
+    const cur = map.get(m.seal_name) || { key: m.seal_name, name: m.seal_name, icon: m.seal_icon, color: m.seal_color, hint: m.title, earned: false };
+    if (done.has(m.id)) cur.earned = true;
+    map.set(m.seal_name, cur);
+  });
+  return [...map.values()].sort((a, b) => Number(b.earned) - Number(a.earned));
 }

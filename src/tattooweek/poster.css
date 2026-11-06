@@ -1,0 +1,241 @@
+/* ==========================================================================
+   Mundo "Pôster de convenção" — Desafio dos Mestres na Tattoo Week
+   Céu pastel lilás → rosa → ciano, nuvens com contorno grosso, cartões-adesivo
+   com sombra dura, tipografia gordinha de cartoon. Zona Bronc em preto/laranja.
+   ========================================================================== */
+
+.tw.tw-poster {
+  --ink: #1d1646;
+  --ink-rgb: 29, 22, 70;
+  --sky-1: #c9b8ff;
+  --sky-2: #ffc2e6;
+  --sky-3: #b5f1f6;
+  --sun: #f4e14d;
+  --pop: #ff4fa3;
+  --mint: #8be3a5;
+  --tw-bg: #f4eeff;
+  --tw-bg-rgb: 244, 238, 255;
+  --tw-card: #ffffff;
+  --tw-card-2: #f6f1ff;
+  --tw-line: rgba(29, 22, 70, 0.14);
+  --tw-text: #1d1646;
+  --tw-muted: #5d5490;
+  --tw-gold: #d81b7e;
+  --tw-gold-rgb: 216, 27, 126;
+  --tw-gold-strong: #f9e64f;
+  --tw-gold-deep: #f2c614;
+  --tw-accent-1: #a995ff;
+  --tw-accent-2: #ff8fd8;
+  --tw-accent-3: #7fe7f2;
+  --display: 'Bagel Fat One', 'Bricolage Grotesque', system-ui, sans-serif;
+  --body: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+  --gothic: 'UnifrakturCook', serif;
+  --shadow: 4px 4px 0 var(--ink);
+  --shadow-lg: 6px 6px 0 var(--ink);
+  font-family: var(--body);
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 1px 1px, rgba(var(--ink-rgb), 0.07) 1px, transparent 0) 0 0 / 22px 22px,
+    linear-gradient(180deg, #efe6ff 0%, #fde8f5 45%, #e6fbfd 100%) fixed;
+}
+
+/* Tipografia */
+.tw-poster .tw-h1 { font-family: var(--display); font-weight: 400; letter-spacing: 0; line-height: 0.92; color: var(--ink); text-transform: none; }
+.tw-poster .tw-h2 { font-family: var(--display); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink); }
+.tw-poster .tw-h3 { font-weight: 800; color: var(--ink); }
+.tw-poster .tw-kicker { color: var(--pop); font-weight: 800; letter-spacing: 1.6px; }
+.tw-poster .tw-p { color: var(--tw-muted); }
+.tw-poster .tw-gothic { font-family: var(--gothic); font-weight: 700; }
+.tw-poster .tw-h1 .tw-gold,
+.tw-poster.tw-themed .tw-h1 .tw-gold {
+  background: linear-gradient(95deg, #8f6bff, #ff4fa3 45%, #36c6d6 90%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  -webkit-text-stroke: 0;
+  filter: drop-shadow(3px 3px 0 var(--ink));
+}
+
+/* Topo e navegação */
+.tw-poster .tw-top { background: rgba(255, 255, 255, 0.92); border-bottom: 3px solid var(--ink); border-image: none; }
+.tw-poster .tw-top-brand span { color: var(--ink); font-family: var(--display); font-weight: 400; letter-spacing: 0.5px; font-size: 0.82rem; }
+.tw-poster .tw-top-brand img { filter: drop-shadow(2px 2px 0 rgba(var(--ink-rgb), 0.35)); }
+.tw-poster .tw-top-links button { color: var(--ink); }
+.tw-poster .tw-top-links button.on, .tw-poster .tw-top-links button:hover { background: var(--sun); color: var(--ink); box-shadow: 2px 2px 0 var(--ink); border: 2px solid var(--ink); }
+.tw-poster .tw-bottom { background: #fff; border-top: 3px solid var(--ink); border-image: none; }
+.tw-poster .tw-bottom button { color: var(--tw-muted); }
+.tw-poster .tw-bottom button.on { color: var(--ink); }
+.tw-poster .tw-bottom button.on svg { background: var(--sun); border: 2px solid var(--ink); border-radius: 10px; padding: 2px; box-sizing: content-box; }
+
+/* Botões-adesivo */
+.tw-poster .tw-btn { background: #fff; color: var(--ink); border: 3px solid var(--ink); box-shadow: var(--shadow); border-radius: 14px; font-weight: 800; letter-spacing: 0.3px; }
+.tw-poster .tw-btn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }
+.tw-poster .tw-btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--ink); }
+.tw-poster .tw-btn-primary { background: var(--sun); color: var(--ink); }
+.tw-poster .tw-btn-ghost { background: #fff; color: var(--ink); }
+.tw-poster .tw-btn-sm { box-shadow: 3px 3px 0 var(--ink); border-width: 2.5px; border-radius: 11px; }
+.tw-poster .tw-btn:disabled { opacity: 0.45; box-shadow: none; transform: none; }
+
+/* Cartões */
+.tw-poster .tw-card { background: #fff; border: 3px solid var(--ink); border-radius: 20px; box-shadow: var(--shadow-lg); }
+.tw-poster .tw-card-gold,
+.tw-poster.tw-themed .tw-card-gold { background: linear-gradient(135deg, #e3d8ff 0%, #ffd9ef 50%, #d4f7fa 100%); border-color: var(--ink); }
+.tw-poster .tw-stat b { font-family: var(--display); font-weight: 400; color: var(--ink); font-size: 1.9rem; }
+.tw-poster .tw-stat span { color: var(--ink); opacity: 0.7; }
+.tw-poster .tw-progress { background: #fff; border: 2.5px solid var(--ink); height: 16px; }
+.tw-poster .tw-progress > div,
+.tw-poster.tw-themed .tw-progress > div { background: repeating-linear-gradient(-45deg, #ff4fa3 0 10px, #ff8fd8 10px 20px); border-radius: 0; }
+.tw-poster .tw-chip { border: 2px solid var(--ink); color: var(--ink); background: #fff; }
+.tw-poster .tw-chip-gold { background: var(--sun); }
+.tw-poster .tw-chip-ok { background: var(--mint); color: var(--ink); border-color: var(--ink); }
+.tw-poster .tw-chip-bad { background: #ffd1dc; color: #b0123a; border-color: #b0123a; }
+.tw-poster .tw-chip-warn { background: #ffe9a8; color: var(--ink); }
+.tw-poster .tw-chip-quiz { background: #e3d8ff; color: var(--ink); border-color: var(--ink); }
+.tw-poster .tw-notice { background: #fff7c2; border: 2.5px solid var(--ink); color: var(--ink); border-radius: 14px; }
+.tw-poster .tw-error { background: #ffe0e8; border: 2.5px solid #b0123a; color: #b0123a; }
+.tw-poster .tw-empty { border: 3px dashed rgba(var(--ink-rgb), 0.3); color: var(--tw-muted); background: rgba(255, 255, 255, 0.6); }
+
+/* Abas */
+.tw-poster .tw-tabs { background: #fff; border: 3px solid var(--ink); box-shadow: var(--shadow); border-radius: 16px; }
+.tw-poster .tw-tab { color: var(--ink); font-weight: 800; }
+.tw-poster .tw-tab.on,
+.tw-poster.tw-themed .tw-tab.on { background: var(--sun); color: var(--ink); border: 2px solid var(--ink); }
+
+/* Missões-adesivo */
+.tw-poster .tw-mission { background: #fff; border: 3px solid var(--ink); border-radius: 18px; box-shadow: var(--shadow); transition: transform .12s, box-shadow .12s; }
+.tw-poster .tw-mission:nth-child(3n+1) { transform: rotate(-0.5deg); }
+.tw-poster .tw-mission:nth-child(3n+2) { transform: rotate(0.4deg); }
+.tw-poster .tw-mission:hover { transform: translate(-1px, -2px) rotate(0); box-shadow: 6px 6px 0 var(--ink); border-color: var(--ink); }
+.tw-poster .tw-mission.done { background: linear-gradient(90deg, #e2fbe9, #fff 70%); border-color: var(--ink); }
+.tw-poster .tw-mission-num { background: #f1ebff; color: var(--ink); border: 2.5px solid var(--ink); border-radius: 50%; width: 46px; height: 46px; flex-basis: 46px; font-family: var(--display); font-weight: 400; overflow: hidden; }
+.tw-poster .tw-mission.done .tw-mission-num { background: var(--mint); color: var(--ink); border-color: var(--ink); }
+.tw-poster .tw-mission-title { color: var(--ink); font-weight: 800; }
+.tw-poster .tw-mission-pts { font-family: var(--display); font-weight: 400; color: var(--pop); font-size: 1.15rem; }
+
+/* Formulários */
+.tw-poster .tw-input { background: #fff; color: var(--ink); border: 2.5px solid var(--ink); border-radius: 12px; }
+.tw-poster .tw-input:focus { border-color: var(--pop); box-shadow: 0 0 0 3px rgba(255, 79, 163, 0.25); }
+.tw-poster .tw-field > span { color: var(--ink); }
+.tw-poster .tw-check { background: #fff; border: 2.5px solid var(--ink); color: var(--ink); }
+.tw-poster .tw-check input { accent-color: #ff4fa3; }
+
+/* Folha de envio */
+.tw-poster .tw-sheet-bg { background: rgba(var(--ink-rgb), 0.55); }
+.tw-poster .tw-sheet { background: #fff; border: 3px solid var(--ink); color: var(--ink); }
+.tw-poster .tw-sheet-x { color: var(--ink); }
+.tw-poster .tw-slot { background: #f6f1ff; border: 2.5px dashed var(--ink); color: var(--ink); }
+
+/* Surpresa e avisos */
+.tw-poster .tw-surprise { background: linear-gradient(120deg, #ffd1e8, #fff 70%); border: 3px solid var(--ink); box-shadow: var(--shadow-lg); border-radius: 20px; }
+.tw-poster .tw-timer { color: #b0123a; }
+.tw-poster .tw-notice-bar { background: var(--sun); border: 2.5px solid var(--ink); color: var(--ink); box-shadow: var(--shadow); }
+.tw-poster .tw-notice-bar.urgent { background: #ff8fb8; }
+
+/* Ranking */
+.tw-poster .tw-rank { background: #fff; border: 3px solid var(--ink); box-shadow: var(--shadow); border-radius: 16px; }
+.tw-poster .tw-rank-pos { font-family: var(--display); color: var(--ink); }
+.tw-poster .tw-rank.top1 { background: linear-gradient(90deg, #fff4a3, #fff 70%); }
+.tw-poster .tw-rank.top1 .tw-rank-pos { color: var(--ink); }
+.tw-poster .tw-rank.top2 { background: linear-gradient(90deg, #e3d8ff, #fff 70%); }
+.tw-poster .tw-rank.top3 { background: linear-gradient(90deg, #ffd9ef, #fff 70%); }
+.tw-poster .tw-rank.me { outline: 3px solid var(--pop); outline-offset: 2px; }
+
+/* Selos secretos e revelação */
+.tw-poster .tw-seal-secret span { background: #fff; border: 3px dashed rgba(var(--ink-rgb), 0.35); color: rgba(var(--ink-rgb), 0.45); }
+.tw-poster .tw-seal-secret.got span { border: 3px solid var(--ink); background: conic-gradient(#a995ff, #ff8fd8, #7fe7f2, #f4e14d, #a995ff); box-shadow: var(--shadow); }
+.tw-poster .tw-seal-secret small { color: var(--tw-muted); }
+.tw-poster .tw-seal-secret.got small { color: var(--ink); }
+.tw-poster .tw-reveal-icon { background: linear-gradient(#fff, #fff) padding-box, conic-gradient(#a995ff, #ff8fd8, #7fe7f2, #f4e14d, #a995ff) border-box; border-width: 6px; box-shadow: var(--shadow-lg); }
+
+/* Selos bordados (escoteiro) */
+.tw-sash { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 0.9rem 0.6rem; }
+.tw-sash-item { display: flex; flex-direction: column; align-items: center; gap: 0.35rem; text-align: center; }
+.tw-sash-item small { font-size: 0.68rem; font-weight: 800; line-height: 1.2; color: var(--tw-muted); }
+.tw-patch { filter: drop-shadow(3px 3px 0 rgba(29, 22, 70, 0.9)); transition: transform .2s; }
+.tw-patch:not(.on) { filter: none; opacity: 0.85; }
+.tw-patch.on:hover { transform: rotate(-6deg) scale(1.05); }
+.tw-sash-banner { background: linear-gradient(90deg, #2a8f5a, #3fae74); border: 3px solid var(--ink); border-radius: 22px; padding: 1rem; box-shadow: var(--shadow-lg); position: relative; }
+.tw-sash-banner::before { content: ''; position: absolute; inset: 8px; border: 2px dashed rgba(255, 255, 255, 0.6); border-radius: 16px; pointer-events: none; }
+.tw-sash-banner .tw-sash-item small { color: #fff; }
+
+/* Hero pôster */
+.tw-poster .tw-hero { border-bottom: 3px solid var(--ink); background: linear-gradient(160deg, var(--sky-1) 0%, var(--sky-2) 48%, var(--sky-3) 100%); overflow: hidden; }
+.tw-poster .tw-hero-bg { display: none; }
+.tw-poster .tw-hero::before { display: none; }
+.tw-poster .tw-hero-inner { padding-bottom: 6.5rem; }
+.tw-hero-art { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.tw-hero-art .tw-cloud { position: absolute; width: 220px; filter: drop-shadow(4px 4px 0 rgba(29, 22, 70, 0.9)); animation: tw-float 7s ease-in-out infinite; }
+.tw-hero-art .c1 { left: -50px; top: 18%; width: 200px; }
+.tw-hero-art .c2 { right: -40px; top: 6%; width: 180px; animation-delay: -2s; }
+.tw-hero-art .c3 { right: 18%; bottom: -26px; width: 260px; animation-delay: -4s; }
+.tw-hero-art .c4 { left: 8%; bottom: -30px; width: 240px; animation-delay: -1s; }
+.tw-hero-art .tw-spark { position: absolute; width: 30px; animation: tw-twinkle 2.6s ease-in-out infinite; }
+.tw-hero-art .s1 { left: 12%; top: 10%; }
+.tw-hero-art .s2 { right: 30%; top: 16%; width: 22px; animation-delay: -1s; }
+.tw-hero-art .s3 { right: 8%; bottom: 36%; width: 26px; animation-delay: -1.8s; }
+.tw-hero-mascot { position: absolute; right: -6px; bottom: 34px; width: 150px; z-index: 1; animation: tw-bob 3.4s ease-in-out infinite; filter: drop-shadow(4px 5px 0 rgba(29, 22, 70, 0.25)); }
+@media (min-width: 900px) {
+  .tw-hero-mascot { width: 280px; right: 6%; bottom: 60px; }
+  .tw-hero-art .tw-cloud { width: 300px; }
+}
+.tw-poster .tw-hero .tw-h1 { font-size: clamp(3rem, 15vw, 7rem); }
+.tw-hero-tag { display: inline-flex; align-items: center; gap: 0.5rem; background: #fff; border: 3px solid var(--ink); box-shadow: var(--shadow); border-radius: 999px; padding: 0.35rem 0.9rem; font-weight: 800; font-size: 0.78rem; color: var(--ink); }
+.tw-hero-tag b { font-family: var(--gothic); font-size: 1.15rem; font-weight: 700; color: var(--pop); }
+.tw-poster .tw-tagline { gap: 0.4rem; }
+.tw-poster .tw-tagline span { background: #fff; border: 2.5px solid var(--ink); border-radius: 10px; padding: 0.2rem 0.6rem; box-shadow: 3px 3px 0 var(--ink); font-size: 0.85rem; color: var(--ink); }
+.tw-poster .tw-tagline span:nth-child(2) { background: var(--sun); color: var(--ink); transform: rotate(-2deg); }
+.tw-poster .tw-tagline span:nth-child(3) { background: #ffd1e8; transform: rotate(1.5deg); }
+.tw-poster .tw-partner { background: #fff; border: 2.5px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+
+/* Experiências A/B */
+.tw-poster .tw-exp { min-height: 250px; overflow: hidden; }
+.tw-poster .tw-exp-letter { font-family: var(--display); color: rgba(var(--ink-rgb), 0.08); font-size: 9rem; top: -1.5rem; }
+.tw-poster .tw-step { background: #fff; border: 3px solid var(--ink); box-shadow: var(--shadow); border-radius: 18px; color: var(--ink); font-weight: 700; }
+.tw-poster .tw-step::before { font-family: var(--display); font-size: 1.5rem; color: var(--pop); }
+
+/* Faixas onduladas entre seções */
+.tw-wave { display: block; width: 100%; height: 26px; }
+
+/* Mapa do jogo */
+.tw-map { position: relative; border: 3px solid var(--ink); border-radius: 20px; overflow: hidden; box-shadow: var(--shadow-lg); background: #fff; }
+.tw-map img { display: block; width: 100%; height: auto; }
+.tw-pin { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; border: 0; cursor: pointer; padding: 0; }
+.tw-pin-dot { width: 34px; height: 34px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--pop); border: 3px solid var(--ink); display: grid; place-items: center; box-shadow: 2px 2px 0 var(--ink); animation: tw-bob 2.4s ease-in-out infinite; }
+.tw-pin-dot > * { transform: rotate(45deg); color: #fff; }
+.tw-pin-bronc .tw-pin-dot { background: #f07c2a; }
+.tw-pin-stage .tw-pin-dot { background: #a995ff; }
+.tw-pin-info .tw-pin-dot { background: #36c6d6; }
+.tw-pin-label { background: #fff; border: 2px solid var(--ink); border-radius: 8px; padding: 1px 6px; font-size: 0.66rem; font-weight: 800; color: var(--ink); white-space: nowrap; box-shadow: 2px 2px 0 var(--ink); }
+.tw-map-empty { aspect-ratio: 4 / 3; display: grid; place-items: center; text-align: center; padding: 1.5rem; background: repeating-linear-gradient(45deg, #f6f1ff 0 14px, #fff 14px 28px); }
+
+/* Zona Bronc: preto + laranja */
+.tw-bronc { --bronc: #f07c2a; background: #0b0b0c; color: #fff; border: 3px solid var(--ink); border-radius: 22px; overflow: hidden; box-shadow: var(--shadow-lg); position: relative; }
+.tw-bronc-img { display: block; width: 100%; height: auto; }
+.tw-bronc-body { padding: 1rem 1.1rem 1.2rem; }
+.tw-bronc .tw-kicker { color: var(--bronc); letter-spacing: 3px; }
+.tw-bronc h2, .tw-bronc h3 { color: #fff; font-family: 'Bricolage Grotesque', system-ui; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin: 0.3rem 0; }
+.tw-bronc p { color: rgba(255, 255, 255, 0.72); margin: 0; line-height: 1.5; }
+.tw-bronc .tw-btn { background: var(--bronc); color: #0b0b0c; border-color: #0b0b0c; box-shadow: 4px 4px 0 #fff; }
+.tw-bronc-hero { min-height: 100vh; background: radial-gradient(ellipse at 50% 0%, #3a1a06 0%, #0b0b0c 60%); color: #fff; }
+
+/* Seguir os perfis */
+.tw-follow { display: grid; gap: 0.55rem; }
+.tw-follow-row { display: flex; align-items: center; gap: 0.7rem; padding: 0.6rem 0.75rem; background: #fff; border: 2.5px solid var(--ink); border-radius: 14px; box-shadow: 3px 3px 0 var(--ink); text-decoration: none; color: var(--ink); }
+.tw-follow-row.done { background: #e2fbe9; }
+.tw-follow-dot { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid var(--ink); display: grid; place-items: center; font-weight: 900; flex: 0 0 34px; }
+.tw-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.tw-tags code { background: #f1ebff; border: 2px solid var(--ink); border-radius: 8px; padding: 0.15rem 0.45rem; font-size: 0.78rem; font-weight: 700; color: var(--ink); }
+
+/* Animações */
+@keyframes tw-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes tw-bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(2deg); } }
+@keyframes tw-twinkle { 0%, 100% { transform: scale(1) rotate(0); opacity: 1; } 50% { transform: scale(0.7) rotate(20deg); opacity: 0.7; } }
+@media (prefers-reduced-motion: reduce) {
+  .tw-hero-art .tw-cloud, .tw-hero-art .tw-spark, .tw-hero-mascot, .tw-pin-dot { animation: none; }
+}
+
+/* Hero no celular: mascote embaixo dos botões, sem cobrir nada */
+@media (max-width: 899px) {
+  .tw-poster .tw-hero-inner { padding-bottom: 9.5rem; }
+  .tw-hero-mascot { width: 128px; right: 50%; transform: translateX(50%); bottom: 14px; animation: none; }
+  .tw-hero-art .c3 { right: -60px; bottom: -40px; }
+  .tw-hero-art .c4 { left: -70px; bottom: -40px; }
+}

@@ -136,7 +136,7 @@ function ResultCard({ participant }) {
         });
       }
 
-      t(`mestresdatattoo.com.br${base}`, W / 2, H - 100, 30, 'rgba(255,255,255,0.55)', 700);
+      t(`mestresdatattoo.com${base}`, W / 2, H - 100, 30, 'rgba(255,255,255,0.55)', 700);
       canvasRef.current.toBlob(b => alive && setBlob(b), 'image/png');
     })();
     return () => { alive = false; };
