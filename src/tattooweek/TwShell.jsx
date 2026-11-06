@@ -226,7 +226,8 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
   const [note, setNote] = useState('');
   const [answer, setAnswer] = useState('');
   const [postUrl, setPostUrl] = useState('');
-  const postOk = !needsPost || /instagram.com/(p|reel|reels|stories|tv)//i.test(postUrl);
+  // Aceita link de post, reel ou story do Instagram (instagram.com/p/..., /reel/..., /stories/...)
+  const postOk = !needsPost || /instagram\.com\/(p|reel|reels|stories|tv)\//i.test(postUrl.trim());
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
