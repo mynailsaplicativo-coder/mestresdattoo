@@ -36,7 +36,7 @@
   color: var(--ink);
   background:
     radial-gradient(circle at 1px 1px, rgba(var(--ink-rgb), 0.07) 1px, transparent 0) 0 0 / 22px 22px,
-    linear-gradient(180deg, #efe6ff 0%, #fde8f5 45%, #e6fbfd 100%) fixed;
+    linear-gradient(180deg, #efe6ff 0%, #fde8f5 45%, #e6fbfd 100%);
 }
 
 /* Tipografia */
@@ -239,3 +239,91 @@
   .tw-hero-art .c3 { right: -60px; bottom: -40px; }
   .tw-hero-art .c4 { left: -70px; bottom: -40px; }
 }
+
+/* ==========================================================================
+   Mais cor: céu do mapa oficial (magenta, lilás, azul-céu, ciano) e personagens
+   ========================================================================== */
+.tw.tw-poster {
+  --pink-soft: #ffd3f0;
+  --lilac-soft: #e4d4ff;
+  --cyan-soft: #c8f4f6;
+  --sun-soft: #fff2a8;
+  --mint-soft: #d2f7df;
+  background:
+    radial-gradient(60% 40% at 0% 0%, rgba(232, 111, 209, 0.55), transparent 70%),
+    radial-gradient(50% 35% at 100% 18%, rgba(143, 240, 232, 0.6), transparent 70%),
+    radial-gradient(55% 40% at 10% 60%, rgba(196, 155, 240, 0.55), transparent 70%),
+    radial-gradient(60% 40% at 100% 85%, rgba(255, 143, 216, 0.5), transparent 70%),
+    radial-gradient(circle at 1px 1px, rgba(29, 22, 70, 0.08) 1px, transparent 0) 0 0 / 22px 22px,
+    linear-gradient(180deg, #e9d6ff 0%, #ffd9f0 40%, #d4f4fb 75%, #f3dcff 100%);
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, no-repeat;
+  background-size: 100% 1600px, 100% 1600px, 100% 100%, 100% 100%, 22px 22px, 100% 100%;
+}
+.tw-poster .tw-top { background: linear-gradient(90deg, #ffe0f4, #efe3ff 50%, #dbf8fa); }
+.tw-poster .tw-bottom { background: linear-gradient(90deg, #ffe0f4, #efe3ff 50%, #dbf8fa); }
+
+/* Cartões em tons pastel, alternando como os adesivos do pôster */
+.tw-poster .tw-card { background: var(--lilac-soft); }
+.tw-poster .tw-grid > .tw-card:nth-child(4n+1) { background: var(--pink-soft); }
+.tw-poster .tw-grid > .tw-card:nth-child(4n+2) { background: var(--cyan-soft); }
+.tw-poster .tw-grid > .tw-card:nth-child(4n+3) { background: var(--sun-soft); }
+.tw-poster .tw-grid > .tw-card:nth-child(4n+4) { background: var(--mint-soft); }
+.tw-poster .tw-mission:nth-child(4n+1) { background: #fff0fa; }
+.tw-poster .tw-mission:nth-child(4n+2) { background: #f1ebff; }
+.tw-poster .tw-mission:nth-child(4n+3) { background: #e9fbfc; }
+.tw-poster .tw-mission:nth-child(4n+4) { background: #fffbe0; }
+.tw-poster .tw-mission.done { background: linear-gradient(90deg, #c9f5d7, #f2fff6 75%); }
+.tw-poster .tw-mission-num { background: #fff; }
+.tw-poster .tw-rank { background: #fff8fd; }
+.tw-poster .tw-step:nth-child(1) { background: var(--pink-soft); }
+.tw-poster .tw-step:nth-child(2) { background: var(--lilac-soft); }
+.tw-poster .tw-step:nth-child(3) { background: var(--cyan-soft); }
+.tw-poster .tw-step:nth-child(4) { background: var(--sun-soft); }
+
+/* Hero: céu saturado + personagens */
+.tw-poster .tw-hero { background: linear-gradient(160deg, #c9a6ff 0%, #ff9ad9 45%, #8fe9f0 100%); }
+.tw-hero-chars { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.tw-char { display: block; user-select: none; filter: drop-shadow(4px 5px 0 rgba(29, 22, 70, 0.22)); }
+.tw-hero-oni { position: absolute; width: 170px; right: 50%; transform: translateX(50%); bottom: 4px; animation: tw-bob 3.6s ease-in-out infinite; }
+.tw-hero-dragon { position: absolute; width: 96px; right: -14px; top: 92px; animation: tw-float 6s ease-in-out infinite; }
+.tw-hero-cat { position: absolute; width: 0; display: none; }
+@media (min-width: 900px) {
+  .tw-hero-oni { width: 360px; right: 4%; transform: none; bottom: 34px; }
+  .tw-hero-dragon { width: 190px; right: 30%; top: 30px; }
+  .tw-hero-cat { display: block; width: 150px; right: 1%; top: 40px; animation: tw-float 7s ease-in-out infinite -2s; }
+}
+@media (max-width: 899px) {
+  .tw-poster .tw-hero-inner { padding-bottom: 12rem; }
+}
+
+/* Personagem que espia o canto de um cartão */
+.tw-peek { position: absolute; pointer-events: none; z-index: 2; }
+.tw-card.tw-has-peek { position: relative; overflow: visible; }
+.tw-section-char { width: 120px; margin: 0 auto -18px; position: relative; z-index: 2; }
+
+/* Selo ilustrado (bordado) */
+.tw-patch-art { position: relative; display: inline-grid; place-items: center; border-radius: 50%; }
+.tw-patch-art img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(3px 3px 0 rgba(29, 22, 70, 0.85)); }
+.tw-patch-art:not(.on) img { filter: grayscale(1) contrast(0.6) brightness(1.35); opacity: 0.45; }
+.tw-patch-art b { position: absolute; font-family: var(--display); font-size: 2rem; color: #1d1646; text-shadow: 2px 2px 0 #fff; }
+.tw-patch-art.on:hover { transform: rotate(-6deg) scale(1.06); }
+
+/* Desfile de personagens no rodapé */
+.tw-parade { display: flex; justify-content: center; align-items: flex-end; gap: 0.5rem; margin-top: 2.5rem; flex-wrap: nowrap; overflow: hidden; }
+.tw-parade .tw-char { width: 18%; max-width: 140px; }
+.tw-parade .tw-char:nth-child(odd) { animation: tw-bob 3.2s ease-in-out infinite; }
+.tw-parade .tw-char:nth-child(even) { animation: tw-bob 3.8s ease-in-out infinite -1.2s; }
+@media (prefers-reduced-motion: reduce) {
+  .tw-hero-oni, .tw-hero-dragon, .tw-hero-cat, .tw-parade .tw-char { animation: none; }
+}
+
+/* Desempenho: drop-shadow em imagens animadas deixa a tela preta em alguns aparelhos.
+   Personagens e nuvens já têm contorno próprio; os selos usam box-shadow (mais leve). */
+.tw-poster .tw-char,
+.tw-hero-art .tw-cloud,
+.tw-hero-mascot,
+.tw-poster .tw-patch,
+.tw-poster .tw-patch-art img { filter: none; }
+.tw-poster .tw-patch-art.on { box-shadow: 3px 3px 0 #1d1646; }
+.tw-poster .tw-patch-art:not(.on) img { filter: grayscale(1); opacity: 0.35; }
+.tw-hero-oni, .tw-hero-dragon, .tw-hero-cat, .tw-parade .tw-char, .tw-hero-art .tw-cloud { will-change: transform; }

@@ -4,7 +4,7 @@ import { Check, Nfc, KeyRound, Share2, HelpCircle, Lock, MapPin } from 'lucide-r
 import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip } from './TwShell';
 import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS } from './twData';
-import { PatchSash } from './TwArt';
+import { PatchSash, Char } from './TwArt';
 
 const SECTIONS = ['quiz', 'parceiros', 'networking', 'conteudo', 'geral', 'secreta'];
 const ACTIVATION_TTL = 3 * 3600 * 1000;
@@ -175,8 +175,13 @@ function ChallengePanel({ participant }) {
 
   return (
     <div className="tw-wrap">
-      <span className="tw-kicker">Artist Challenge · {campaign.event_name}</span>
-      <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem' }}>{participant.name}</h1>
+      <div className="tw-between" style={{ alignItems: 'flex-end' }}>
+        <div>
+          <span className="tw-kicker">Artist Challenge · {campaign.event_name}</span>
+          <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem', fontSize: '2.1rem' }}>{participant.name}</h1>
+        </div>
+        <Char name="tigre" style={{ width: 92, marginBottom: '-6px' }} />
+      </div>
 
       <div className="tw-card tw-card-gold">
         <div className="tw-grid tw-stats-4">

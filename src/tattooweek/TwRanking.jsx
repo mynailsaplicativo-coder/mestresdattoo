@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Gift, Award, Users, Video } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell } from './TwShell';
+import { Char } from './TwArt';
 import { useTwParticipant, useCampaign, todaySP } from './twData';
 
 export function TwRanking() {
@@ -29,7 +30,10 @@ export function TwRanking() {
     <TwShell>
       <div className="tw-wrap" style={{ maxWidth: 640 }}>
         <span className="tw-kicker">{campaign.status === 'finished' ? 'Resultado final' : 'Ao vivo'}</span>
-        <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem' }}>Ranking</h1>
+        <div className="tw-between" style={{ alignItems: 'flex-end' }}>
+          <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem', fontSize: '2.4rem' }}>Ranking</h1>
+          <Char name="gato" style={{ width: 88, marginBottom: '-4px' }} />
+        </div>
         <div className="tw-tabs" style={{ marginBottom: '1rem' }}>
           <button className={`tw-tab ${track === 'today' ? 'on' : ''}`} onClick={() => setTrack('today')}>Hoje<small>tatuador do dia</small></button>
           <button className={`tw-tab ${track === 'artist' ? 'on' : ''}`} onClick={() => setTrack('artist')}>Artist Challenge</button>

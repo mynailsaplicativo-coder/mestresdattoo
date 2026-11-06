@@ -4,6 +4,7 @@ import { SignInButton } from '@clerk/clerk-react';
 import { AtSign, MapPin, Nfc, KeyRound, Check, Camera, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, MissionSheet } from './TwShell';
+import { Char } from './TwArt';
 import { useTwParticipant, useCampaign, trackEvent, instagramUrl, activationKey } from './twData';
 
 // Página aberta pelo adesivo NFC (ou QR). Três tipos: ponto, selo secreto e ativação do Artist Challenge.
@@ -107,6 +108,7 @@ function SecretSeal({ tag, tw }) {
   return (
     <div className="tw-wrap" style={{ maxWidth: 480 }}>
       <div className="tw-reveal">
+        <Char name="caveira" style={{ width: 110, margin: '0 auto 0.5rem' }} />
         <span className="tw-kicker"><KeyRound size={12} style={{ verticalAlign: -1 }} /> Selo secreto</span>
         <div className="tw-reveal-icon" style={{ marginTop: '1rem' }}>{tag.seal_icon || '★'}</div>
         <h1 className="tw-h1" style={{ fontSize: 'clamp(2rem, 9vw, 3rem)' }}>{tag.name}</h1>

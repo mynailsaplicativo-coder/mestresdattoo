@@ -1,26 +1,30 @@
 import { useState } from 'react';
 import { Map as MapIcon, Flame, Music, Info, Star } from 'lucide-react';
 import { TwShell } from './TwShell';
-import { useCampaign } from './twData';
+import { Char } from './TwArt';
+import { useCampaign, campaignMap, campaignPins } from './twData';
 
 const PIN_ICONS = { bronc: Flame, stage: Music, info: Info, star: Star };
 
 // Mapa oficial do evento com os pontos do jogo (pinos posicionados no admin)
 export default function TwMap() {
   const { campaign: c } = useCampaign();
-  const pins = Array.isArray(c.map_pins) ? c.map_pins : [];
+  const pins = campaignPins(c);
   const [active, setActive] = useState(null);
 
   return (
     <TwShell>
       <div className="tw-wrap" style={{ maxWidth: 960 }}>
         <span className="tw-kicker">Onde rola</span>
-        <h1 className="tw-h2" style={{ fontSize: '2.4rem', margin: '0.3rem 0 1rem' }}>Mapa do jogo</h1>
+        <div className="tw-between" style={{ alignItems: 'flex-end' }}>
+          <h1 className="tw-h2" style={{ fontSize: '2.4rem', margin: '0.3rem 0 1rem' }}>Mapa do jogo</h1>
+          <Char name="dragao" style={{ width: 92, marginBottom: '-4px' }} />
+        </div>
 
         <div className="tw-map">
-          {c.map_image ? (
+          {campaignMap(c) ? (
             <>
-              <img src={c.map_image} alt={`Mapa da ${c.event_name}`} />
+              <img src={campaignMap(c)} alt={`Mapa da ${c.event_name}`} />
               {pins.map((p, i) => {
                 const Icon = PIN_ICONS[p.kind] || Star;
                 return (

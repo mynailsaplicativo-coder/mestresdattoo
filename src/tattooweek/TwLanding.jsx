@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, Swords, MapPin, CalendarDays, Gift, Map as MapIcon, KeyRound, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, PartnerStrip } from './TwShell';
-import { Cloud, Sparkle, Mascot, Patch } from './TwArt';
-import { useCampaign, campaignPartners, trackEvent, formatDays } from './twData';
+import { Cloud, Sparkle, Patch, Char } from './TwArt';
+import { useCampaign, campaignPartners, trackEvent, formatDays, campaignMap } from './twData';
 
 export default function TwLanding() {
   const navigate = useNavigate();
@@ -40,7 +40,11 @@ export default function TwLanding() {
           <Sparkle className="tw-spark s2" fill="#ff8fd8" />
           <Sparkle className="tw-spark s3" fill="#7fe7f2" />
         </div>
-        <Mascot className="tw-hero-mascot" />
+        <div className="tw-hero-chars">
+          <Char name="dragao" className="tw-hero-dragon" />
+          <Char name="gato" className="tw-hero-cat" />
+          <Char name="oni" className="tw-hero-oni" alt="Mascote oni tatuador" />
+        </div>
         <div className="tw-hero-inner">
           <span className="tw-hero-tag">Mestres da Tattoo na <b>Tattoo Week</b></span>
           <h1 className="tw-h1" style={{ marginTop: '1rem' }}>{words.join(' ')}{lastWord && <><br /><span className="tw-gold">{lastWord}</span></>}</h1>
@@ -61,14 +65,16 @@ export default function TwLanding() {
 
         {/* DOIS JEITOS DE JOGAR */}
         <section className="tw-section tw-grid tw-grid-2">
-          <article className="tw-card tw-card-gold tw-exp">
+          <article className="tw-card tw-card-gold tw-exp tw-has-peek">
+            <Char name="gato" className="tw-peek" style={{ width: 92, right: -10, top: -46 }} />
             <span className="tw-exp-letter">1</span>
             <span className="tw-kicker">Pra todo mundo</span>
             <h2 className="tw-h2" style={{ margin: '0.3rem 0 0.5rem', fontSize: '2rem' }}>Meu {c.event_name}</h2>
             <p className="tw-p" style={{ color: 'var(--tw-text)' }}>Missões rápidas abertas o evento todo. Cada missão vale um selo bordado pra sua coleção e no fim você ganha um vídeo só seu.</p>
             <button className="tw-btn tw-btn-primary" style={{ marginTop: '1rem', alignSelf: 'flex-start' }} onClick={() => navigate(`${base}/meu`)}>Começar agora</button>
           </article>
-          <article className="tw-card tw-exp" style={{ background: '#fff' }}>
+          <article className="tw-card tw-exp tw-has-peek">
+            <Char name="tigre" className="tw-peek" style={{ width: 96, right: -8, top: -50 }} />
             <span className="tw-exp-letter">2</span>
             <span className="tw-kicker">Pra tatuadores</span>
             <h2 className="tw-h2" style={{ margin: '0.3rem 0 0.5rem', fontSize: '2rem' }}>Artist Challenge</h2>
@@ -80,6 +86,7 @@ export default function TwLanding() {
         {/* SELOS DE ESCOTEIRO */}
         {seals.length > 0 && (
           <section className="tw-section">
+            <Char name="caveira" className="tw-section-char" style={{ margin: '0 0 0.4rem', width: 90 }} />
             <span className="tw-kicker">Colecione</span>
             <h2 className="tw-h2" style={{ margin: '0.3rem 0 0.4rem', fontSize: '2.2rem' }}>Cada missão, um selo</h2>
             <p className="tw-p" style={{ marginBottom: '1rem' }}>Igual escoteiro: comeu na convenção? Selo Comilão. Achou o patrocinador? Selo Detetive. Complete a sua faixa.</p>
@@ -124,8 +131,8 @@ export default function TwLanding() {
             <button className="tw-btn tw-btn-sm" onClick={() => navigate(`${base}/mapa`)}><MapIcon size={14} /> Abrir mapa</button>
           </div>
           <button className="tw-map" style={{ width: '100%', padding: 0, cursor: 'pointer' }} onClick={() => navigate(`${base}/mapa`)}>
-            {c.map_image
-              ? <img src={c.map_image} alt={`Mapa da ${c.event_name}`} />
+            {campaignMap(c)
+              ? <img src={campaignMap(c)} alt={`Mapa da ${c.event_name}`} style={{ height: 380, objectFit: 'cover', objectPosition: 'center 52%' }} />
               : <div className="tw-map-empty"><div><MapIcon size={40} /><p className="tw-p" style={{ marginTop: '0.5rem' }}>O mapa oficial chega aqui antes do evento.</p></div></div>}
           </button>
         </section>
@@ -181,7 +188,10 @@ export default function TwLanding() {
           </section>
         )}
 
-        <p className="tw-p" style={{ fontSize: '0.8rem', marginTop: '2rem', textAlign: 'center' }}>
+        <div className="tw-parade" aria-hidden="true">
+          <Char name="tigre" /><Char name="gato" /><Char name="oni" /><Char name="dragao" /><Char name="caveira" />
+        </div>
+        <p className="tw-p" style={{ fontSize: '0.8rem', marginTop: '1rem', textAlign: 'center' }}>
           Idealização e realização: Mestres da Tattoo. Sua participação pode ser privada: nada é publicado sem sua autorização.
         </p>
       </div>

@@ -77,10 +77,26 @@ export function Mascot({ className, mood = 'happy', style }) {
   );
 }
 
+// Selos com ilustração bordada pronta (public/tattooweek/art/selo-<ícone>.webp)
+const SEAL_ART = new Set(['door', 'megaphone', 'flame', 'search', 'crown', 'eye', 'pen', 'heart', 'stencil', 'book', 'map', 'users', 'mic', 'lightbulb', 'utensils', 'music']);
+
+// Personagens da campanha (oni, dragão, gato, caveira, tigre)
+export function Char({ name, className, style, alt = '' }) {
+  return <img className={`tw-char ${className || ''}`} style={style} src={`/tattooweek/art/${name}.webp`} alt={alt} loading="lazy" decoding="async" draggable="false" />;
+}
+
 // Selo bordado de escoteiro. earned=false mostra a silhueta para descobrir.
 export function Patch({ name, icon = 'star', color = '#a995ff', earned = true, size = 112 }) {
   const id = useId().replace(/:/g, '');
   const Icon = SEAL_ICONS[icon] || Star;
+  if (SEAL_ART.has(icon)) {
+    return (
+      <span className={`tw-patch tw-patch-art ${earned ? 'on' : ''}`} style={{ width: size, height: size }} role="img" aria-label={earned ? `Selo ${name}` : 'Selo a descobrir'}>
+        <img src={`/tattooweek/art/selo-${icon}.webp`} alt="" loading="lazy" draggable="false" />
+        {!earned && <b>?</b>}
+      </span>
+    );
+  }
   return (
     <svg width={size} height={size} viewBox="0 0 120 120" className={`tw-patch ${earned ? 'on' : ''}`} role="img" aria-label={earned ? `Selo ${name}` : 'Selo a descobrir'}>
       <defs>

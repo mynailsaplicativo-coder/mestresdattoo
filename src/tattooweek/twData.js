@@ -367,3 +367,21 @@ export function sealItems(missions, approved) {
   });
   return [...map.values()].sort((a, b) => Number(b.earned) - Number(a.earned));
 }
+
+// Mapa do jogo: o enviado no admin ou, na Tattoo Week, o mapa oficial que já vem no site
+export function campaignMap(c) {
+  return c?.map_image || (c?.slug === 'tattooweek' ? '/tattooweek/mapa-tattooweek.webp' : '');
+}
+
+// Pinos do mapa oficial da Tattoo Week (posições em % da imagem). Ao subir outro mapa no admin, valem os pinos do admin.
+const TATTOOWEEK_PINS = [
+  { label: 'Stand Bronc · cadastro dos artistas', x: 18.8, y: 49, kind: 'bronc' },
+  { label: 'Palco', x: 84.5, y: 31, kind: 'stage' },
+  { label: 'Entrada', x: 11.5, y: 42, kind: 'info' },
+  { label: 'Alimentação · missão Comilão', x: 87, y: 59, kind: 'star' },
+];
+
+export function campaignPins(c) {
+  if (c?.map_image) return Array.isArray(c.map_pins) ? c.map_pins : [];
+  return c?.slug === 'tattooweek' ? TATTOOWEEK_PINS : [];
+}

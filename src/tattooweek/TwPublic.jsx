@@ -5,7 +5,7 @@ import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip } from './TwShell';
 import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive } from './twData';
 import { sumPoints } from './badges';
-import { PatchSash } from './TwArt';
+import { PatchSash, Char } from './TwArt';
 
 // Missões normais da lista (as outras têm seção própria)
 const LIST_CATEGORIES = ['geral', 'quiz', 'parceiros', 'dia', 'networking', 'conteudo'];
@@ -68,8 +68,13 @@ function PublicPanel({ participant }) {
 
   return (
     <div className="tw-wrap">
-      <span className="tw-kicker">Meu {campaign.event_name}</span>
-      <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem' }}>Bora, {participant.name.split(' ')[0]}!</h1>
+      <div className="tw-between" style={{ alignItems: 'flex-end' }}>
+        <div>
+          <span className="tw-kicker">Meu {campaign.event_name}</span>
+          <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem', fontSize: '2.2rem' }}>Bora, {participant.name.split(' ')[0]}!</h1>
+        </div>
+        <Char name="oni" style={{ width: 96, marginBottom: '-6px' }} />
+      </div>
 
       <div className="tw-card tw-card-gold">
         <div className="tw-grid tw-stats-4">
