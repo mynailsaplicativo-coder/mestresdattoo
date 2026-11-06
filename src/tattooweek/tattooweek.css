@@ -424,3 +424,20 @@ select.tw-input option { background: #111; }
   .tw-stickers { grid-template-columns: repeat(3, 6cm); }
   .tw-sticker, .tw-sticker * { color: inherit !important; }
 }
+
+/* Kit do dia */
+.tw-kit-list { margin: 0.6rem 0 0; padding-left: 1.1rem; line-height: 1.75; font-size: 0.9rem; columns: 2 220px; column-gap: 1.5rem; }
+.tw-kit-rules { display: grid; gap: 0.3rem; margin-top: 0.8rem; font-size: 0.82rem; font-weight: 700; }
+.tw-kit-rules span { opacity: 0.85; }
+.tw-kit-rules span.ok { color: #16a34a; opacity: 1; }
+.tw-live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; margin-right: 6px; vertical-align: 1px; animation: tw-live 1.4s ease-in-out infinite; }
+@keyframes tw-live { 50% { opacity: 0.25; transform: scale(0.8); } }
+.tw-rank .tw-rank-seals { font-size: 0.7rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: rgba(0,0,0,0.08); white-space: nowrap; }
+.tw-rank .tw-rank-seals.ok { background: #16a34a; color: #fff; }
+.tw-admin-drag { cursor: grab; touch-action: none; user-select: none; opacity: 0.55; padding: 0 4px; }
+.tw-admin-row-drop { outline: 2px dashed var(--tw-gold, #f4e14d); outline-offset: -2px; }
+.tw-admin-row-dragging { opacity: 0.35; }
+.tw-modal { position: fixed; inset: 0; z-index: 80; background: rgba(10, 6, 30, 0.6); display: grid; place-items: start center; overflow-y: auto; padding: 4vh 12px; }
+.tw-modal > form { width: min(760px, 100%); }
+.tw-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 90; background: #1d1646; color: #fff; padding: 10px 16px; border-radius: 12px; font-weight: 700; box-shadow: 0 8px 30px rgba(0,0,0,0.3); max-width: calc(100vw - 32px); }
+.tw-toast.bad { background: #b91c1c; }

@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
-import { Home, Camera, Swords, Trophy, Map as MapIcon, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound, Download } from 'lucide-react';
+import { Home, Camera, Swords, Trophy, Map as MapIcon, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound, Download, Gift } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS } from './twData';
+import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems } from './twData';
 import './tattooweek.css';
 import './poster.css';
 import { GoldCoin } from './TwArt';
@@ -71,6 +71,12 @@ export function TwShell({ children }) {
 }
 
 // Tela de entrada: login (Clerk) + cadastro (uma vez) + inscrição na campanha
+function friendlyError(err) {
+  const msg = err?.message || String(err || '');
+  if (/fetch|network|Failed/i.test(msg)) return 'Sem conexão agora. Confira a internet e toque de novo.';
+  return `Não deu para concluir: ${msg}. Toque de novo; se continuar, chame a equipe.`;
+}
+
 export function JoinGate({ tw, track, children }) {
   const { campaign } = useCampaign();
   const { user, isSignedIn, loading, participant, setParticipant, isEnrolled, setEnrollments } = tw;
@@ -133,8 +139,13 @@ export function JoinGate({ tw, track, children }) {
         in_public: track !== 'artist',
         in_challenge: track === 'artist',
       }]).select().single();
-      if (res.error) { setSaving(false); setError(res.error.message); return; }
-      p = res.data;
+      if (res.error) {
+        // Cadastro já existe (ex.: conexão caiu no meio): reaproveita em vez de travar
+        const again = await supabase.from('tw_participants').select('*').eq('clerk_id', user.id).maybeSingle();
+        if (!again.data) { setSaving(false); setError(friendlyError(res.error)); return; }
+        p = again.data;
+      } else p = res.data;
+      setParticipant(p);
     } else if (!p[track === 'artist' ? 'in_challenge' : 'in_public']) {
       const res = await supabase.from('tw_participants').update(flag).eq('id', p.id).select().single();
       if (res.data) p = res.data;
@@ -143,8 +154,8 @@ export function JoinGate({ tw, track, children }) {
       .upsert({ participant_id: p.id, campaign_id: campaign.id, track }, { onConflict: 'participant_id,campaign_id,track' })
       .select().single();
     setSaving(false);
-    if (en.error) { setError(en.error.message); return; }
-    setEnrollments(list => [...list, en.data]);
+    if (en.error) { setError(friendlyError(en.error)); return; }
+    setEnrollments(list => [...list.filter(x => x.id !== en.data.id), en.data]);
     setParticipant(p);
   };
 
@@ -452,6 +463,33 @@ export function SealStrip({ seals, found }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// Kit do dia do Artist Challenge: o que leva e o que precisa para ganhar
+export function KitCard({ campaign, dayNum, hasAllSeals, foundSeals, needSeals, isLeader, onRanking, compact }) {
+  const items = kitItems(campaign);
+  return (
+    <div className="tw-card tw-card-gold tw-kit" style={{ marginTop: '1rem' }}>
+      <div className="tw-between" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
+        <div>
+          <span className="tw-kicker"><Gift size={12} style={{ verticalAlign: -1 }} /> Kit do dia{dayNum ? ` · dia ${dayNum}` : ''}</span>
+          <h3 className="tw-h3" style={{ margin: '0.25rem 0' }}>1 kit completo por dia para o tatuador nº 1 do dia</h3>
+        </div>
+        {isLeader && <span className="tw-chip tw-chip-ok" style={{ whiteSpace: 'nowrap' }}>Você está na frente!</span>}
+      </div>
+      {!compact && (
+        <ul className="tw-kit-list">
+          {items.map(i => <li key={i}>{i}</li>)}
+        </ul>
+      )}
+      <div className="tw-kit-rules">
+        <span className={hasAllSeals ? 'ok' : ''}>{hasAllSeals ? '✓' : '○'} Ter os {needSeals} selos secretos{foundSeals != null ? ` (${foundSeals}/${needSeals})` : ''}</span>
+        <span>○ Ser o maior pontuador do dia (empate: quem chegou primeiro)</span>
+        <span>○ Quem já ganhou um kit não disputa os outros dias</span>
+      </div>
+      {onRanking && <button className="tw-btn tw-btn-sm" style={{ marginTop: '0.75rem' }} onClick={onRanking}><Trophy size={14} /> Ranking ao vivo</button>}
     </div>
   );
 }

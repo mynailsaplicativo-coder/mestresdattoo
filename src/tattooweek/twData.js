@@ -244,10 +244,17 @@ export async function submitMission({ participant, mission, artistId, files, not
     points: mission.points,
     reviewed_at: new Date().toISOString(),
     ...(postUrl ? { post_url: postUrl } : {}),
+    // Missão diária do tatuador: vale de novo no dia seguinte
+    ...(isDailyMission(mission) ? { play_day: todaySP() } : {}),
   };
-  const { data, error } = await supabase.from('tw_submissions').insert([row]).select().single();
+  let { data, error } = await supabase.from('tw_submissions').insert([row]).select().single();
+  if (error && row.play_day && /play_day/.test(error.message || '')) {
+    // Banco ainda sem a coluna play_day (SQL da fase 11 não rodado): envia sem ela
+    delete row.play_day;
+    ({ data, error } = await supabase.from('tw_submissions').insert([row]).select().single());
+  }
   if (error) {
-    if (error.code === '23505') throw new Error('Você já enviou esta missão.');
+    if (error.code === '23505') throw new Error(isDailyMission(mission) ? 'Você já fez esta missão hoje. Amanhã ela vale de novo!' : 'Você já enviou esta missão.');
     throw error;
   }
   return data;
@@ -402,4 +409,100 @@ const SECRET_ART = new Set(['dragao', 'macaco', 'imperador', 'oni', 'caveira', '
 export function secretArt(slug) {
   const key = (slug || '').replace(/^selo-/, '');
   return SECRET_ART.has(key) ? `/tattooweek/art/secreto-${key}.webp` : null;
+}
+
+// --- Kit do dia (Artist Challenge) ---
+// Cada dia do evento tem ranking próprio. O kit vai para o tatuador com mais pontos no dia
+// que já tenha TODOS os selos secretos. Quem ganhou um dia não participa mais.
+
+export const DEFAULT_KIT = [
+  '1 máquina',
+  '1 impressora',
+  '10 caixas de cartucho',
+  '1 mês de STENCILFLOW Pro',
+  'Acesso Ink Authority para assistir à stream class da Isabella Badini',
+  '1 post collab com o Mestres da Tattoo',
+  '1 chaveiro da Bronc',
+  '1 copo da Tattoo Week',
+];
+
+export function kitItems(campaign) {
+  const items = campaign?.prize_items || [];
+  return items.some(i => /m[áa]quina/i.test(i)) ? items : DEFAULT_KIT;
+}
+
+export function dateSP(ts) {
+  return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
+// Dia de jogo de um envio (envios antigos não têm play_day: usa a data do envio)
+export const subDay = (s) => s.play_day || dateSP(s.created_at);
+
+// 1, 2 ou 3 nos dias do evento; null fora deles (antes do evento tudo fica liberado para teste)
+export function eventDayNumber(campaign, date = todaySP()) {
+  const i = (campaign?.event_days || []).indexOf(date);
+  return i >= 0 ? i + 1 : null;
+}
+
+// Missões do tatuador que podem ser refeitas a cada dia (o ranking zera todo dia)
+export const isDailyMission = (m) => m.track === 'artist' && !['selo', 'passaporte', 'surpresa'].includes(m.category);
+
+// Missão com "Dia" marcado no admin só aparece naquele dia do evento
+export function missionForToday(m, campaign) {
+  if (!m.day) return true;
+  const d = eventDayNumber(campaign);
+  return d == null || d === Number(m.day);
+}
+
+export async function loadArtistDaily(campaign) {
+  const [r, tags, sealSubs] = await Promise.all([
+    supabase.from('tw_ranking_daily').select('*').eq('campaign_id', campaign.id).eq('track', 'artist')
+      .order('points', { ascending: false }).order('last_at').limit(2000),
+    supabase.from('tw_artists').select('id').eq('campaign_id', campaign.id).eq('kind', 'secret').eq('active', true),
+    supabase.from('tw_submissions').select('participant_id, artist_id, created_at, mission:tw_missions!inner(category, campaign_id)')
+      .eq('mission.campaign_id', campaign.id).eq('mission.category', 'selo').eq('status', 'approved').limit(5000),
+  ]);
+  const secretIds = new Set((tags.data || []).map(t => t.id));
+  const need = secretIds.size;
+  // participante → selo → dia em que achou
+  const found = {};
+  for (const s of sealSubs.data || []) {
+    if (!secretIds.has(s.artist_id)) continue;
+    const d = dateSP(s.created_at);
+    const byP = (found[s.participant_id] ||= {});
+    if (!byP[s.artist_id] || d < byP[s.artist_id]) byP[s.artist_id] = d;
+  }
+  const sealsOf = (pid, upTo) => Object.values(found[pid] || {}).filter(d => !upTo || d <= upTo).length;
+  const eligible = (pid, upTo) => sealsOf(pid, upTo) >= need;
+
+  const rows = r.data || [];
+  const today = todaySP();
+  const days = [...new Set(rows.map(x => x.day))].sort();
+  const winners = {};
+  const winnerSet = new Set();
+  for (const day of days) {
+    if (day >= today) break; // o dia de hoje ainda está em disputa
+    const w = rows.find(x => x.day === day && !winnerSet.has(x.participant_id) && eligible(x.participant_id, day));
+    if (w) { winners[day] = w; winnerSet.add(w.participant_id); }
+  }
+  // Ranking de um dia sem quem já levou kit em dia anterior
+  const rankingOf = (day) => rows.filter(x => x.day === day && !(winnerSet.has(x.participant_id) && winners[day]?.participant_id !== x.participant_id));
+  const todayRows = rankingOf(today);
+  const leader = todayRows.find(x => eligible(x.participant_id, today)) || null;
+  return { need, sealsOf, eligible, winners, winnerSet, rankingOf, todayRows, leader, today };
+}
+
+// Recarrega na hora quando entra envio novo (Supabase Realtime) e, de garantia, a cada N segundos
+export function useLiveRefresh(key, load, ms = 15000) {
+  useEffect(() => {
+    let timer = null;
+    const soon = () => { clearTimeout(timer); timer = setTimeout(load, 700); };
+    load();
+    const poll = setInterval(load, ms);
+    const ch = supabase.channel(`tw-live-${key}-${Math.random().toString(36).slice(2, 8)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tw_submissions' }, soon)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tw_adjustments' }, soon)
+      .subscribe();
+    return () => { clearInterval(poll); clearTimeout(timer); supabase.removeChannel(ch); };
+  }, [key, load, ms]);
 }

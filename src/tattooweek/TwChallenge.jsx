@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Nfc, KeyRound, Share2, HelpCircle, Lock, MapPin } from 'lucide-react';
+import { Check, Nfc, KeyRound, Share2, HelpCircle, Lock, MapPin, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip } from './TwShell';
-import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS } from './twData';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, KitCard } from './TwShell';
+import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS, loadArtistDaily, useLiveRefresh, subDay, todaySP, isDailyMission, missionForToday, eventDayNumber } from './twData';
 import { PatchSash, Char } from './TwArt';
 
 const SECTIONS = ['quiz', 'parceiros', 'networking', 'conteudo', 'geral', 'secreta'];
@@ -125,7 +125,7 @@ function ChallengePanel({ participant }) {
   const [tags, setTags] = useState([]);
   const [subs, setSubs] = useState([]);
   const [scanned, setScanned] = useState(new Set());
-  const [rank, setRank] = useState(null);
+  const [daily, setDaily] = useState(null);
   const [adj, setAdj] = useState({ public: 0, artist: 0 });
   const [open, setOpen] = useState(null);
   const [loaded, setLoaded] = useState(false);
@@ -136,24 +136,19 @@ function ChallengePanel({ participant }) {
       supabase.from('tw_artists').select('*').eq('campaign_id', campaign.id).eq('active', true).order('slug'),
       supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participant.id).eq('mission.campaign_id', campaign.id),
       supabase.from('tw_events').select('ref').eq('participant_id', participant.id).eq('campaign_id', campaign.id).in('type', ['nfc_scan', 'qr_scan']),
-      supabase.from('tw_ranking').select('participant_id, points').eq('campaign_id', campaign.id).eq('track', 'artist').order('points', { ascending: false }).order('last_at'),
+      loadArtistDaily(campaign),
       loadAdjustments(participant.id, campaign.id),
     ]);
     setMissions(m.data || []);
     setTags(a.data || []);
     setSubs(s.data || []);
     setScanned(new Set((e.data || []).map(x => x.ref)));
-    const pos = (r.data || []).findIndex(x => x.participant_id === participant.id);
-    setRank(pos >= 0 ? pos + 1 : null);
+    setDaily(r);
     setAdj(ad);
     setLoaded(true);
-  }, [participant.id, campaign.id]);
+  }, [participant.id, campaign]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 60000);
-    return () => clearInterval(t);
-  }, [load]);
+  useLiveRefresh(`challenge-${participant.id}`, load, 30000);
 
   if (!loaded) return <div className="tw-center-screen">Carregando desafios...</div>;
 
@@ -162,16 +157,44 @@ function ChallengePanel({ participant }) {
   const seals = tags.filter(t => kindOf(t) === 'secret');
   const missionSubs = (id) => subs.filter(s => s.mission_id === id);
   const revealed = new Set(tags.filter(a => a.reveals_mission_id && scanned.has(a.slug)).map(a => a.reveals_mission_id));
-  const visible = missions.filter(m => !m.hidden || revealed.has(m.id));
+  const today = todaySP();
+  const dayNum = eventDayNumber(campaign);
+  const visible = missions.filter(m => (!m.hidden || revealed.has(m.id)) && missionForToday(m, campaign));
+  // Missão diária: conta só o envio de hoje (amanhã vale de novo)
+  const subFor = (m) => {
+    const list = missionSubs(m.id);
+    return isDailyMission(m) ? list.find(s => subDay(s) === today) : list[0];
+  };
   const surprises = visible.filter(m => m.category === 'surpresa' && isMissionLive(m));
   const passportMission = missions.find(m => m.category === 'passaporte');
   const sealMission = missions.find(m => m.category === 'selo');
   const approved = subs.filter(s => s.status === 'approved' && s.mission?.track === 'artist');
   const total = approved.reduce((a, s) => a + (s.points || 0), 0) + adj.artist;
+  const todayRow = daily?.todayRows.find(x => x.participant_id === participant.id);
+  const todayPos = todayRow ? daily.todayRows.indexOf(todayRow) + 1 : null;
   const stamps = passportMission ? missionSubs(passportMission.id) : [];
   const foundSeals = new Set(approved.filter(s => s.mission?.category === 'selo').map(s => s.artist_id));
   const seals_ = sealItems(missions, approved);
-  const finished = campaign.status === 'finished';
+  const wonDay = daily && Object.entries(daily.winners).find(([, w]) => w.participant_id === participant.id)?.[0];
+  const needSeals = daily?.need ?? seals.length;
+  const hasAllSeals = foundSeals.size >= needSeals;
+  const isLeader = daily?.leader?.participant_id === participant.id;
+  const finished = campaign.status === 'finished' || !!wonDay;
+
+  if (wonDay) {
+    return (
+      <div className="tw-center-screen">
+        <div style={{ maxWidth: 440 }}>
+          <div className="tw-reveal-icon" style={{ width: 120, height: 120, animation: 'tw-glow 2.4s ease-in-out infinite' }}><Trophy size={52} color="var(--tw-gold)" /></div>
+          <span className="tw-kicker">Artist Challenge</span>
+          <h1 className="tw-h2" style={{ margin: '0.4rem 0' }}>Você levou o Kit dos Mestres!</h1>
+          <p className="tw-p">Você foi o tatuador do dia em {new Date(`${wonDay}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}. Procure a equipe do Mestres da Tattoo para retirar seu kit.</p>
+          <p className="tw-p" style={{ marginTop: '0.8rem' }}>Quem ganha o kit não disputa os outros dias: a vaga fica para outro tatuador. Valeu demais!</p>
+          <button className="tw-btn tw-btn-primary tw-btn-block" style={{ marginTop: '1.25rem' }} onClick={() => navigate(`${base}/resultado`)}><Share2 size={14} /> Ver meu card de resultado</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="tw-wrap">
@@ -185,18 +208,20 @@ function ChallengePanel({ participant }) {
 
       <div className="tw-card tw-card-gold">
         <div className="tw-grid tw-stats-4">
-          <div className="tw-stat"><b>{total}</b><span>Pontos</span></div>
-          <div className="tw-stat"><b>{rank ? `${rank}º` : '–'}</b><span>Ranking</span></div>
-          <div className="tw-stat"><b>{foundSeals.size}/{seals.length}</b><span>Selos</span></div>
-          <div className="tw-stat"><b>{stamps.filter(s => s.status === 'approved').length}</b><span>Pontos NFC</span></div>
+          <div className="tw-stat"><b>{todayRow?.points || 0}</b><span>Pontos hoje</span></div>
+          <div className="tw-stat"><b>{todayPos ? `${todayPos}º` : '–'}</b><span>Ranking hoje</span></div>
+          <div className="tw-stat"><b>{foundSeals.size}/{needSeals}</b><span>Selos secretos</span></div>
+          <div className="tw-stat"><b>{total}</b><span>Total no evento</span></div>
         </div>
       </div>
 
       {finished && <div className="tw-notice" style={{ marginTop: '1rem' }}>O Artist Challenge foi encerrado.</div>}
 
+      <KitCard campaign={campaign} dayNum={dayNum} hasAllSeals={hasAllSeals} foundSeals={foundSeals.size} needSeals={needSeals} isLeader={isLeader} onRanking={() => navigate(`${base}/ranking`)} />
+
       {!finished && surprises.length > 0 && (
         <div className="tw-stack" style={{ marginTop: '1rem' }}>
-          {surprises.map(m => <SurpriseCard key={m.id} mission={m} sub={missionSubs(m.id)[0]} onOpen={() => setOpen({ mission: m })} />)}
+          {surprises.map(m => <SurpriseCard key={m.id} mission={m} sub={subFor(m)} onOpen={() => setOpen({ mission: m })} />)}
         </div>
       )}
 
@@ -208,7 +233,7 @@ function ChallengePanel({ participant }) {
             <span className="tw-kicker">{cat === 'secreta' && <KeyRound size={12} style={{ verticalAlign: -1 }} />} {cat === 'quiz' ? 'Perguntas' : CATEGORY_LABELS[cat]}</span>
             <div className="tw-stack" style={{ marginTop: '0.7rem' }}>
               {list.map(m => {
-                const s = missionSubs(m.id)[0];
+                const s = subFor(m);
                 const partner = m.partner && partners[m.partner];
                 return (
                   <button key={m.id} className={`tw-mission ${s?.status === 'approved' ? 'done' : ''} ${finished ? 'locked' : ''}`} disabled={finished || (s && s.status !== 'rejected')} onClick={() => setOpen({ mission: m })}>
@@ -273,7 +298,7 @@ function ChallengePanel({ participant }) {
       </section>
 
       <p className="tw-p" style={{ fontSize: '0.8rem', marginTop: '2rem' }}>
-        Os pontos entram na hora. A equipe revisa os envios e pode recusar o que não cumprir a missão.
+        Os pontos entram na hora. O ranking do dia zera à meia-noite e as missões valem de novo no dia seguinte. A equipe revisa os envios e pode recusar o que não cumprir a missão.
       </p>
 
       {open && (

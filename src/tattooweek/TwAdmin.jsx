@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser, RedirectToSignIn } from '@clerk/clerk-react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   LayoutDashboard, ShieldCheck, ListChecks, Nfc, Users, Settings, Check, X, Zap, Download, Printer, Plus, Save, Film,
   ArrowLeft, FileText, Handshake, ExternalLink, Copy, Activity, Images, Trophy, Megaphone, UserCog, Trash2, CopyPlus,
+  GripVertical, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES, NFC_KINDS, hashAnswers, SEAL_ICON_KEYS, SEAL_COLORS, campaignTheme, themeStyle, PRESET_THEMES, DEFAULT_THEME } from './twData';
@@ -461,24 +462,58 @@ function Missions({ campaign, partners }) {
   const [rows, setRows] = useState([]);
   const [edit, setEdit] = useState(null);
   const [surprise, setSurprise] = useState({ track: 'artist', title: '', description: '', points: 30, minutes: 20, media_count: 1, at: '' });
+  const [toast, setToast] = useState(null);
+  const [drag, setDrag] = useState(null);
+  const [over, setOver] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const toastTimer = useRef(null);
+
+  const flash = (text, bad = false) => {
+    setToast({ text, bad });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), bad ? 7000 : 2600);
+  };
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).order('track').order('day').order('position');
+    const { data, error } = await supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).order('track').order('position');
+    if (error) { flash(`Não carregou as missões: ${error.message}`, true); return; }
     setRows(data || []);
-  }, [campaign.id]);
+  }, [campaign.id]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [load]);
 
   const save = async (e) => {
     e.preventDefault();
+    setSaving(true);
     const { answerText, ...rest } = edit;
-    const row = { ...rest, campaign_id: campaign.id, day: edit.day ? Number(edit.day) : null, partner: edit.partner || null, points: Number(edit.points), media_count: Number(edit.media_count) };
+    const row = { ...rest, campaign_id: campaign.id, day: edit.day ? Number(edit.day) : null, partner: edit.partner || null, points: Number(edit.points) || 0, media_count: Number(edit.media_count) || 0, position: Number(edit.position) || 0 };
+    delete row.created_at;
     // A resposta certa vira hash: quem olhar o site não descobre
     if (answerText?.trim()) row.answer_hash = await hashAnswers(answerText);
-    const { error } = row.id
-      ? await supabase.from('tw_missions').update(row).eq('id', row.id)
-      : await supabase.from('tw_missions').insert([row]);
-    if (error) { alert(error.message); return; }
+    // Nova missão: entra no fim da lista da trilha
+    if (!row.id && !row.position) row.position = Math.max(0, ...rows.filter(m => m.track === row.track && m.category !== 'surpresa').map(m => m.position || 0)) + 1;
+    const { data, error } = row.id
+      ? await supabase.from('tw_missions').update(row).eq('id', row.id).select()
+      : await supabase.from('tw_missions').insert([row]).select();
+    setSaving(false);
+    if (error) { flash(`Não salvou: ${error.message}`, true); return; }
+    if (!data?.length) { flash('Não salvou: o banco não aceitou a alteração. Atualize a página e tente de novo.', true); return; }
     setEdit(null);
+    flash(`Missão “${row.title}” salva${row.active ? '' : ' (desativada)'}`);
+    load();
+  };
+
+  // Arrastar e soltar (ou setas ↑ ↓ no celular): reordena e grava a posição de todas da lista
+  const reorder = async (list, fromId, toIdx) => {
+    const from = list.findIndex(m => m.id === fromId);
+    if (from < 0 || toIdx < 0 || toIdx >= list.length || from === toIdx) return;
+    const next = [...list];
+    const [moved] = next.splice(from, 1);
+    next.splice(toIdx, 0, moved);
+    const changes = next.map((m, i) => ({ id: m.id, position: i + 1 })).filter((c, i) => next[i].position !== c.position);
+    setRows(rs => rs.map(r => { const c = changes.find(x => x.id === r.id); return c ? { ...r, position: c.position } : r; }));
+    const res = await Promise.all(changes.map(c => supabase.from('tw_missions').update({ position: c.position }).eq('id', c.id)));
+    const err = res.find(r => r.error);
+    flash(err ? `Não salvou a ordem: ${err.error.message}` : 'Ordem salva. O site já mostra nessa ordem.', !!err);
     load();
   };
 
@@ -505,7 +540,9 @@ function Missions({ campaign, partners }) {
   };
 
   const toggle = async (m) => {
-    await supabase.from('tw_missions').update({ active: !m.active }).eq('id', m.id);
+    const { data, error } = await supabase.from('tw_missions').update({ active: !m.active }).eq('id', m.id).select();
+    if (error || !data?.length) { flash(`Não mudou “${m.title}”: ${error?.message || 'o banco não aceitou'}`, true); return; }
+    flash(m.active ? `“${m.title}” saiu do ar (está em Desativadas)` : `“${m.title}” está no ar`);
     load();
   };
 
@@ -531,11 +568,12 @@ function Missions({ campaign, partners }) {
     return ['No ar', 'tw-chip-bad'];
   };
 
+  const byPos = (a, b) => (a.position || 0) - (b.position || 0);
   const groups = [
-    ['Surpresas', rows.filter(m => m.category === 'surpresa')],
-    ['Público', rows.filter(m => m.track === 'public' && m.category !== 'surpresa' && m.active)],
-    ['Artist Challenge', rows.filter(m => m.track === 'artist' && m.category !== 'surpresa' && m.active)],
-    ['Desativadas', rows.filter(m => !m.active && m.category !== 'surpresa')],
+    ['Surpresas', rows.filter(m => m.category === 'surpresa'), false],
+    ['Público · no ar', rows.filter(m => m.track === 'public' && m.category !== 'surpresa' && m.active).sort(byPos), true],
+    ['Artist Challenge · no ar', rows.filter(m => m.track === 'artist' && m.category !== 'surpresa' && m.active).sort(byPos), true],
+    ['Desativadas (fora do site)', rows.filter(m => !m.active && m.category !== 'surpresa'), false],
   ];
 
   return (
@@ -561,7 +599,10 @@ function Missions({ campaign, partners }) {
         <p className="tw-p" style={{ fontSize: '0.78rem' }}>Deixe “Começa em” vazio para lançar agora. Programadas aparecem sozinhas no horário, com contagem regressiva (em até 1 minuto). Dica: monte toda a agenda de surpresas dos 3 dias antes do evento.</p>
       </form>
 
+      {toast && <div className={`tw-toast ${toast.bad ? 'bad' : ''}`} role="status">{toast.text}</div>}
+
       {edit && (
+        <div className="tw-modal" onClick={e => { if (e.target === e.currentTarget) setEdit(null); }}>
         <form className="tw-card tw-card-gold tw-stack" onSubmit={save}>
           <h3 className="tw-h3">{edit.id ? 'Editar missão' : 'Nova missão'}</h3>
           <input className="tw-input" placeholder="Título" value={edit.title} onChange={e => setEdit({ ...edit, title: e.target.value })} required />
@@ -602,31 +643,53 @@ function Missions({ campaign, partners }) {
             <label className="tw-check"><input type="checkbox" checked={!!edit.require_post} onChange={e => setEdit({ ...edit, require_post: e.target.checked })} /><span>Pedir o link do post no perfil do tatuador marcando os parceiros.</span></label>
           )}
           <label className="tw-check"><input type="checkbox" checked={!!edit.hidden} onChange={e => setEdit({ ...edit, hidden: e.target.checked })} /><span>Escondida: só aparece para quem ler o Ponto NFC que a revela (configure em Pontos NFC).</span></label>
-          <div className="tw-row"><button className="tw-btn tw-btn-primary tw-btn-sm"><Save size={14} /> Salvar</button><button type="button" className="tw-btn tw-btn-ghost tw-btn-sm" onClick={() => setEdit(null)}>Cancelar</button></div>
+          <label className="tw-check"><input type="checkbox" checked={edit.active !== false} onChange={e => setEdit({ ...edit, active: e.target.checked })} /><span>No ar (aparece no site)</span></label>
+          <div className="tw-row"><button className="tw-btn tw-btn-primary tw-btn-sm" disabled={saving}><Save size={14} /> {saving ? 'Salvando...' : 'Salvar'}</button><button type="button" className="tw-btn tw-btn-ghost tw-btn-sm" onClick={() => setEdit(null)}>Cancelar</button></div>
         </form>
+        </div>
       )}
 
-      {groups.map(([title, list]) => list.length > 0 && (
+      {groups.map(([title, list, sortable]) => list.length > 0 && (
         <section key={title} className="tw-stack" style={{ marginTop: '1rem' }}>
-          <h3 className="tw-kicker">{title}</h3>
+          <h3 className="tw-kicker">{title} · {list.length}</h3>
+          {sortable && <p className="tw-p" style={{ fontSize: '0.78rem', margin: 0 }}>Segure e arraste pela alça ⠿ para mudar a ordem (no celular use ↑ ↓). Grava sozinho.</p>}
           <div className="tw-table-wrap">
             <table className="tw-table tw-table-stack">
               <tbody>
-                {list.map(m => (
-                  <tr key={m.id} style={{ opacity: m.active ? 1 : 0.45 }}>
+                {list.map((m, idx) => (
+                  <tr
+                    key={m.id}
+                    style={{ opacity: m.active ? 1 : 0.45 }}
+                    className={`${sortable && over === m.id && drag !== m.id ? 'tw-admin-row-drop' : ''} ${drag === m.id ? 'tw-admin-row-dragging' : ''}`}
+                    draggable={sortable}
+                    onDragStart={sortable ? (e => { setDrag(m.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', m.id); }) : undefined}
+                    onDragOver={sortable ? (e => { if (!drag || !list.some(x => x.id === drag)) return; e.preventDefault(); setOver(m.id); }) : undefined}
+                    onDrop={sortable ? (e => { e.preventDefault(); const from = drag; setDrag(null); setOver(null); reorder(list, from, idx); }) : undefined}
+                    onDragEnd={sortable ? (() => { setDrag(null); setOver(null); }) : undefined}
+                  >
                     <td style={{ width: '50%' }}>
-                      <b>{m.title}</b>
+                      <div className="tw-row" style={{ gap: '0.4rem', alignItems: 'flex-start' }}>
+                      {sortable && <span className="tw-admin-drag" title="Arraste para reordenar"><GripVertical size={16} /></span>}
+                      <div>
+                      <b>{sortable ? `${idx + 1}. ` : ''}{m.title}</b>
                       <div className="tw-row" style={{ gap: '0.3rem', marginTop: 4, flexWrap: 'wrap' }}>
                         {m.partner && <span className="tw-chip" style={{ color: partners[m.partner]?.color }}>{partners[m.partner]?.name || m.partner}</span>}
                         {m.hidden && <span className="tw-chip tw-chip-gold">Escondida</span>}
                         {m.category === 'quiz' && <span className={`tw-chip ${m.answer_hash ? 'tw-chip-ok' : 'tw-chip-bad'}`}>{m.answer_hash ? 'Resposta ✓' : 'Falta a resposta'}</span>}
                         {m.category === 'surpresa' && <span className={`tw-chip ${surpriseState(m)[1]}`}>{surpriseState(m)[0]}</span>}
+                        {m.day && <span className="tw-chip">Só no dia {m.day}</span>}
                         {m.starts_at && <span className="tw-chip">{new Date(m.starts_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}{m.ends_at && ` → ${new Date(m.ends_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}</span>}
+                      </div>
+                      </div>
                       </div>
                     </td>
                     <td>{m.points} pts</td>
                     <td>{m.media_count}×</td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {sortable && <>
+                        <button className="tw-icon-btn" style={{ display: 'inline-grid' }} disabled={idx === 0} onClick={() => reorder(list, m.id, idx - 1)} title="Subir"><ArrowUp size={13} /></button>{' '}
+                        <button className="tw-icon-btn" style={{ display: 'inline-grid' }} disabled={idx === list.length - 1} onClick={() => reorder(list, m.id, idx + 1)} title="Descer"><ArrowDown size={13} /></button>{' '}
+                      </>}
                       <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => setEdit({ ...m })}>Editar</button>{' '}
                       <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => toggle(m)}>{m.active ? 'Desativar' : 'Ativar'}</button>{' '}
                       <button className="tw-icon-btn" style={{ display: 'inline-grid' }} onClick={() => duplicate(m)} title="Duplicar"><CopyPlus size={13} /></button>{' '}
