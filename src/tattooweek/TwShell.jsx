@@ -6,6 +6,7 @@ import { supabase } from '../supabaseClient';
 import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS } from './twData';
 import './tattooweek.css';
 import './poster.css';
+import { GoldCoin } from './TwArt';
 
 export function TwShell({ children }) {
   const navigate = useNavigate();
@@ -409,7 +410,7 @@ export function BadgeGrid({ badges, all, small }) {
   );
 }
 
-// Os 5 selos secretos: ícone revelado só depois de encontrado
+// Os 5 selos secretos: medalhão dourado revelado só depois de encontrado
 export function SealStrip({ seals, found }) {
   if (!seals.length) return null;
   return (
@@ -417,8 +418,8 @@ export function SealStrip({ seals, found }) {
       {seals.map(s => {
         const got = found.has(s.id);
         return (
-          <div key={s.id} className={`tw-seal-secret ${got ? 'got' : ''}`} title={got ? s.name : 'Selo secreto'}>
-            <span>{got ? (s.seal_icon || '★') : '?'}</span>
+          <div key={s.id} className="tw-seal-secret" title={got ? s.name : 'Selo secreto'}>
+            <GoldCoin slug={s.slug} name={s.name} found={got} size={64} />
             <small>{got ? s.name : '???'}</small>
           </div>
         );

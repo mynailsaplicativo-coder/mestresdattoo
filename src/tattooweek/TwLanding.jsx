@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, Swords, MapPin, CalendarDays, Gift, Map as MapIcon, KeyRound, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, PartnerStrip } from './TwShell';
-import { Cloud, Sparkle, Patch, Char } from './TwArt';
+import { Cloud, Sparkle, Patch, Char, GoldCoin } from './TwArt';
 import { useCampaign, campaignPartners, trackEvent, formatDays, campaignMap } from './twData';
 
 export default function TwLanding() {
@@ -109,7 +109,7 @@ export default function TwLanding() {
             <div className="tw-card" style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap', background: 'linear-gradient(135deg, #fff 0%, #f1ebff 100%)' }}>
               <div style={{ display: 'flex' }}>
                 {Array.from({ length: Math.min(secretCount, 5) }).map((_, i) => (
-                  <div key={i} style={{ marginLeft: i ? -26 : 0, transform: `rotate(${(i - 2) * 8}deg)` }}><Patch earned={false} size={70} /></div>
+                  <div key={i} style={{ marginLeft: i ? -26 : 0, transform: `rotate(${(i - 2) * 8}deg)` }}><GoldCoin found={false} size={70} /></div>
                 ))}
               </div>
               <div style={{ flex: '1 1 220px' }}>

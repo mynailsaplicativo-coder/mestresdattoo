@@ -33,7 +33,7 @@ function PublicPanel({ participant }) {
   const load = useCallback(async () => {
     const [m, t, s, a] = await Promise.all([
       supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).eq('track', 'public').eq('active', true).order('position'),
-      supabase.from('tw_artists').select('id, name, kind, seal_icon').eq('campaign_id', campaign.id).eq('active', true).order('slug'),
+      supabase.from('tw_artists').select('id, slug, name, kind, seal_icon').eq('campaign_id', campaign.id).eq('active', true).order('slug'),
       supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participant.id).eq('mission.campaign_id', campaign.id),
       loadAdjustments(participant.id, campaign.id),
     ]);

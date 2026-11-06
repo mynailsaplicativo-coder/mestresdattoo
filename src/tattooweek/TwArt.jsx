@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { secretArt } from './twData';
 import {
   DoorOpen, Megaphone, Flame, Search, Crown, Eye, PenTool, Heart, PenLine, BookOpen, Map, Users, Mic, Lightbulb,
   Utensils, Music, Star, Camera, Zap, KeyRound, HelpCircle,
@@ -133,5 +134,17 @@ export function PatchSash({ items }) {
         </div>
       ))}
     </div>
+  );
+}
+
+
+// Medalhão dourado com brilho passando (found=false mostra só a silhueta)
+export function GoldCoin({ slug, name, found = true, size = 88 }) {
+  const src = secretArt(slug);
+  return (
+    <span className={`tw-coin ${found ? 'on' : ''}`} style={{ width: size, height: size }} role="img" aria-label={found ? name : 'Selo secreto a descobrir'}>
+      {src ? <img src={src} alt="" draggable="false" /> : found && <span className="tw-coin-fallback">★</span>}
+      {!found && <b>?</b>}
+    </span>
   );
 }

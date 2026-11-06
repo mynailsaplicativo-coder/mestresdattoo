@@ -327,3 +327,49 @@
 .tw-poster .tw-patch-art.on { box-shadow: 3px 3px 0 #1d1646; }
 .tw-poster .tw-patch-art:not(.on) img { filter: grayscale(1); opacity: 0.35; }
 .tw-hero-oni, .tw-hero-dragon, .tw-hero-cat, .tw-parade .tw-char, .tw-hero-art .tw-cloud { will-change: transform; }
+
+/* ==========================================================================
+   Selos secretos dourados: medalhão com brilho e revelação animada
+   ========================================================================== */
+.tw-coin { position: relative; display: inline-grid; place-items: center; border-radius: 50%; overflow: hidden; flex: 0 0 auto; }
+.tw-coin img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.tw-coin:not(.on) { background: #2a2357; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.15); }
+.tw-coin:not(.on) img { filter: brightness(0) invert(0.2); opacity: 0.55; }
+.tw-coin b { position: absolute; font-family: var(--display, system-ui); font-size: 1.6rem; color: #f4e14d; text-shadow: 2px 2px 0 #1d1646; }
+.tw-coin.on { box-shadow: 0 0 0 3px #1d1646, 0 0 18px rgba(255, 205, 60, 0.65); animation: tw-coin-pulse 2.8s ease-in-out infinite; }
+.tw-coin.on::after { content: ''; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.75) 48%, transparent 62%); transform: translateX(-120%); animation: tw-shine 3.2s ease-in-out infinite; }
+.tw-coin-fallback { font-size: 2rem; color: #f4e14d; }
+.tw-poster .tw-seal-secret span.tw-coin { border: 0; background: none; aspect-ratio: auto; }
+.tw-poster .tw-seal-secret .tw-coin:not(.on) { background: #2a2357; }
+@keyframes tw-shine { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+@keyframes tw-coin-pulse { 0%, 100% { box-shadow: 0 0 0 3px #1d1646, 0 0 12px rgba(255, 205, 60, 0.45); } 50% { box-shadow: 0 0 0 3px #1d1646, 0 0 28px rgba(255, 205, 60, 0.9); } }
+
+/* Palco da revelação */
+.tw-gold-stage { position: relative; width: 260px; height: 260px; margin: 1rem auto 0.5rem; display: grid; place-items: center; perspective: 900px; }
+.tw-gold-rays { position: absolute; inset: -40px; border-radius: 50%; background: repeating-conic-gradient(from 0deg, rgba(255, 214, 79, 0.55) 0deg 8deg, transparent 8deg 22deg); -webkit-mask: radial-gradient(circle, #000 35%, transparent 70%); mask: radial-gradient(circle, #000 35%, transparent 70%); animation: tw-spin-rays 14s linear infinite; }
+.tw-gold-glow { position: absolute; inset: 30px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 232, 130, 0.95), rgba(255, 190, 40, 0) 70%); animation: tw-glow-breathe 2.4s ease-in-out infinite; }
+.tw-gold-medal { position: relative; width: 210px; height: 210px; border-radius: 50%; box-shadow: 0 0 0 4px #1d1646, 0 18px 40px rgba(120, 70, 0, 0.45); animation: tw-coin-drop 1.4s cubic-bezier(.2, .9, .25, 1.15) both, tw-coin-float 3.4s ease-in-out 1.4s infinite; }
+.tw-gold-stage::after { content: ''; position: absolute; width: 210px; height: 210px; border-radius: 50%; background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.8) 50%, transparent 65%); transform: translateX(-130%); animation: tw-shine 3s ease-in-out 1.4s infinite; pointer-events: none; -webkit-mask: radial-gradient(circle, #000 70%, transparent 71%); mask: radial-gradient(circle, #000 70%, transparent 71%); overflow: hidden; }
+.tw-gold-spark { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px; border-radius: 2px; background: #ffd84f; box-shadow: 0 0 8px #ffe98a; transform: rotate(var(--a)) translateY(0) scale(0); opacity: 0; }
+.tw-gold-stage.fresh .tw-gold-spark { animation: tw-burst 1.3s ease-out calc(0.9s + var(--d)) both; }
+.tw-gold-stage.fresh .tw-gold-spark:nth-child(odd) { background: #ff8fd8; box-shadow: 0 0 8px #ffc2ec; }
+@keyframes tw-coin-drop {
+  0% { transform: translateY(-140px) rotateY(900deg) scale(0.3); opacity: 0; }
+  60% { transform: translateY(10px) rotateY(60deg) scale(1.08); opacity: 1; }
+  80% { transform: translateY(-6px) rotateY(-10deg) scale(0.98); }
+  100% { transform: translateY(0) rotateY(0) scale(1); }
+}
+@keyframes tw-coin-float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(2deg); } }
+@keyframes tw-spin-rays { to { transform: rotate(360deg); } }
+@keyframes tw-glow-breathe { 0%, 100% { transform: scale(0.92); opacity: 0.75; } 50% { transform: scale(1.08); opacity: 1; } }
+@keyframes tw-burst {
+  0% { transform: rotate(var(--a)) translateY(0) scale(0); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: rotate(var(--a)) translateY(-150px) scale(1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tw-gold-rays, .tw-gold-glow, .tw-gold-medal, .tw-gold-stage::after, .tw-gold-spark, .tw-coin.on, .tw-coin.on::after { animation: none; }
+}
+/* reflexo centralizado em cima da moeda */
+.tw-gold-stage::after { left: 50%; top: 50%; margin: -105px 0 0 -105px; }
+.tw-gold-stage::after { display: none; }

@@ -385,3 +385,11 @@ export function campaignPins(c) {
   if (c?.map_image) return Array.isArray(c.map_pins) ? c.map_pins : [];
   return c?.slug === 'tattooweek' ? TATTOOWEEK_PINS : [];
 }
+
+// Medalhões dourados dos selos secretos (public/tattooweek/art/secreto-<nome>.webp)
+const SECRET_ART = new Set(['dragao', 'macaco', 'imperador', 'oni', 'caveira', 'tigre']);
+
+export function secretArt(slug) {
+  const key = (slug || '').replace(/^selo-/, '');
+  return SECRET_ART.has(key) ? `/tattooweek/art/secreto-${key}.webp` : null;
+}

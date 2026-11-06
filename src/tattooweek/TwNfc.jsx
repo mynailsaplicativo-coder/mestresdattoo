@@ -4,8 +4,7 @@ import { SignInButton } from '@clerk/clerk-react';
 import { AtSign, MapPin, Nfc, KeyRound, Check, Camera, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, MissionSheet } from './TwShell';
-import { Char } from './TwArt';
-import { useTwParticipant, useCampaign, trackEvent, instagramUrl, activationKey } from './twData';
+import { useTwParticipant, useCampaign, trackEvent, instagramUrl, activationKey, secretArt } from './twData';
 
 // Página aberta pelo adesivo NFC (ou QR). Três tipos: ponto, selo secreto e ativação do Artist Challenge.
 export default function TwNfc() {
@@ -102,15 +101,22 @@ function SecretSeal({ tag, tw }) {
         if (!error) { fresh = true; points = Math.max(points, m.points); }
       }
       setResult({ fresh, points });
+      if (fresh) { try { navigator.vibrate?.([60, 40, 140]); } catch { /* sem vibração */ } }
     })();
   }, [loading, participant, tracks.length, tag, campaign.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="tw-wrap" style={{ maxWidth: 480 }}>
       <div className="tw-reveal">
-        <Char name="caveira" style={{ width: 110, margin: '0 auto 0.5rem' }} />
         <span className="tw-kicker"><KeyRound size={12} style={{ verticalAlign: -1 }} /> Selo secreto</span>
-        <div className="tw-reveal-icon" style={{ marginTop: '1rem' }}>{tag.seal_icon || '★'}</div>
+        <div className={`tw-gold-stage ${result?.fresh ? 'fresh' : ''}`}>
+          <span className="tw-gold-rays" />
+          <span className="tw-gold-glow" />
+          {Array.from({ length: 14 }).map((_, i) => <i key={i} className="tw-gold-spark" style={{ '--a': `${i * (360 / 14)}deg`, '--d': `${(i % 4) * 0.12}s` }} />)}
+          {secretArt(tag.slug)
+            ? <img className="tw-gold-medal" src={secretArt(tag.slug)} alt={tag.name} />
+            : <div className="tw-reveal-icon">{tag.seal_icon || '★'}</div>}
+        </div>
         <h1 className="tw-h1" style={{ fontSize: 'clamp(2rem, 9vw, 3rem)' }}>{tag.name}</h1>
         {result?.fresh && <h2 className="tw-h2 tw-gold">+{result.points} pontos!</h2>}
         {result && !result.fresh && <p className="tw-p">Você já tinha este selo. Procure os outros!</p>}
