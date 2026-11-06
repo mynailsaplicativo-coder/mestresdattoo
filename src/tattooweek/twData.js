@@ -77,10 +77,20 @@ export function campaignBase(c) {
   return c.slug === 'tattooweek' ? '/tattooweek' : `/desafios/${c.slug}`;
 }
 
+// Instagram oficial dos parceiros (conferidos no Instagram). O @ salvo no admin tem prioridade.
+const PARTNER_INSTAGRAM = {
+  mestres: '@mestresdatattoo',
+  stencilflow: '@stencilflowapp',
+  inkauthority: '@inkauthorityacademy',
+  tcm: '@tcmsupply',
+  bronc: '@bronc_oficial_brasil',
+  tattooweek: '@tattooweek',
+};
+
 export async function loadPartners() {
   const { data } = await supabase.from('tw_partners').select('*').order('created_at');
   if (!data?.length) return DEFAULT_PARTNERS;
-  return Object.fromEntries(data.map(p => [p.id, p]));
+  return Object.fromEntries(data.map(p => [p.id, { ...p, instagram: p.instagram || PARTNER_INSTAGRAM[p.id] || null }]));
 }
 
 export async function loadCampaign(slug) {
