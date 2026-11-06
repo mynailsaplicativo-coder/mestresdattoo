@@ -3,14 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Play, Pause, Download, Share2, Loader2, Film } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate } from './TwShell';
-import { useTwParticipant, useCampaign, useStaffRole, trackEvent, dayName, campaignPartners, campaignTheme } from './twData';
+import { useTwParticipant, useCampaign, useStaffRole, trackEvent, dayName, campaignPartners, secretArt } from './twData';
+import { loadCampaignProgress } from './badges';
+import { W, H, buildScenes, createRenderer, stopRendererVideos } from './retroRender';
 
-// Vídeo vertical 720x1280, ~30–60s: abertura, dia 1, dia 2, dia 3, encerramento.
-const W = 720;
-const H = 1280;
-const MAX_MEDIA = 20;
-const IMAGE_SEC = 2.2;
-const VIDEO_SEC = 4;
+const MAX_MEDIA = 14;
+const CHARS = ['oni', 'dragao', 'gato', 'caveira', 'tigre'];
+const SEAL_ART = new Set(['door', 'megaphone', 'flame', 'search', 'crown', 'eye', 'pen', 'heart', 'stencil', 'book', 'map', 'users', 'mic', 'lightbulb', 'utensils', 'music']);
 
 export default function TwRetro() {
   const tw = useTwParticipant();
@@ -41,21 +40,27 @@ function RetroLoader({ participantId }) {
 
   useEffect(() => {
     (async () => {
-      const [p, s] = await Promise.all([
+      const [p, s, progress] = await Promise.all([
         supabase.from('tw_participants').select('*').eq('id', participantId).single(),
-        supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participantId).eq('mission.campaign_id', cfg.id).eq('status', 'approved').order('created_at'),
+        supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*), artist:tw_artists(slug, name)')
+          .eq('participant_id', participantId).eq('mission.campaign_id', cfg.id).eq('status', 'approved').order('created_at'),
+        loadCampaignProgress(participantId, cfg.id),
       ]);
+      const subs = s.data || [];
       const dayOf = (sub) => {
         if (sub.mission?.day) return sub.mission.day;
-        const d = sub.created_at.slice(0, 10);
+        const d = new Date(sub.created_at).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
         const idx = (cfg.event_days || []).indexOf(d);
-        return idx >= 0 ? idx + 1 : 3;
+        return idx >= 0 ? idx + 1 : 1;
       };
+      // Momentos: uma foto/vídeo por missão (o primeiro registro), com o selo da missão
       const byDay = { 1: [], 2: [], 3: [] };
-      (s.data || []).forEach(sub => {
-        (sub.media || []).forEach(m => byDay[dayOf(sub)]?.push({ ...m, caption: sub.mission?.title }));
+      subs.forEach(sub => {
+        const m = (sub.media || [])[0];
+        if (!m) return;
+        const seal = sub.mission?.seal_name && SEAL_ART.has(sub.mission.seal_icon) ? { name: sub.mission.seal_name, icon: sub.mission.seal_icon } : null;
+        byDay[dayOf(sub)].push({ ...m, caption: sub.mission?.title, seal });
       });
-      // Limita a ~20 registros, distribuídos entre os dias
       const total = byDay[1].length + byDay[2].length + byDay[3].length;
       if (total > MAX_MEDIA) {
         [1, 2, 3].forEach(d => {
@@ -64,9 +69,29 @@ function RetroLoader({ participantId }) {
           byDay[d] = byDay[d].length ? Array.from({ length: keep }, (_, i) => byDay[d][Math.floor(i * step)]) : [];
         });
       }
+      const seen = new Set();
+      const sealsEarned = subs
+        .filter(x => x.mission?.seal_name && SEAL_ART.has(x.mission.seal_icon))
+        .map(x => ({ name: x.mission.seal_name, icon: x.mission.seal_icon }))
+        .filter(x => !seen.has(x.name) && seen.add(x.name));
+      const coins = [...new Set(subs.filter(x => x.mission?.category === 'selo' && x.artist?.slug && secretArt(x.artist.slug)).map(x => x.artist.slug))];
+      const track = subs.some(x => x.mission?.track === 'artist') ? 'artist' : 'public';
+      const rank = [progress.ranks.artist, progress.ranks.public].filter(Boolean).sort((a, b) => a - b)[0] || null;
       setState({
-        participant: p.data, byDay, total, musicUrl: cfg.music_url,
+        participant: p.data,
+        byDay,
+        total: subs.length,
+        musicUrl: cfg.music_url,
         campaign: cfg,
+        sealsEarned,
+        coins,
+        track,
+        stats: {
+          points: (progress.points.public || 0) + (progress.points.artist || 0),
+          missions: subs.filter(x => x.mission?.category !== 'selo').length,
+          seals: sealsEarned.length + coins.length,
+          rank,
+        },
         partnerLine: campaignPartners(cfg, partners).filter(x => x.id !== 'mestres').map(x => x.name.toUpperCase()).join('  ·  '),
       });
     })();
@@ -80,7 +105,7 @@ function RetroLoader({ participantId }) {
         <div style={{ maxWidth: 380 }}>
           <Film size={48} color="var(--tw-gold)" />
           <h1 className="tw-h2" style={{ marginTop: '1rem' }}>Seu vídeo começa aqui</h1>
-          <p className="tw-p" style={{ margin: '0.5rem 0 1.5rem' }}>Cumpra as missões do Meu {cfg.event_name}. Cada foto ou vídeo aprovado vira uma cena da sua retrospectiva.</p>
+          <p className="tw-p" style={{ margin: '0.5rem 0 1.5rem' }}>Cumpra as missões do Meu {cfg.event_name}. Cada foto, selo e moeda dourada vira uma cena da sua retrospectiva.</p>
           <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => navigate(`${base}/meu`)}>Ir para as missões</button>
         </div>
       </div>
@@ -90,90 +115,37 @@ function RetroLoader({ participantId }) {
   return <RetroPlayer {...state} />;
 }
 
-function buildScenes(byDay, name, branded) {
-  const scenes = [{ kind: 'intro', dur: 2.6, name }];
-  [1, 2, 3].forEach(d => {
-    if (!byDay[d].length) return;
-    scenes.push({ kind: 'day', dur: 1.8, day: d });
-    byDay[d].forEach(m => scenes.push({ kind: m.type, dur: m.type === 'video' ? VIDEO_SEC : IMAGE_SEC, media: m }));
-  });
-  scenes.push({ kind: 'outro', dur: 3.2, branded });
-  let t = 0;
-  scenes.forEach(s => { s.start = t; t += s.dur; });
-  return { scenes, total: t };
-}
-
-function loadAsset(m) {
-  return new Promise((resolve) => {
-    if (m.type === 'video') {
-      const v = document.createElement('video');
-      v.crossOrigin = 'anonymous';
-      v.muted = true;
-      v.playsInline = true;
-      v.preload = 'auto';
-      v.src = m.url;
-      v.onloadeddata = () => resolve(v);
-      v.onerror = () => resolve(null);
-    } else {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
-      img.src = m.url;
-    }
+function loadImage(src, cors = false) {
+  return new Promise(resolve => {
+    const img = new Image();
+    if (cors) img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
   });
 }
 
-function drawCover(ctx, el, zoom = 1) {
-  const sw = el.videoWidth || el.naturalWidth || el.width;
-  const sh = el.videoHeight || el.naturalHeight || el.height;
-  if (!sw || !sh) return;
-  const scale = Math.max(W / sw, H / sh) * zoom;
-  const dw = sw * scale;
-  const dh = sh * scale;
-  ctx.drawImage(el, (W - dw) / 2, (H - dh) / 2, dw, dh);
-}
-
-function text(ctx, str, x, y, size, color = '#fff', weight = 900, align = 'center') {
-  ctx.font = `${weight} ${size}px Inter, system-ui, sans-serif`;
-  ctx.fillStyle = color;
-  ctx.textAlign = align;
-  ctx.fillText(str, x, y);
-}
-
-// Diminui a fonte até caber na largura (nomes de eventos longos)
-function fitText(ctx, str, x, y, size, color = '#fff', weight = 900) {
-  let s = size;
-  ctx.font = `${weight} ${s}px Inter, system-ui, sans-serif`;
-  while (s > 18 && ctx.measureText(str).width > W - 80) {
-    s -= 4;
-    ctx.font = `${weight} ${s}px Inter, system-ui, sans-serif`;
-  }
-  text(ctx, str, x, y, s, color, weight);
-}
-
-function wrap(ctx, str, maxW) {
-  const words = (str || '').split(' ');
-  const lines = [];
-  let line = '';
-  words.forEach(w => {
-    const test = line ? `${line} ${w}` : w;
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test;
+function loadMedia(m) {
+  if (m.type !== 'video') return loadImage(m.url, true);
+  return new Promise(resolve => {
+    const v = document.createElement('video');
+    v.crossOrigin = 'anonymous';
+    v.muted = true;
+    v.playsInline = true;
+    v.preload = 'auto';
+    v.src = m.url;
+    v.onloadeddata = () => resolve(v);
+    v.onerror = () => resolve(null);
   });
-  if (line) lines.push(line);
-  return lines;
 }
 
-function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine }) {
-  const { primary: GOLD, bg: BG } = campaignTheme(campaign);
+function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine, sealsEarned, coins, track, stats }) {
   const canvasRef = useRef(null);
-  const assetsRef = useRef(new Map());
-  const logoRef = useRef(null);
+  const assetsRef = useRef({ media: new Map(), chars: {}, seals: {}, coins: {}, logo: null });
   const rafRef = useRef(0);
   const clockRef = useRef({ startedAt: 0, offset: 0 });
   const recRef = useRef(null);
   const audioRef = useRef(null);
-  const activeVideoRef = useRef(null);
 
   const [branded, setBranded] = useState(true);
   const [ready, setReady] = useState(false);
@@ -181,109 +153,58 @@ function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine }) {
   const [recording, setRecording] = useState(false);
   const [output, setOutput] = useState(null);
 
-  const { scenes, total } = useMemo(() => buildScenes(byDay, participant?.name || '', branded), [byDay, participant?.name, branded]);
+  const { scenes, total } = useMemo(() => buildScenes({ byDay, sealsEarned, coins, stats, track }), [byDay, sealsEarned, coins, stats, track]);
 
+  const info = useMemo(() => ({
+    name: participant?.name || '',
+    eventName: campaign.event_name || 'Evento',
+    campaignName: campaign.name,
+    eventLine: [campaign.event_name, (campaign.event_days?.[0] || '').slice(0, 4), campaign.venue].filter(Boolean).join(' · ').toUpperCase(),
+    partnerLine,
+    branded,
+    track,
+    sealsEarned,
+    coins,
+    dayName: (d) => dayName(campaign, d),
+  }), [participant?.name, campaign, partnerLine, branded, track, sealsEarned, coins]);
+
+  const draw = useMemo(() => createRenderer({ scenes, total, assets: assetsRef.current, info }), [scenes, total, info]);
+
+  // Carrega fontes, personagens, selos, moedas e as fotos/vídeos da pessoa
   useEffect(() => {
     let alive = true;
-    const all = [1, 2, 3].flatMap(d => byDay[d]);
-    const logo = new Image();
-    logo.src = '/fotos artistas/logo mestres.png';
-    logoRef.current = logo;
-    Promise.all(all.map(async m => [m.url, await loadAsset(m)])).then(entries => {
-      if (!alive) return;
-      entries.forEach(([url, el]) => el && assetsRef.current.set(url, el));
-      setReady(true);
-    });
+    const a = assetsRef.current;
+    const media = [1, 2, 3].flatMap(d => byDay[d]);
+    (async () => {
+      await Promise.all([
+        document.fonts?.load?.("400 80px 'Bagel Fat One'"),
+        document.fonts?.load?.("800 30px 'Bricolage Grotesque'"),
+      ].map(p => p?.catch?.(() => null)));
+      const jobs = [
+        ...CHARS.map(async n => { a.chars[n] = await loadImage(`/tattooweek/art/${n}.webp`); }),
+        ...[...new Set(sealsEarned.map(s => s.icon).concat(media.map(m => m.seal?.icon).filter(Boolean)))]
+          .map(async ic => { a.seals[ic] = await loadImage(`/tattooweek/art/selo-${ic}.webp`); }),
+        ...coins.map(async slug => { a.coins[slug] = await loadImage(secretArt(slug)); }),
+        (async () => { a.logo = await loadImage('/fotos artistas/logo mestres.png'); })(),
+        ...media.map(async m => { const el = await loadMedia(m); if (el) a.media.set(m.url, el); }),
+      ];
+      await Promise.all(jobs);
+      if (alive) setReady(true);
+    })();
     return () => { alive = false; };
-  }, [byDay]);
+  }, [byDay, sealsEarned, coins]);
 
-  const draw = useCallback((t, showBars) => {
+  const paint = useCallback((t, showBars) => {
     const ctx = canvasRef.current?.getContext('2d');
-    if (!ctx) return;
-    const scene = scenes.find(s => t >= s.start && t < s.start + s.dur) || scenes[scenes.length - 1];
-    const local = t - scene.start;
-    const p = Math.min(1, local / scene.dur);
-    const fadeIn = Math.min(1, local / 0.35);
+    if (ctx) draw(ctx, t, { showBars });
+  }, [draw]);
 
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = BG;
-    ctx.fillRect(0, 0, W, H);
-
-    if (scene.kind === 'image' || scene.kind === 'video') {
-      const el = assetsRef.current.get(scene.media.url);
-      if (scene.kind === 'video' && el) {
-        if (activeVideoRef.current !== el) {
-          activeVideoRef.current?.pause();
-          activeVideoRef.current = el;
-          el.currentTime = 0;
-          el.play().catch(() => {});
-        }
-      } else if (activeVideoRef.current) {
-        activeVideoRef.current.pause();
-        activeVideoRef.current = null;
-      }
-      ctx.globalAlpha = fadeIn;
-      if (el) drawCover(ctx, el, scene.kind === 'image' ? 1 + 0.08 * p : 1);
-      ctx.globalAlpha = 1;
-      const g = ctx.createLinearGradient(0, H * 0.7, 0, H);
-      g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(1, 'rgba(0,0,0,0.8)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, H * 0.7, W, H * 0.3);
-      if (scene.media.caption) {
-        ctx.font = '800 34px Inter, system-ui, sans-serif';
-        const lines = wrap(ctx, scene.media.caption, W - 120);
-        lines.slice(0, 3).forEach((l, i) => text(ctx, l, 60, H - 110 - (lines.length - 1 - i) * 44, 34, '#fff', 800, 'left'));
-      }
-    } else {
-      if (activeVideoRef.current) { activeVideoRef.current.pause(); activeVideoRef.current = null; }
-      ctx.globalAlpha = fadeIn;
-      if (scene.kind === 'intro') {
-        if (logoRef.current?.complete && logoRef.current.naturalWidth) {
-          const lw = 320;
-          const lh = lw * (logoRef.current.naturalHeight / logoRef.current.naturalWidth);
-          ctx.drawImage(logoRef.current, (W - lw) / 2, 330, lw, lh);
-        }
-        text(ctx, 'MEU', W / 2, 640, 64, GOLD);
-        fitText(ctx, (campaign.event_name || 'EVENTO').toUpperCase(), W / 2, 730, 92);
-        text(ctx, (scene.name || '').toUpperCase(), W / 2, 830, 40, 'rgba(255,255,255,0.7)', 700);
-      } else if (scene.kind === 'day') {
-        text(ctx, `DIA ${scene.day}`, W / 2, 600, 150, GOLD);
-        fitText(ctx, dayName(campaign, scene.day).toUpperCase(), W / 2, 700, 56);
-      } else if (scene.kind === 'outro') {
-        const words = campaign.name.toUpperCase().split(' ');
-        const last = words.length > 1 ? words.pop() : '';
-        fitText(ctx, words.join(' '), W / 2, 560, 80);
-        if (last) fitText(ctx, last, W / 2, 640, 80, GOLD);
-        text(ctx, 'uma realização Mestres da Tattoo', W / 2, 730, 32, 'rgba(255,255,255,0.75)', 600);
-        if (scene.branded && partnerLine) {
-          fitText(ctx, partnerLine, W / 2, 1080, 26, 'rgba(255,255,255,0.5)', 800);
-        }
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    if (showBars) {
-      const gap = 6;
-      const bw = (W - 48 - gap * (scenes.length - 1)) / scenes.length;
-      scenes.forEach((s, i) => {
-        const x = 24 + i * (bw + gap);
-        ctx.fillStyle = 'rgba(255,255,255,0.25)';
-        ctx.fillRect(x, 24, bw, 5);
-        const fill = t >= s.start + s.dur ? 1 : t < s.start ? 0 : (t - s.start) / s.dur;
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(x, 24, bw * fill, 5);
-      });
-    }
-  }, [scenes, campaign, partnerLine, GOLD, BG]);
-
-  // Primeiro quadro
-  useEffect(() => { if (ready) draw(0, true); }, [ready, draw]);
+  // Primeiro quadro: a abertura já montada
+  useEffect(() => { if (ready) paint(1.6, true); }, [ready, paint]);
 
   const stop = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
-    activeVideoRef.current?.pause();
-    activeVideoRef.current = null;
+    stopRendererVideos(assetsRef.current);
     audioRef.current?.pause();
     setPlaying(false);
   }, []);
@@ -291,15 +212,15 @@ function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine }) {
   const loop = useCallback((showBars, onEnd) => {
     const t = clockRef.current.offset + (performance.now() - clockRef.current.startedAt) / 1000;
     if (t >= total) {
-      draw(total - 0.01, showBars);
+      paint(total - 0.01, showBars);
       clockRef.current.offset = 0;
       stop();
       onEnd?.();
       return;
     }
-    draw(t, showBars);
+    paint(t, showBars);
     rafRef.current = requestAnimationFrame(() => loop(showBars, onEnd));
-  }, [draw, total, stop]);
+  }, [paint, total, stop]);
 
   const play = () => {
     clockRef.current.startedAt = performance.now();
@@ -324,16 +245,21 @@ function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine }) {
         audioRef.current = audio;
         const actx = new AudioContext();
         const src = actx.createMediaElementSource(audio);
+        const gain = actx.createGain();
         const dest = actx.createMediaStreamDestination();
-        src.connect(dest);
-        src.connect(actx.destination);
+        src.connect(gain);
+        gain.connect(dest);
+        gain.connect(actx.destination);
+        // fade-out da trilha no final
+        gain.gain.setValueAtTime(1, actx.currentTime + Math.max(0, total - 1.5));
+        gain.gain.linearRampToValueAtTime(0, actx.currentTime + total);
         dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
         await audio.play();
       } catch { /* sem trilha: grava só o vídeo */ }
     }
 
     const mime = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find(m => window.MediaRecorder?.isTypeSupported?.(m));
-    const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 4_000_000 } : undefined);
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 6_000_000 } : undefined);
     const chunks = [];
     rec.ondataavailable = e => e.data.size && chunks.push(e.data);
     rec.onstop = () => {
@@ -366,7 +292,7 @@ function RetroPlayer({ participant, byDay, musicUrl, campaign, partnerLine }) {
   return (
     <div className="tw-wrap" style={{ maxWidth: 520 }}>
       <span className="tw-kicker">Minha retrospectiva</span>
-      <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem' }}>Meu {campaign.event_name}</h1>
+      <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem', fontSize: '2.2rem' }}>Meu {campaign.event_name}</h1>
 
       <div className="tw-retro-stage">
         <canvas ref={canvasRef} width={W} height={H} />
