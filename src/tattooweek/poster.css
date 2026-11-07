@@ -373,3 +373,75 @@
 /* reflexo centralizado em cima da moeda */
 .tw-gold-stage::after { left: 50%; top: 50%; margin: -105px 0 0 -105px; }
 .tw-gold-stage::after { display: none; }
+
+/* ==========================================================================
+   Telão no visual pôster (mesma estética da página principal)
+   ========================================================================== */
+.tw-tv.tw-tv-poster { position: relative; overflow: hidden; color: var(--ink); font-family: var(--body); }
+.tw-tv-poster > :not(.tw-tv-deco) { position: relative; z-index: 1; }
+.tw-tv-deco { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.tw-tv-cloud { position: absolute; width: 16vw; opacity: 0.95; animation: tw-float 7s ease-in-out infinite; }
+.tw-tv-cloud.c1 { top: 2vh; left: 50vw; width: 11vw; }
+.tw-tv-cloud.c2 { top: 48vh; left: 22vw; width: 13vw; animation-delay: -3s; }
+.tw-tv-spark { position: absolute; width: 2.6vw; animation: tw-twinkle 2.6s ease-in-out infinite; }
+.tw-tv-spark.s1 { top: 4vh; left: 47vw; }
+.tw-tv-spark.s2 { bottom: 16vh; left: 4vw; animation-delay: -1.2s; }
+.tw-tv-char { position: absolute; animation: tw-bob 5s ease-in-out infinite; }
+.tw-tv-char.oni { width: 9vw; left: 1.5vw; bottom: 1vh; }
+.tw-tv-char.dragao { width: 13vw; right: 1vw; bottom: 0; animation-delay: -2s; }
+
+.tw-tv-poster .tw-tv-logo { height: 8vh; filter: drop-shadow(2px 2px 0 rgba(var(--ink-rgb), 0.35)); }
+.tw-tv-poster .tw-tv-kicker { color: var(--pop); font-weight: 800; letter-spacing: 3px; }
+.tw-tv-poster .tw-tv-title { font-family: var(--display); font-weight: 400; text-transform: none; color: var(--ink); font-size: 3.4vw; line-height: 0.95; }
+.tw-tv-poster .tw-tv-stats div { background: #fff; border: 3px solid var(--ink); border-radius: 1.2vw; box-shadow: var(--shadow); padding: 0.8vh 1.4vw; min-width: 8vw; }
+.tw-tv-poster .tw-tv-stats div:nth-child(1) { background: var(--sun); }
+.tw-tv-poster .tw-tv-stats div:nth-child(2) { background: var(--sky-2); }
+.tw-tv-poster .tw-tv-stats div:nth-child(3) { background: var(--sky-3); }
+.tw-tv-poster .tw-tv-stats b { color: var(--ink); font-family: var(--display); font-weight: 400; }
+.tw-tv-poster .tw-tv-stats span { color: var(--ink); opacity: 0.75; }
+
+.tw-tv-poster .tw-tv-panel { background: rgba(255, 255, 255, 0.82); border: 3px solid var(--ink); border-radius: 1.4vw; box-shadow: var(--shadow-lg); padding: 1.6vh 1.2vw; align-self: start; }
+.tw-tv-poster .tw-tv-panel h2 { font-family: var(--display); font-weight: 400; text-transform: none; color: var(--ink); font-size: 2.3vw; margin: 0; }
+.tw-tv-sub { margin: 0.2vh 0 1.2vh; font-size: 0.95vw; font-weight: 700; color: var(--tw-muted); }
+.tw-tv-poster .tw-tv-row { background: #fff; border: 2.5px solid var(--ink); color: var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+.tw-tv-poster .tw-tv-row.top1 { background: var(--sun); }
+.tw-tv-poster .tw-tv-row.top2 { background: var(--sky-2); }
+.tw-tv-poster .tw-tv-row.top3 { background: var(--sky-3); }
+.tw-tv-poster .tw-tv-row b { color: var(--ink); font-family: var(--display); font-weight: 400; }
+.tw-tv-poster .tw-tv-row em { color: var(--pop); font-family: var(--display); font-weight: 400; font-size: 1.7vw; }
+.tw-tv-seals { font-size: 0.85vw; font-weight: 800; padding: 0.2vh 0.6vw; border-radius: 999px; background: rgba(var(--ink-rgb), 0.1); white-space: nowrap; }
+.tw-tv-seals.ok { background: #16a34a; color: #fff; }
+.tw-tv-poster .tw-tv-empty { color: var(--tw-muted); font-weight: 700; }
+
+.tw-tv-side { display: flex; flex-direction: column; gap: 1.6vh; }
+.tw-tv-polaroid { position: relative; background: #fff; border: 3px solid var(--ink); border-radius: 1vw; padding: 0.7vw 0.7vw 0; box-shadow: var(--shadow-lg); transform: rotate(1.5deg); }
+.tw-tv-poster .tw-tv-photo { border: 2px solid var(--ink); border-radius: 0.6vw; max-height: 38vh; aspect-ratio: 4 / 5; }
+.tw-tv-poster .tw-tv-caption { position: static; background: none; color: var(--ink); padding: 0.8vh 0.2vw 1vh; font-size: 1vw; }
+.tw-tv-poster .tw-tv-caption span { color: var(--tw-muted); }
+.tw-tv-photo-empty { display: grid; place-items: center; text-align: center; padding: 1rem; max-height: 240px; background: #fff; border: 3px dashed var(--ink); border-radius: 1vw; }
+.tw-tv-prizes { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8vw; }
+.tw-tv-prize { display: flex; align-items: center; gap: 0.6vw; background: #0b0b10; color: #fff; border: 3px solid var(--ink); border-radius: 1vw; box-shadow: 3px 3px 0 #f07c2a; padding: 0.6vw; }
+.tw-tv-prize img { width: 4vw; height: 4vw; object-fit: cover; border-radius: 0.5vw; flex: 0 0 auto; }
+.tw-tv-prize small { display: block; font-size: 0.7vw; color: #f07c2a; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.tw-tv-prize b { display: block; font-size: 1.05vw; }
+.tw-tv-prize em { display: block; font-style: normal; font-size: 0.85vw; color: #f4e14d; font-weight: 800; }
+
+.tw-tv-qr { background: #fff; padding: 8px; border: 3px solid var(--ink); border-radius: 14px; box-shadow: var(--shadow); flex: 0 0 auto; line-height: 0; }
+.tw-tv-poster .tw-tv-cta { font-family: var(--display); font-weight: 400; color: var(--ink); font-size: 2.6vw; }
+.tw-tv-poster .tw-tv-cta-sub { color: var(--tw-muted); font-weight: 700; }
+
+@media (max-width: 900px) {
+  .tw-tv-poster .tw-tv-title { font-size: 1.7rem; }
+  .tw-tv-poster .tw-tv-stats div { border-radius: 12px; padding: 0.4rem 0.7rem; }
+  .tw-tv-poster .tw-tv-panel { border-radius: 16px; padding: 0.9rem; }
+  .tw-tv-poster .tw-tv-panel h2 { font-size: 1.4rem; }
+  .tw-tv-sub { font-size: 0.75rem; }
+  .tw-tv-poster .tw-tv-row em { font-size: 1.1rem; }
+  .tw-tv-seals { font-size: 0.65rem; padding: 2px 6px; }
+  .tw-tv-prize img { width: 48px; height: 48px; }
+  .tw-tv-prize small { font-size: 0.6rem; } .tw-tv-prize b { font-size: 0.85rem; } .tw-tv-prize em { font-size: 0.7rem; }
+  .tw-tv-poster .tw-tv-caption { font-size: 0.8rem; }
+  .tw-tv-poster .tw-tv-cta { font-size: 1.3rem; }
+  .tw-tv-char.oni, .tw-tv-cloud, .tw-tv-spark { display: none; }
+  .tw-tv-char.dragao { width: 90px; opacity: 0.9; }
+}

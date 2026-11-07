@@ -31,9 +31,11 @@ export function TwShell({ children }) {
   const last = words.length > 1 ? words.pop() : '';
 
   const theme = ctx ? campaignTheme(ctx.campaign) : null;
+  // Fora de uma campanha (hub, perfil) usa o mesmo visual pôster do Desafio dos Mestres
+  const poster = !ctx || theme?.style === 'poster';
 
   return (
-    <div className={`tw ${theme?.accents?.length ? 'tw-themed' : ''} ${theme?.style === 'poster' ? 'tw-poster' : ''}`} style={theme && theme.style !== 'poster' ? themeStyle(theme) : undefined}>
+    <div className={`tw ${theme?.accents?.length ? 'tw-themed' : ''} ${poster ? 'tw-poster' : ''}`} style={theme && !poster ? themeStyle(theme) : undefined}>
       <header className="tw-top">
         <button className="tw-top-brand" onClick={() => navigate(base || '/desafios')}>
           <img src="/fotos artistas/logo mestres.png" alt="Mestres da Tattoo" />
