@@ -4,7 +4,7 @@ import { Gift, Award, Users, Video, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, KitCard } from './TwShell';
 import { Char } from './TwArt';
-import { useTwParticipant, useCampaign, loadArtistDaily, useLiveRefresh, eventDayNumber, kitItems } from './twData';
+import { useTwParticipant, useCampaign, loadArtistDaily, useLiveRefresh, eventDayNumber, kitItems, hasGift, KIT_IMAGE, PUBLIC_GIFT } from './twData';
 
 const fmtDay = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
@@ -48,7 +48,7 @@ export function TwRanking() {
           <Char name="gato" style={{ width: 88, marginBottom: '-4px' }} />
         </div>
         <div className="tw-tabs" style={{ marginBottom: '1rem' }}>
-          <button className={`tw-tab ${track === 'today' ? 'on' : ''}`} onClick={() => setTrack('today')}>Hoje<small>kit do dia</small></button>
+          <button className={`tw-tab ${track === 'today' ? 'on' : ''}`} onClick={() => setTrack('today')}>Hoje<small>impressora do dia</small></button>
           <button className={`tw-tab ${track === 'artist' ? 'on' : ''}`} onClick={() => setTrack('artist')}>Artist Challenge<small>total</small></button>
           <button className={`tw-tab ${track === 'public' ? 'on' : ''}`} onClick={() => setTrack('public')}>Meu {campaign.event_name}</button>
         </div>
@@ -59,7 +59,7 @@ export function TwRanking() {
               <div key={day} className="tw-card tw-card-gold tw-row" style={{ alignItems: 'center', gap: '0.75rem' }}>
                 <Trophy color="var(--tw-gold)" size={28} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <span className="tw-kicker">Kit do dia {fmtDay(day)}</span>
+                  <span className="tw-kicker">Impressora do dia {fmtDay(day)}</span>
                   <div style={{ fontWeight: 900 }}>{w.name} <span className="tw-p" style={{ fontWeight: 600 }}>{[w.instagram, `${w.points} pts`].filter(Boolean).join(' · ')}</span></div>
                 </div>
               </div>
@@ -72,7 +72,7 @@ export function TwRanking() {
             <KitCard campaign={campaign} dayNum={dayNum} hasAllSeals={false} needSeals={daily.need} compact />
             {daily.leader && (
               <p className="tw-p" style={{ fontSize: '0.85rem', marginTop: '0.6rem' }}>
-                🏆 Se o dia acabasse agora, o kit seria de <b style={{ color: 'var(--tw-text)' }}>{daily.leader.name}</b> ({daily.leader.points} pts).
+                🏆 Se o dia acabasse agora, a impressora seria de <b style={{ color: 'var(--tw-text)' }}>{daily.leader.name}</b> ({daily.leader.points} pts).
               </p>
             )}
           </div>
@@ -104,7 +104,7 @@ export function TwRanking() {
           })}
         </div>
         <p className="tw-p" style={{ fontSize: '0.78rem', marginTop: '1.25rem' }}>
-          {track === 'today' && <><b style={{ color: 'var(--tw-text)' }}>Leva o kit o tatuador com mais pontos no dia que tiver todos os selos secretos.</b> O ranking de hoje zera à meia-noite e quem já ganhou não disputa de novo. </>}
+          {track === 'today' && <><b style={{ color: 'var(--tw-text)' }}>Leva a impressora Bronc o tatuador com mais pontos no dia que tiver todos os selos secretos.</b> O ranking de hoje zera à meia-noite e quem já ganhou não disputa de novo. </>}
           Empate: vence quem chegou primeiro na pontuação. Participantes privados não aparecem nem concorrem.
         </p>
       </div>
@@ -153,12 +153,22 @@ export function TwPrizes() {
             <ul className="tw-p" style={{ paddingLeft: '1.1rem', lineHeight: 1.9, margin: 0 }}>
               {kitItems(c).map(item => <li key={item}>{item}</li>)}
             </ul>
+            {hasGift(c) && <img className="tw-kit-photo" src={KIT_IMAGE} alt="Impressora de stencil Bronc" loading="lazy" />}
           </div>
         )}
 
         <div className="tw-grid tw-grid-2" style={{ marginTop: '0.75rem' }}>
-          <div className="tw-card"><Users color="var(--tw-gold)" /><h3 className="tw-h3" style={{ margin: '0.5rem 0 0.3rem' }}>Tatuador do dia</h3><p className="tw-p" style={{ fontSize: '0.88rem' }}>Todo dia, o tatuador com mais pontos no dia que tiver todos os selos secretos leva o kit completo. São 3 kits e cada tatuador ganha no máximo 1.</p></div>
-          <div className="tw-card"><Video color="var(--tw-gold)" /><h3 className="tw-h3" style={{ margin: '0.5rem 0 0.3rem' }}>Selos de escoteiro</h3><p className="tw-p" style={{ fontSize: '0.88rem' }}>Cada missão cumprida vira um selo bordado na sua faixa. Colecione todos.</p></div>
+          <div className="tw-card"><Users color="var(--tw-gold)" /><h3 className="tw-h3" style={{ margin: '0.5rem 0 0.3rem' }}>Tatuador do dia</h3><p className="tw-p" style={{ fontSize: '0.88rem' }}>Todo dia, o tatuador com mais pontos no dia que tiver todos os selos secretos leva uma impressora de stencil Bronc. São 3 impressoras (1 por dia) e cada tatuador ganha no máximo 1.</p></div>
+          {hasGift(c) ? (
+            <div className="tw-card">
+              <Gift color="var(--tw-gold)" />
+              <h3 className="tw-h3" style={{ margin: '0.5rem 0 0.3rem' }}>{PUBLIC_GIFT.title} · público</h3>
+              <p className="tw-p" style={{ fontSize: '0.88rem' }}>{PUBLIC_GIFT.total} chaveiros. Complete {PUBLIC_GIFT.missions} missões (uma delas da Bronc), garanta o seu no app e retire no stand da Bronc. Enquanto durar.</p>
+              <img className="tw-kit-photo" src={PUBLIC_GIFT.image} alt={PUBLIC_GIFT.title} loading="lazy" style={{ maxHeight: 180 }} />
+            </div>
+          ) : (
+            <div className="tw-card"><Video color="var(--tw-gold)" /><h3 className="tw-h3" style={{ margin: '0.5rem 0 0.3rem' }}>Selos de escoteiro</h3><p className="tw-p" style={{ fontSize: '0.88rem' }}>Cada missão cumprida vira um selo bordado na sua faixa. Colecione todos.</p></div>
+          )}
         </div>
 
         <section className="tw-section tw-stack">
@@ -169,7 +179,7 @@ export function TwPrizes() {
             <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: 'var(--tw-text)' }}>Selos secretos:</b> adesivos NFC escondidos no evento. Encostou o celular, ganhou o selo e os pontos.</p>
             <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: 'var(--tw-text)' }}>Para tatuadores:</b> siga Bronc, TCM, Mestres da Tattoo, STENCILFLOW, Ink Authority e Tattoo Week, e poste cada missão no seu perfil marcando todos eles (o link do post vai junto).</p>
             <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: 'var(--tw-text)' }}>Artist Challenge:</b> aberto a todos os tatuadores do evento. O cadastro é feito no NFC do stand da Bronc.</p>
-            <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: 'var(--tw-text)' }}>Kit do dia:</b> 1 kit por dia para o tatuador com mais pontos naquele dia, desde que tenha todos os selos secretos. O ranking zera todo dia e as missões valem de novo. Quem ganhou não disputa os dias seguintes. Empate: vence quem chegou primeiro na pontuação.</p>
+            <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: 'var(--tw-text)' }}>Impressora do dia:</b> 1 impressora de stencil Bronc por dia para o tatuador com mais pontos naquele dia, desde que tenha os 5 selos secretos. São 5 missões por dia (1 de parceiro) e o ranking zera todo dia. Quem ganhou não disputa os dias seguintes. Empate: vence quem chegou primeiro na pontuação.</p>
             <p style={{ margin: '0 0 0.8rem' }}><b style={{ color: 'var(--tw-text)' }}>Validação:</b> a equipe revisa os envios. Registros fora do tema, repetidos ou de terceiros são recusados e perdem os pontos.</p>
             <p style={{ margin: 0 }}><b style={{ color: 'var(--tw-text)' }}>Participação privada:</b> quem escolhe não aparecer no ranking também não concorre aos prêmios do ranking.</p>
           </div>

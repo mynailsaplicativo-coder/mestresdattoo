@@ -8,7 +8,7 @@ import {
   GripVertical, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES, NFC_KINDS, hashAnswers, SEAL_ICON_KEYS, SEAL_COLORS, campaignTheme, themeStyle, PRESET_THEMES, DEFAULT_THEME } from './twData';
+import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES, NFC_KINDS, hashAnswers, SEAL_ICON_KEYS, SEAL_COLORS, campaignTheme, themeStyle, PRESET_THEMES, DEFAULT_THEME, loadArtistDaily, useLiveRefresh, hasGift, PUBLIC_GIFT, giftCode } from './twData';
 import { Live, Gallery, ParticipantSheet, Awards, Announcements, Staff } from './AdminExtra';
 import { Patch } from './TwArt';
 import './tattooweek.css';
@@ -217,6 +217,7 @@ function Overview({ campaign, partners }) {
       <div className="tw-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}>
         {kpiList(d).map(([label, v]) => <div key={label} className="tw-card tw-kpi"><b>{v}</b><span>{label}</span></div>)}
       </div>
+      <KitAndGift campaign={campaign} />
       <div className="tw-grid tw-grid-2" style={{ marginTop: '1.25rem' }}>
         <div className="tw-card tw-stack">
           <h3 className="tw-h3">Resultado por parceiro</h3>
@@ -239,6 +240,63 @@ function Overview({ campaign, partners }) {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+
+// --- Prêmios ao vivo: impressora do dia (artistas) e chaveiros Bronc (público) ---
+function KitAndGift({ campaign }) {
+  const [daily, setDaily] = useState(null);
+  const [claims, setClaims] = useState([]);
+  const [q, setQ] = useState('');
+
+  const load = useCallback(async () => {
+    const [d, c] = await Promise.all([
+      loadArtistDaily(campaign),
+      hasGift(campaign)
+        ? supabase.from('tw_events').select('id, created_at, participant:tw_participants(id, name, instagram)').eq('campaign_id', campaign.id).eq('type', 'gift_claim').eq('ref', PUBLIC_GIFT.id).order('created_at', { ascending: false }).limit(500)
+        : Promise.resolve({ data: [] }),
+    ]);
+    setDaily(d);
+    setClaims(c.data || []);
+  }, [campaign]);
+  useLiveRefresh(`admin-kit-${campaign.id}`, load, 20000);
+
+  if (!daily) return null;
+  const fmt = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const shown = claims.filter(c => !q || `${c.participant?.name} ${c.participant?.instagram} ${giftCode(c.participant?.id)}`.toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <div className="tw-grid tw-grid-2" style={{ marginTop: '1.25rem' }}>
+      <div className="tw-card tw-stack">
+        <h3 className="tw-h3">Impressora do dia (Artist Challenge)</h3>
+        <p className="tw-p" style={{ fontSize: '0.8rem' }}>Ganha o nº 1 do dia com os {daily.need} selos secretos. Para tirar alguém, desclassifique em Pessoas.</p>
+        {Object.entries(daily.winners).map(([day, w]) => (
+          <div key={day} className="tw-between" style={{ fontSize: '0.9rem' }}>
+            <span>🏆 <b>{fmt(day)}</b> · {w.name}</span><span className="tw-p">{w.instagram} · {w.points} pts</span>
+          </div>
+        ))}
+        <div className="tw-between" style={{ fontSize: '0.9rem' }}>
+          <span><b>Hoje</b> · {daily.leader ? daily.leader.name : 'ninguém com os selos ainda'}</span>
+          <span className="tw-p">{daily.leader ? `${daily.leader.points} pts` : ''}</span>
+        </div>
+      </div>
+      {hasGift(campaign) && (
+        <div className="tw-card tw-stack">
+          <h3 className="tw-h3">Chaveiros Bronc: {claims.length}/{PUBLIC_GIFT.total} garantidos</h3>
+          <input className="tw-input" placeholder="Buscar por nome, @ ou código" value={q} onChange={e => setQ(e.target.value)} />
+          <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+            {shown.map(c => (
+              <div key={c.id} className="tw-between" style={{ fontSize: '0.85rem', padding: '0.25rem 0' }}>
+                <span><b style={{ fontFamily: 'ui-monospace, monospace' }}>{giftCode(c.participant?.id)}</b> · {c.participant?.name}</span>
+                <span className="tw-p">{new Date(c.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            ))}
+            {shown.length === 0 && <p className="tw-p">Ninguém ainda.</p>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -572,7 +630,12 @@ function Missions({ campaign, partners }) {
   const groups = [
     ['Surpresas', rows.filter(m => m.category === 'surpresa'), false],
     ['Público · no ar', rows.filter(m => m.track === 'public' && m.category !== 'surpresa' && m.active).sort(byPos), true],
-    ['Artist Challenge · no ar', rows.filter(m => m.track === 'artist' && m.category !== 'surpresa' && m.active).sort(byPos), true],
+    // Artist Challenge separado por dia (cada dia tem as suas 5 missões)
+    ...[...new Set(rows.filter(m => m.track === 'artist' && m.category !== 'surpresa' && m.active).map(m => m.day || 0))].sort().map(day => [
+      day ? `Artist Challenge · dia ${day}${campaign.event_days?.[day - 1] ? ` (${new Date(`${campaign.event_days[day - 1]}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})` : ''} · no ar` : 'Artist Challenge · todos os dias · no ar',
+      rows.filter(m => m.track === 'artist' && m.category !== 'surpresa' && m.active && (m.day || 0) === day).sort(byPos),
+      true,
+    ]),
     ['Desativadas (fora do site)', rows.filter(m => !m.active && m.category !== 'surpresa'), false],
   ];
 

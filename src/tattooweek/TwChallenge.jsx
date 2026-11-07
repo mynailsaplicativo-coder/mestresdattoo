@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Nfc, KeyRound, Share2, HelpCircle, Lock, MapPin, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, KitCard } from './TwShell';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, KitCard, PartnerLogo } from './TwShell';
 import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS, loadArtistDaily, useLiveRefresh, subDay, todaySP, isDailyMission, missionForToday, eventDayNumber } from './twData';
 import { PatchSash, Char } from './TwArt';
 
@@ -99,7 +99,7 @@ function FollowStep({ enrollment, setEnrollments, participantId }) {
           const done = opened.has(p.id);
           return h ? (
             <a key={p.id} className={`tw-follow-row ${done ? 'done' : ''}`} href={`https://instagram.com/${h}`} target="_blank" rel="noreferrer" onClick={() => open(p)}>
-              <span className="tw-follow-dot" style={{ background: p.color || '#fff' }}>{done ? <Check size={18} /> : p.name.slice(0, 1)}</span>
+              {p.logo_url && !done ? <PartnerLogo partner={p} height={42} /> : <span className="tw-follow-dot" style={{ background: p.color || '#fff' }}>{done ? <Check size={18} /> : p.name.slice(0, 1)}</span>}
               <span style={{ flex: 1 }}><b>{p.name}</b><br /><small>@{h}</small></span>
               <span className="tw-chip">{done ? 'Aberto' : 'Seguir'}</span>
             </a>
@@ -187,9 +187,9 @@ function ChallengePanel({ participant }) {
         <div style={{ maxWidth: 440 }}>
           <div className="tw-reveal-icon" style={{ width: 120, height: 120, animation: 'tw-glow 2.4s ease-in-out infinite' }}><Trophy size={52} color="var(--tw-gold)" /></div>
           <span className="tw-kicker">Artist Challenge</span>
-          <h1 className="tw-h2" style={{ margin: '0.4rem 0' }}>Você levou o Kit dos Mestres!</h1>
-          <p className="tw-p">Você foi o tatuador do dia em {new Date(`${wonDay}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}. Procure a equipe do Mestres da Tattoo para retirar seu kit.</p>
-          <p className="tw-p" style={{ marginTop: '0.8rem' }}>Quem ganha o kit não disputa os outros dias: a vaga fica para outro tatuador. Valeu demais!</p>
+          <h1 className="tw-h2" style={{ margin: '0.4rem 0' }}>Você levou a impressora Bronc!</h1>
+          <p className="tw-p">Você foi o tatuador do dia em {new Date(`${wonDay}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}. Procure a equipe no stand da Bronc para retirar sua impressora.</p>
+          <p className="tw-p" style={{ marginTop: '0.8rem' }}>Quem ganha não disputa os outros dias: a vaga fica para outro tatuador. Valeu demais!</p>
           <button className="tw-btn tw-btn-primary tw-btn-block" style={{ marginTop: '1.25rem' }} onClick={() => navigate(`${base}/resultado`)}><Share2 size={14} /> Ver meu card de resultado</button>
         </div>
       </div>

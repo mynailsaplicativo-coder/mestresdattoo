@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 160" role="img" aria-label="Ink Authority Academy">
+  <defs>
+    <linearGradient id="ia-drop" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#a9c6ff"/>
+      <stop offset="0.55" stop-color="#4f7dff"/>
+      <stop offset="1" stop-color="#1c2f8f"/>
+    </linearGradient>
+    <linearGradient id="ia-gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff1b0"/>
+      <stop offset="0.5" stop-color="#f1c84b"/>
+      <stop offset="1" stop-color="#b8841c"/>
+    </linearGradient>
+    <linearGradient id="ia-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12142a"/>
+      <stop offset="1" stop-color="#05060d"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="414" height="154" rx="26" fill="url(#ia-bg)" stroke="url(#ia-gold)" stroke-width="4"/>
+  <!-- coroa -->
+  <path d="M52 52 L60 30 L72 44 L82 22 L92 44 L104 30 L112 52 Z" fill="url(#ia-gold)" stroke="#7a5310" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="60" cy="29" r="4" fill="#fff1b0"/><circle cx="82" cy="20" r="4.5" fill="#fff1b0"/><circle cx="104" cy="29" r="4" fill="#fff1b0"/>
+  <rect x="52" y="52" width="60" height="7" rx="3" fill="url(#ia-gold)" stroke="#7a5310" stroke-width="1.5"/>
+  <!-- gota de tinta -->
+  <path d="M82 64 C82 64 50 100 50 118 C50 136 64 148 82 148 C100 148 114 136 114 118 C114 100 82 64 82 64 Z" fill="url(#ia-drop)" stroke="#0d1a5c" stroke-width="2"/>
+  <path d="M66 112 C66 102 74 92 79 86" fill="none" stroke="#e6efff" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="64" cy="123" r="3.5" fill="#e6efff" opacity="0.8"/>
+  <!-- texto -->
+  <text x="136" y="92" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="62" fill="#ffffff" letter-spacing="2">INK</text>
+  <text x="138" y="124" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="27" fill="url(#ia-gold)" letter-spacing="5.5">AUTHORITY</text>
+  <rect x="138" y="134" width="70" height="3" rx="1.5" fill="#4f7dff"/>
+  <text x="216" y="139" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="12" fill="#a9c6ff" letter-spacing="4">ACADEMY</text>
+</svg>

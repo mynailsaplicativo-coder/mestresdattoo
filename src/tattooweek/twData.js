@@ -87,10 +87,18 @@ const PARTNER_INSTAGRAM = {
   tattooweek: '@tattooweek',
 };
 
+// Logos dos parceiros (o logo salvo no admin tem prioridade). dark = logo claro, vai em fundo escuro
+export const PARTNER_LOGOS = {
+  bronc: { src: '/tattooweek/parceiros/bronc.png', dark: true },
+  stencilflow: { src: '/tattooweek/parceiros/stencilflow.jpg', dark: true, square: true },
+  inkauthority: { src: '/tattooweek/parceiros/inkauthority.svg' },
+  mestres: { src: '/fotos artistas/logo mestres.png', dark: true },
+};
+
 export async function loadPartners() {
   const { data } = await supabase.from('tw_partners').select('*').order('created_at');
   if (!data?.length) return DEFAULT_PARTNERS;
-  return Object.fromEntries(data.map(p => [p.id, { ...p, instagram: p.instagram || PARTNER_INSTAGRAM[p.id] || null }]));
+  return Object.fromEntries(data.map(p => [p.id, { ...p, instagram: p.instagram || PARTNER_INSTAGRAM[p.id] || null, logo_url: p.logo_url || PARTNER_LOGOS[p.id]?.src || null }]));
 }
 
 export async function loadCampaign(slug) {
@@ -415,20 +423,47 @@ export function secretArt(slug) {
 // Cada dia do evento tem ranking próprio. O kit vai para o tatuador com mais pontos no dia
 // que já tenha TODOS os selos secretos. Quem ganhou um dia não participa mais.
 
-export const DEFAULT_KIT = [
-  '1 máquina',
-  '1 impressora',
-  '10 caixas de cartucho',
-  '1 mês de STENCILFLOW Pro',
-  'Acesso Ink Authority para assistir à stream class da Isabella Badini',
-  '1 post collab com o Mestres da Tattoo',
-  '1 chaveiro da Bronc',
-  '1 copo da Tattoo Week',
-];
+export const DEFAULT_KIT = ['1 impressora de stencil Bronc'];
+export const KIT_IMAGE = '/tattooweek/bronc/impressora.jpg';
+
+// Brinde do público: chaveiros exclusivos da Bronc, enquanto durarem
+export const PUBLIC_GIFT = {
+  id: 'bronc-chaveiro',
+  campaign: 'tattooweek-2026',
+  title: 'Chaveiro exclusivo Bronc',
+  total: 200,
+  missions: 5,
+  partner: 'bronc',
+  image: '/tattooweek/bronc/chaveiro.jpg',
+};
+
+export const hasGift = (c) => c?.id === PUBLIC_GIFT.campaign;
+
+export async function giftStatus(campaignId, participantId) {
+  const [all, mine] = await Promise.all([
+    supabase.from('tw_events').select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId).eq('type', 'gift_claim').eq('ref', PUBLIC_GIFT.id),
+    participantId
+      ? supabase.from('tw_events').select('id, created_at').eq('campaign_id', campaignId).eq('type', 'gift_claim').eq('ref', PUBLIC_GIFT.id).eq('participant_id', participantId).limit(1)
+      : Promise.resolve({ data: [] }),
+  ]);
+  return { claimed: all.count || 0, left: Math.max(0, PUBLIC_GIFT.total - (all.count || 0)), mine: mine.data?.[0] || null };
+}
+
+export async function claimGift(campaignId, participantId) {
+  const st = await giftStatus(campaignId, participantId);
+  if (st.mine) return st;
+  if (st.left <= 0) throw new Error('Os chaveiros acabaram. Valeu por jogar!');
+  const { error } = await supabase.from('tw_events').insert([{ type: 'gift_claim', ref: PUBLIC_GIFT.id, participant_id: participantId, campaign_id: campaignId }]);
+  if (error) throw error;
+  return giftStatus(campaignId, participantId);
+}
+
+// Código curto que a equipe confere no stand
+export const giftCode = (participantId) => (participantId || '').replace(/-/g, '').slice(0, 6).toUpperCase();
 
 export function kitItems(campaign) {
   const items = campaign?.prize_items || [];
-  return items.some(i => /m[áa]quina/i.test(i)) ? items : DEFAULT_KIT;
+  return items.length ? items : DEFAULT_KIT;
 }
 
 export function dateSP(ts) {

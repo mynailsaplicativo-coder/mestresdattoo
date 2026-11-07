@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 import { Home, Camera, Swords, Trophy, Map as MapIcon, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound, Download, Gift } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems } from './twData';
+import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems, PARTNER_LOGOS, KIT_IMAGE } from './twData';
 import './tattooweek.css';
 import './poster.css';
 import { GoldCoin } from './TwArt';
@@ -407,10 +407,18 @@ function Announcements({ campaignId }) {
   );
 }
 
+export function PartnerLogo({ partner, height = 40 }) {
+  const meta = PARTNER_LOGOS[partner.id] || {};
+  const src = partner.logo_url || meta.src;
+  if (!src) return <span className="tw-partner" style={{ color: partner.color }}>{partner.name}</span>;
+  const cls = ['tw-plogo', meta.dark && 'dark', meta.square && 'square', src.endsWith('.svg') && 'bare'].filter(Boolean).join(' ');
+  return <span className={cls} style={{ height, ...(meta.square ? { width: height } : {}) }}><img src={src} alt={partner.name} loading="lazy" /></span>;
+}
+
 export function PartnerStrip({ list }) {
   return (
     <div className="tw-partners">
-      {list.map(p => <span key={p.id} className="tw-partner" style={{ color: p.color }}>{p.name}</span>)}
+      {list.map(p => <PartnerLogo key={p.id} partner={p} height={50} />)}
     </div>
   );
 }
@@ -474,20 +482,23 @@ export function KitCard({ campaign, dayNum, hasAllSeals, foundSeals, needSeals, 
     <div className="tw-card tw-card-gold tw-kit" style={{ marginTop: '1rem' }}>
       <div className="tw-between" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
         <div>
-          <span className="tw-kicker"><Gift size={12} style={{ verticalAlign: -1 }} /> Kit do dia{dayNum ? ` · dia ${dayNum}` : ''}</span>
-          <h3 className="tw-h3" style={{ margin: '0.25rem 0' }}>1 kit completo por dia para o tatuador nº 1 do dia</h3>
+          <span className="tw-kicker"><Gift size={12} style={{ verticalAlign: -1 }} /> Impressora do dia{dayNum ? ` · dia ${dayNum}` : ''}</span>
+          <h3 className="tw-h3" style={{ margin: '0.25rem 0' }}>1 impressora Bronc por dia para o tatuador nº 1 do dia</h3>
         </div>
         {isLeader && <span className="tw-chip tw-chip-ok" style={{ whiteSpace: 'nowrap' }}>Você está na frente!</span>}
       </div>
       {!compact && (
-        <ul className="tw-kit-list">
-          {items.map(i => <li key={i}>{i}</li>)}
-        </ul>
+        <>
+          <img className="tw-kit-photo" src={KIT_IMAGE} alt="Impressora de stencil Bronc" loading="lazy" />
+          <ul className="tw-kit-list">
+            {items.map(i => <li key={i}>{i}</li>)}
+          </ul>
+        </>
       )}
       <div className="tw-kit-rules">
         <span className={hasAllSeals ? 'ok' : ''}>{hasAllSeals ? '✓' : '○'} Ter os {needSeals} selos secretos{foundSeals != null ? ` (${foundSeals}/${needSeals})` : ''}</span>
         <span>○ Ser o maior pontuador do dia (empate: quem chegou primeiro)</span>
-        <span>○ Quem já ganhou um kit não disputa os outros dias</span>
+        <span>○ Quem já ganhou não disputa os outros dias</span>
       </div>
       {onRanking && <button className="tw-btn tw-btn-sm" style={{ marginTop: '0.75rem' }} onClick={onRanking}><Trophy size={14} /> Ranking ao vivo</button>}
     </div>

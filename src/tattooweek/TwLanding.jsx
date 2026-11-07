@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Swords, MapPin, CalendarDays, Gift, Map as MapIcon, KeyRound, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, PartnerStrip } from './TwShell';
+import { TwShell, PartnerLogo } from './TwShell';
 import { Cloud, Sparkle, Patch, Char, GoldCoin } from './TwArt';
-import { useCampaign, campaignPartners, trackEvent, formatDays, campaignMap } from './twData';
+import { useCampaign, campaignPartners, trackEvent, formatDays, campaignMap, KIT_IMAGE, PUBLIC_GIFT, hasGift } from './twData';
 
 export default function TwLanding() {
   const navigate = useNavigate();
@@ -78,7 +78,7 @@ export default function TwLanding() {
             <span className="tw-exp-letter">2</span>
             <span className="tw-kicker">Pra tatuadores</span>
             <h2 className="tw-h2" style={{ margin: '0.3rem 0 0.5rem', fontSize: '2rem' }}>Artist Challenge</h2>
-            <p className="tw-p" style={{ color: 'var(--tw-text)' }}>Aberto a todos os tatuadores do evento. Faça o cadastro no stand da Bronc, poste as missões no seu perfil e dispute <b>1 kit por dia</b> para o tatuador do dia.</p>
+            <p className="tw-p" style={{ color: 'var(--tw-text)' }}>Aberto a todos os tatuadores do evento. Faça o cadastro no stand da Bronc, poste as missões no seu perfil e dispute <b>1 impressora Bronc por dia</b>: leva o tatuador nº 1 do dia que tiver os 5 selos secretos. São 5 missões novas por dia.</p>
             <button className="tw-btn" style={{ marginTop: '1rem', alignSelf: 'flex-start' }} onClick={() => navigate(`${base}/artist`)}>Entrar no Challenge</button>
           </article>
         </section>
@@ -167,6 +167,19 @@ export default function TwLanding() {
               </div>
               <button className="tw-btn" onClick={() => navigate(`${base}/premiacao`)}>Regras e prêmios</button>
             </div>
+            {hasGift(c) && <div className="tw-grid tw-grid-2" style={{ marginTop: '0.75rem' }}>
+              <div className="tw-card">
+                <span className="tw-kicker">Artist Challenge · 1 por dia</span>
+                <h3 className="tw-h3" style={{ margin: '0.3rem 0' }}>Impressora de stencil Bronc</h3>
+                <img className="tw-kit-photo" src={KIT_IMAGE} alt="Impressora de stencil Bronc" loading="lazy" />
+              </div>
+              <div className="tw-card">
+                <span className="tw-kicker">Público · {PUBLIC_GIFT.total} unidades</span>
+                <h3 className="tw-h3" style={{ margin: '0.3rem 0' }}>{PUBLIC_GIFT.title}</h3>
+                <p className="tw-p" style={{ fontSize: '0.85rem' }}>Complete {PUBLIC_GIFT.missions} missões (uma delas da Bronc) e retire no stand da Bronc, enquanto durar.</p>
+                <img className="tw-kit-photo" src={PUBLIC_GIFT.image} alt={PUBLIC_GIFT.title} loading="lazy" />
+              </div>
+            </div>}
           </section>
         )}
 
@@ -174,11 +187,10 @@ export default function TwLanding() {
         {list.length > 0 && (
           <section className="tw-section">
             <span className="tw-kicker">Quem faz acontecer</span>
-            <div style={{ margin: '0.8rem 0' }}><PartnerStrip list={list} /></div>
             <div className="tw-grid tw-grid-3">
               {list.map(p => (
                 <div key={p.id} className="tw-card">
-                  {p.logo_url && <img src={p.logo_url} alt={p.name} style={{ height: 36, marginBottom: '0.5rem' }} />}
+                  {p.logo_url && <div style={{ marginBottom: '0.6rem' }}><PartnerLogo partner={p} height={56} /></div>}
                   <h3 className="tw-h3">{p.name}</h3>
                   <p className="tw-p" style={{ fontSize: '0.88rem', margin: '0.3rem 0 0.8rem' }}>{p.role}</p>
                   {p.url && <a className="tw-btn tw-btn-sm" href={p.url} target="_blank" rel="noreferrer" onClick={() => trackEvent('partner_click', p.id, null, c.id)}>Conhecer</a>}
