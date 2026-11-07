@@ -539,10 +539,83 @@ export function useLiveRefresh(key, load, ms = 15000) {
     const soon = () => { clearTimeout(timer); timer = setTimeout(load, 700); };
     load();
     const poll = setInterval(load, ms);
+    window.addEventListener('tw-refresh', soon);
     const ch = supabase.channel(`tw-live-${key}-${Math.random().toString(36).slice(2, 8)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tw_submissions' }, soon)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tw_adjustments' }, soon)
       .subscribe();
-    return () => { clearInterval(poll); clearTimeout(timer); supabase.removeChannel(ch); };
+    return () => { clearInterval(poll); clearTimeout(timer); window.removeEventListener('tw-refresh', soon); supabase.removeChannel(ch); };
   }, [key, load, ms]);
+}
+
+// --- Selo secreto lido por quem ainda não está no jogo: fica guardado no celular por 3 h ---
+const PENDING_TTL = 3 * 3600 * 1000;
+const pendingKey = (cid) => `tw-pending-seals-${cid}`;
+
+export function readPendingSeals(campaignId) {
+  try {
+    return (JSON.parse(localStorage.getItem(pendingKey(campaignId)) || '[]') || []).filter(x => Date.now() - x.at < PENDING_TTL);
+  } catch { return []; }
+}
+
+export function savePendingSeal(campaignId, tag) {
+  try {
+    const list = readPendingSeals(campaignId).filter(x => x.id !== tag.id);
+    list.push({ id: tag.id, slug: tag.slug, name: tag.name, at: Date.now() });
+    localStorage.setItem(pendingKey(campaignId), JSON.stringify(list));
+  } catch { /* sem storage: a pessoa encosta de novo */ }
+}
+
+export function clearPendingSeals(campaignId) {
+  try { localStorage.removeItem(pendingKey(campaignId)); } catch { /* sem storage */ }
+}
+
+// Credita o selo secreto nas trilhas em que a pessoa está inscrita
+export async function claimSeal(campaignId, participantId, tracks, tag) {
+  const { data: missions } = await supabase.from('tw_missions').select('*').eq('campaign_id', campaignId).eq('category', 'selo').eq('active', true).in('track', tracks);
+  let fresh = false;
+  let points = 0;
+  for (const m of missions || []) {
+    const { error } = await supabase.from('tw_submissions').insert([{
+      participant_id: participantId, mission_id: m.id, artist_id: tag.id, media: [],
+      status: 'approved', points: m.points, note: `Selo secreto: ${tag.name}`, reviewed_at: new Date().toISOString(),
+    }]);
+    if (!error) { fresh = true; points = Math.max(points, m.points); }
+  }
+  return { fresh, points };
+}
+
+// Quem pegou 3+ selos secretos em menos de 2 minutos (provável link compartilhado)
+export async function loadSealSuspects(campaignId) {
+  const { data } = await supabase.from('tw_submissions')
+    .select('participant_id, artist_id, created_at, participant:tw_participants(name, instagram), mission:tw_missions!inner(category, campaign_id)')
+    .eq('mission.campaign_id', campaignId).eq('mission.category', 'selo').limit(5000);
+  const by = {};
+  for (const s of data || []) {
+    const p = (by[s.participant_id] ||= { participant: s.participant, seals: {} });
+    const t = new Date(s.created_at).getTime();
+    if (!p.seals[s.artist_id] || t < p.seals[s.artist_id]) p.seals[s.artist_id] = t;
+  }
+  const out = [];
+  for (const [pid, p] of Object.entries(by)) {
+    const times = Object.values(p.seals).sort((a, b) => a - b);
+    let worst = null;
+    for (let i = 0; i + 2 < times.length; i++) {
+      const span = times[i + 2] - times[i];
+      if (span < 120000 && (!worst || span < worst)) worst = span;
+    }
+    if (worst != null) out.push({ participant_id: pid, name: p.participant?.name, instagram: p.participant?.instagram, seals: times.length, seconds: Math.round(worst / 1000) });
+  }
+  return out.sort((a, b) => a.seconds - b.seconds);
+}
+
+// Avisa as telas abertas para recarregar (ex.: depois de creditar um selo guardado)
+export const refreshScreens = () => { try { window.dispatchEvent(new Event('tw-refresh')); } catch { /* sem window */ } };
+
+// Foto de perfil de verdade? (o avatar padrão do Clerk, com as iniciais, não conta)
+export function isRealPhoto(url) {
+  if (!url) return false;
+  const m = url.match(/img\.clerk\.com\/([^/?#]+)/);
+  if (!m) return true;
+  try { return !/"type":"default"/.test(atob(m[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { return true; }
 }

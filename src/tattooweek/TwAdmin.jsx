@@ -8,7 +8,7 @@ import {
   GripVertical, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES, NFC_KINDS, hashAnswers, SEAL_ICON_KEYS, SEAL_COLORS, campaignTheme, themeStyle, PRESET_THEMES, DEFAULT_THEME, loadArtistDaily, useLiveRefresh, hasGift, PUBLIC_GIFT, giftCode } from './twData';
+import { useStaffRole, loadPartners, campaignBase, formatDays, dayName, uploadMedia, downloadBlob, CATEGORY_LABELS, DEFAULT_DAY_NAMES, NFC_KINDS, hashAnswers, SEAL_ICON_KEYS, SEAL_COLORS, campaignTheme, themeStyle, PRESET_THEMES, DEFAULT_THEME, loadArtistDaily, useLiveRefresh, hasGift, PUBLIC_GIFT, giftCode, loadSealSuspects } from './twData';
 import { Live, Gallery, ParticipantSheet, Awards, Announcements, Staff } from './AdminExtra';
 import { Patch } from './TwArt';
 import './tattooweek.css';
@@ -249,6 +249,7 @@ function Overview({ campaign, partners }) {
 function KitAndGift({ campaign }) {
   const [daily, setDaily] = useState(null);
   const [claims, setClaims] = useState([]);
+  const [suspects, setSuspects] = useState([]);
   const [q, setQ] = useState('');
 
   const load = useCallback(async () => {
@@ -260,6 +261,7 @@ function KitAndGift({ campaign }) {
     ]);
     setDaily(d);
     setClaims(c.data || []);
+    loadSealSuspects(campaign.id).then(setSuspects).catch(() => {});
   }, [campaign]);
   useLiveRefresh(`admin-kit-${campaign.id}`, load, 20000);
 
@@ -268,6 +270,19 @@ function KitAndGift({ campaign }) {
   const shown = claims.filter(c => !q || `${c.participant?.name} ${c.participant?.instagram} ${giftCode(c.participant?.id)}`.toLowerCase().includes(q.toLowerCase()));
 
   return (
+    <>
+    {suspects.length > 0 && (
+      <div className="tw-card tw-stack" style={{ marginTop: '1.25rem', borderColor: '#ef4444' }}>
+        <h3 className="tw-h3">⚠ Selos suspeitos ({suspects.length})</h3>
+        <p className="tw-p" style={{ fontSize: '0.8rem' }}>Pegaram 3 ou mais selos secretos em menos de 2 minutos: provável link do adesivo compartilhado. Confira e, se for o caso, desclassifique em Pessoas.</p>
+        {suspects.slice(0, 20).map(x => (
+          <div key={x.participant_id} className="tw-between" style={{ fontSize: '0.88rem' }}>
+            <span><b>{x.name || 'Sem nome'}</b> {x.instagram && <span className="tw-p">{x.instagram}</span>}</span>
+            <span className="tw-chip tw-chip-bad">{x.seals} selos · 3 em {x.seconds}s</span>
+          </div>
+        ))}
+      </div>
+    )}
     <div className="tw-grid tw-grid-2" style={{ marginTop: '1.25rem' }}>
       <div className="tw-card tw-stack">
         <h3 className="tw-h3">Impressora do dia (Artist Challenge)</h3>
@@ -298,6 +313,7 @@ function KitAndGift({ campaign }) {
         </div>
       )}
     </div>
+    </>
   );
 }
 

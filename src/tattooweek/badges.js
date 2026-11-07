@@ -60,7 +60,7 @@ export async function loadCampaignProgress(participantId, campaignId) {
   const [s, m, a, r, e, adj] = await Promise.all([
     supabase.from('tw_submissions').select('*, mission:tw_missions!inner(*)').eq('participant_id', participantId).eq('mission.campaign_id', campaignId),
     supabase.from('tw_missions').select('*').eq('campaign_id', campaignId).eq('active', true),
-    supabase.from('tw_artists').select('id, kind').eq('campaign_id', campaignId).eq('active', true),
+    supabase.from('tw_artists').select('id, kind, slug, name').eq('campaign_id', campaignId).eq('active', true).order('slug'),
     supabase.from('tw_ranking').select('participant_id, track, points').eq('campaign_id', campaignId).order('points', { ascending: false }).order('last_at'),
     supabase.from('tw_events').select('id').eq('participant_id', participantId).eq('campaign_id', campaignId).eq('type', 'video_generated').limit(1),
     loadAdjustments(participantId, campaignId),
@@ -80,7 +80,9 @@ export async function loadCampaignProgress(participantId, campaignId) {
   const pointsCount = tags.filter(t => (t.kind || 'point') === 'point').length;
   const secretCount = tags.filter(t => t.kind === 'secret').length;
   const badges = computeBadges({ approved, missions, artistsCount: pointsCount, secretCount, ranks, videoGenerated: (e.data || []).length > 0 });
-  return { subs, approved, missions, ranks, points, badges, artistsCount: pointsCount, secretCount };
+  const foundSecret = new Set(approved.filter(x => x.mission?.category === 'selo').map(x => x.artist_id));
+  const secretTags = tags.filter(t => t.kind === 'secret').map(t => ({ slug: t.slug, name: t.name, earned: foundSecret.has(t.id) }));
+  return { subs, approved, missions, ranks, points, badges, artistsCount: pointsCount, secretCount, secretTags };
 }
 
 // Pontos calculados localmente (participação privada não aparece na view tw_ranking)

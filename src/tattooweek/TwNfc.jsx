@@ -4,7 +4,8 @@ import { SignInButton } from '@clerk/clerk-react';
 import { AtSign, MapPin, Nfc, KeyRound, Check, Camera, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, MissionSheet } from './TwShell';
-import { useTwParticipant, useCampaign, trackEvent, instagramUrl, activationKey, secretArt } from './twData';
+import { useTwParticipant, useCampaign, trackEvent, instagramUrl, activationKey, secretArt, savePendingSeal, claimSeal } from './twData';
+import { Char, Cloud, Sparkle } from './TwArt';
 
 // Página aberta pelo adesivo NFC (ou QR). Três tipos: ponto, selo secreto e ativação do Artist Challenge.
 export default function TwNfc() {
@@ -61,12 +62,12 @@ function NotFound() {
   );
 }
 
-function JoinPrompt({ tw, text }) {
+function JoinPrompt({ tw, text, bare }) {
   const navigate = useNavigate();
   const { base } = useCampaign();
   return (
-    <div className="tw-card tw-stack" style={{ textAlign: 'left' }}>
-      <p className="tw-p" style={{ fontSize: '0.9rem' }}>{text}</p>
+    <div className={bare ? 'tw-stack' : 'tw-card tw-stack'} style={{ textAlign: 'left', marginTop: bare ? '0.9rem' : undefined }}>
+      {text && <p className="tw-p" style={{ fontSize: '0.9rem' }}>{text}</p>}
       {tw.isSignedIn
         ? <div className="tw-cta-row">
             <button className="tw-btn tw-btn-primary" onClick={() => navigate(`${base}/meu`)}>Sou visitante</button>
@@ -80,36 +81,38 @@ function JoinPrompt({ tw, text }) {
 // --- Selo secreto: encostou, ganhou ---
 
 function SecretSeal({ tag, tw }) {
-  const { campaign } = useCampaign();
+  const navigate = useNavigate();
+  const { campaign, base } = useCampaign();
   const { participant, enrollments, loading } = tw;
   const [result, setResult] = useState(null); // { fresh, points }
   const done = useRef(false);
   const tracks = enrollments.filter(e => e.campaign_id === campaign.id).map(e => e.track);
+  const inGame = !!participant && tracks.length > 0;
+
+  // Guarda o selo no celular na hora (mesmo se o login demorar): quem entrar no jogo depois recebe sozinho
+  useEffect(() => { savePendingSeal(campaign.id, tag); }, [campaign.id, tag]);
 
   useEffect(() => {
-    if (loading || !participant || !tracks.length || done.current) return;
+    if (loading || done.current || !inGame) return;
     done.current = true;
-    (async () => {
-      const { data: missions } = await supabase.from('tw_missions').select('*').eq('campaign_id', campaign.id).eq('category', 'selo').eq('active', true).in('track', tracks);
-      let fresh = false;
-      let points = 0;
-      for (const m of missions || []) {
-        const { error } = await supabase.from('tw_submissions').insert([{
-          participant_id: participant.id, mission_id: m.id, artist_id: tag.id, media: [],
-          status: 'approved', points: m.points, note: `Selo secreto: ${tag.name}`, reviewed_at: new Date().toISOString(),
-        }]);
-        if (!error) { fresh = true; points = Math.max(points, m.points); }
-      }
-      setResult({ fresh, points });
-      if (fresh) { try { navigator.vibrate?.([60, 40, 140]); } catch { /* sem vibração */ } }
-    })();
-  }, [loading, participant, tracks.length, tag, campaign.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    claimSeal(campaign.id, participant.id, tracks, tag).then(r => {
+      setResult(r);
+      if (r.fresh) { try { navigator.vibrate?.([60, 40, 140]); } catch { /* sem vibração */ } }
+    });
+  }, [loading, inGame, participant, tracks.length, tag, campaign.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="tw-wrap" style={{ maxWidth: 480 }}>
-      <div className="tw-reveal">
-        <span className="tw-kicker"><KeyRound size={12} style={{ verticalAlign: -1 }} /> Selo secreto</span>
-        <div className={`tw-gold-stage ${result?.fresh ? 'fresh' : ''}`}>
+    <div className="tw-wrap tw-seal-page" style={{ maxWidth: 520 }}>
+      <div className="tw-seal-scene" aria-hidden="true">
+        <Cloud className="tw-seal-cloud c1" />
+        <Cloud className="tw-seal-cloud c2" />
+        <Sparkle className="tw-seal-spark s1" />
+        <Sparkle className="tw-seal-spark s2" fill="#ff8fd8" />
+        <Sparkle className="tw-seal-spark s3" fill="#7fe7f2" />
+      </div>
+      <div className="tw-reveal tw-seal-card">
+        <span className="tw-seal-ribbon"><KeyRound size={13} style={{ verticalAlign: -2 }} /> Selo secreto encontrado!</span>
+        <div className={`tw-gold-stage ${result?.fresh || !inGame ? 'fresh' : ''}`}>
           <span className="tw-gold-rays" />
           <span className="tw-gold-glow" />
           {Array.from({ length: 14 }).map((_, i) => <i key={i} className="tw-gold-spark" style={{ '--a': `${i * (360 / 14)}deg`, '--d': `${(i % 4) * 0.12}s` }} />)}
@@ -118,13 +121,25 @@ function SecretSeal({ tag, tw }) {
             : <div className="tw-reveal-icon">{tag.seal_icon || '★'}</div>}
         </div>
         <h1 className="tw-h1" style={{ fontSize: 'clamp(2rem, 9vw, 3rem)' }}>{tag.name}</h1>
-        {result?.fresh && <h2 className="tw-h2 tw-gold">+{result.points} pontos!</h2>}
+        {result?.fresh && <div className="tw-seal-points">+{result.points} pontos!</div>}
         {result && !result.fresh && <p className="tw-p">Você já tinha este selo. Procure os outros!</p>}
-        {!result && participant && tracks.length > 0 && <p className="tw-p"><Loader2 className="tw-spin" size={16} style={{ verticalAlign: -3 }} /> Guardando seu selo...</p>}
-        <p className="tw-p" style={{ margin: '1rem 0' }}>{tag.bio || 'Você encontrou um dos selos secretos escondidos no evento.'}</p>
+        {!result && inGame && <p className="tw-p"><Loader2 className="tw-spin" size={16} style={{ verticalAlign: -3 }} /> Guardando seu selo...</p>}
+        <p className="tw-p" style={{ margin: '1rem 0 0' }}>{tag.bio || 'Você encontrou um dos selos secretos escondidos no evento.'}</p>
+        {result && (
+          <button className="tw-btn tw-btn-primary tw-btn-block" style={{ marginTop: '1.25rem' }} onClick={() => navigate(`${base}/${tracks.includes('artist') ? 'artist' : 'meu'}`)}>Ver meus selos</button>
+        )}
       </div>
-      {!loading && (!participant || !tracks.length) && (
-        <JoinPrompt tw={tw} text="Entre no jogo para guardar este selo e ganhar os pontos. Depois encoste o celular de novo." />
+
+      {!loading && !inGame && (
+        <div className="tw-card tw-card-gold tw-seal-join">
+          <Char name="oni" className="tw-seal-join-char" />
+          <span className="tw-kicker">Esse selo já é quase seu</span>
+          <h2 className="tw-h3" style={{ margin: '0.3rem 0' }}>Entre no Desafio dos Mestres em 1 minuto</h2>
+          <p className="tw-p" style={{ fontSize: '0.9rem' }}>
+            Guardamos o <b style={{ color: 'var(--tw-text)' }}>{tag.name}</b> aqui no seu celular por 3 horas. Entrou no jogo, ele cai na sua conta sozinho, valendo pontos para a impressora Bronc e os chaveiros exclusivos.
+          </p>
+          <JoinPrompt tw={tw} text="" bare />
+        </div>
       )}
     </div>
   );

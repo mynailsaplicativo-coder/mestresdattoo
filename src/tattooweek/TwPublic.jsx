@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Film, Share2, HelpCircle, Nfc, Gift, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip } from './TwShell';
-import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, PUBLIC_GIFT, hasGift, giftStatus, claimGift, giftCode } from './twData';
+import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, PUBLIC_GIFT, hasGift, giftStatus, claimGift, giftCode, useLiveRefresh } from './twData';
 import { sumPoints } from './badges';
 import { PatchSash, Char } from './TwArt';
 
@@ -45,11 +45,8 @@ function PublicPanel({ participant }) {
     setAdj(a);
   }, [participant.id, campaign]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    load();
-    const t = setInterval(load, 60000); // missões surpresa aparecem sem recarregar
-    return () => clearInterval(t);
-  }, [load]);
+  // Ao vivo: envios novos, selos guardados e missões surpresa aparecem sem recarregar
+  useLiveRefresh(`public-${participant.id}`, load, 60000);
 
   if (!missions) return <div className="tw-center-screen">Carregando missões...</div>;
 

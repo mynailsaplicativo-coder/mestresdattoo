@@ -3,10 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 import { Home, Camera, Swords, Trophy, Map as MapIcon, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound, Download, Gift } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems, PARTNER_LOGOS, KIT_IMAGE } from './twData';
+import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems, PARTNER_LOGOS, KIT_IMAGE, uploadMedia, readPendingSeals, clearPendingSeals, claimSeal, secretArt, refreshScreens, isRealPhoto } from './twData';
 import './tattooweek.css';
 import './poster.css';
-import { GoldCoin } from './TwArt';
+import { GoldCoin, Char, Cloud, Sparkle } from './TwArt';
 
 export function TwShell({ children }) {
   const navigate = useNavigate();
@@ -79,27 +79,144 @@ function friendlyError(err) {
   return `Não deu para concluir: ${msg}. Toque de novo; se continuar, chame a equipe.`;
 }
 
+// Cenário pôster das telas de entrada (nuvens, brilhos e personagens)
+function JoinScene({ left = 'oni', right = 'gato' }) {
+  return (
+    <div className="tw-join-scene" aria-hidden="true">
+      <Cloud className="tw-join-cloud c1" />
+      <Cloud className="tw-join-cloud c2" />
+      <Sparkle className="tw-join-spark s1" />
+      <Sparkle className="tw-join-spark s2" fill="#ff8fd8" />
+      <Char name={left} className="tw-join-char left" />
+      <Char name={right} className="tw-join-char right" />
+    </div>
+  );
+}
+
+// Foto de perfil: obrigatória no cadastro (vai no ranking, no card e no vídeo)
+function AvatarPick({ preview, onPick, required }) {
+  return (
+    <label className={`tw-avatar-pick ${preview ? 'has' : ''} ${required && !preview ? 'need' : ''}`}>
+      <input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ''; }} />
+      <span className="tw-avatar-pick-img">{preview ? <img src={preview} alt="Sua foto" /> : <Camera size={34} />}</span>
+      <span className="tw-avatar-pick-txt">{preview ? 'Trocar foto' : 'Adicionar sua foto'}{required && !preview && <b> · obrigatório</b>}</span>
+    </label>
+  );
+}
+
+// Quem já está no jogo sem foto de verdade: pede a foto no topo (sobe na hora)
+function PhotoNudge({ participant, setParticipant, user }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  if (isRealPhoto(participant.photo_url)) return null;
+  const pick = async (file) => {
+    if (!file.type.startsWith('image/')) { setErr('Escolha uma foto (imagem).'); return; }
+    setBusy(true); setErr('');
+    try {
+      const m = await uploadMedia(file, `perfil/${user?.id || participant.id}`);
+      const { data, error } = await supabase.from('tw_participants').update({ photo_url: m.url }).eq('id', participant.id).select().single();
+      if (error) throw error;
+      setParticipant(data);
+    } catch (e) { setErr(friendlyError(e)); }
+    setBusy(false);
+  };
+  return (
+    <div className="tw-wrap" style={{ paddingBottom: 0 }}>
+      <div className="tw-card tw-card-gold tw-photo-nudge">
+        <AvatarPick preview={null} onPick={pick} required />
+        <div>
+          <h3 className="tw-h3">{busy ? 'Subindo sua foto...' : 'Coloque sua foto de perfil'}</h3>
+          <p className="tw-p" style={{ fontSize: '0.85rem' }}>Ela aparece no ranking, no telão, no seu card de resultado e no vídeo. Toque no círculo para escolher.</p>
+          {err && <div className="tw-error" style={{ marginTop: '0.4rem' }}>{err}</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Selos secretos lidos antes de entrar no jogo: credita e mostra a revelação
+function PendingSeals({ participant, campaign, enrollments }) {
+  const [shown, setShown] = useState(null);
+  const tracks = enrollments.filter(e => e.campaign_id === campaign.id).map(e => e.track);
+  useEffect(() => {
+    const list = readPendingSeals(campaign.id);
+    if (!list.length || !tracks.length) return;
+    let alive = true;
+    (async () => {
+      let points = 0;
+      const got = [];
+      for (const tag of list) {
+        const r = await claimSeal(campaign.id, participant.id, tracks, tag);
+        if (r.fresh) { points += r.points; got.push(tag); }
+      }
+      clearPendingSeals(campaign.id);
+      if (alive && got.length) {
+        setShown({ got, points });
+        refreshScreens();
+        try { navigator.vibrate?.([60, 40, 140]); } catch { /* sem vibração */ }
+      }
+    })();
+    return () => { alive = false; };
+  }, [participant.id, campaign.id, tracks.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!shown) return null;
+  const first = shown.got[0];
+  return (
+    <div className="tw-modal" onClick={e => { if (e.target === e.currentTarget) setShown(null); }}>
+      <div className="tw-card tw-reveal" style={{ width: 'min(440px, 100%)', marginTop: '6vh' }}>
+        <span className="tw-seal-ribbon">Selo guardado!</span>
+        <div className="tw-gold-stage fresh">
+          <span className="tw-gold-rays" />
+          <span className="tw-gold-glow" />
+          {Array.from({ length: 14 }).map((_, i) => <i key={i} className="tw-gold-spark" style={{ '--a': `${i * (360 / 14)}deg`, '--d': `${(i % 4) * 0.12}s` }} />)}
+          {secretArt(first.slug) ? <img className="tw-gold-medal" src={secretArt(first.slug)} alt={first.name} /> : <div className="tw-reveal-icon">★</div>}
+        </div>
+        <h2 className="tw-h2">{shown.got.length > 1 ? `${shown.got.length} selos secretos` : first.name}</h2>
+        <div className="tw-seal-points">+{shown.points} pontos!</div>
+        <p className="tw-p" style={{ margin: '0.6rem 0 1rem' }}>O selo que você encontrou antes de entrar já está na sua conta. Bora achar os outros!</p>
+        <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => setShown(null)}>Bora!</button>
+      </div>
+    </div>
+  );
+}
+
 export function JoinGate({ tw, track, children }) {
   const { campaign } = useCampaign();
-  const { user, isSignedIn, loading, participant, setParticipant, isEnrolled, setEnrollments } = tw;
+  const { user, isSignedIn, loading, participant, setParticipant, isEnrolled, setEnrollments, enrollments } = tw;
   const [form, setForm] = useState({ name: '', phone: '', instagram: '', city: '', show_in_ranking: true, consent_media: false, consent_marketing: false });
+  const [photo, setPhoto] = useState(null); // { file, preview }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const label = track === 'artist' ? 'Artist Challenge' : `Meu ${campaign.event_name || 'evento'}`;
+  const pendingCount = readPendingSeals(campaign.id).length;
 
   useEffect(() => {
     if (user) setForm(f => ({ ...f, name: f.name || user.fullName || '' }));
   }, [user]);
+  useEffect(() => () => { if (photo?.preview) URL.revokeObjectURL(photo.preview); }, [photo]);
+
+  const pickPhoto = (file) => {
+    if (!file.type.startsWith('image/')) { setError('Escolha uma foto (imagem).'); return; }
+    setError('');
+    setPhoto({ file, preview: URL.createObjectURL(file) });
+  };
 
   if (loading) return <div className="tw-center-screen"><Loader2 className="tw-spin" /></div>;
 
   if (!isSignedIn) {
     return (
-      <div className="tw-center-screen">
-        <div style={{ maxWidth: 420 }}>
+      <div className="tw-wrap tw-join" style={{ maxWidth: 520 }}>
+        <JoinScene left={track === 'artist' ? 'tigre' : 'oni'} right="gato" />
+        <div className="tw-card tw-join-card">
           <span className="tw-kicker">{label}</span>
-          <h1 className="tw-h2" style={{ marginTop: '0.5rem' }}>Entre para participar</h1>
-          <p className="tw-p" style={{ margin: '0.5rem 0 1.5rem' }}>Sem aplicativo. Use seu e-mail ou Google e comece em menos de um minuto.</p>
+          <h1 className="tw-h2" style={{ margin: '0.4rem 0' }}>Entre no Desafio dos Mestres</h1>
+          {pendingCount > 0 && <div className="tw-notice" style={{ margin: '0.4rem 0 0.8rem' }}>🔑 Você tem {pendingCount} selo{pendingCount > 1 ? 's' : ''} secreto{pendingCount > 1 ? 's' : ''} guardado{pendingCount > 1 ? 's' : ''}. Entre para ele{pendingCount > 1 ? 's' : ''} cair na sua conta!</div>}
+          <p className="tw-p">Sem aplicativo. Use seu e-mail ou Google e comece em menos de 1 minuto.</p>
+          <ol className="tw-join-steps">
+            <li><b>1</b>Entre com e-mail ou Google</li>
+            <li><b>2</b>Coloque sua foto e seus dados</li>
+            <li><b>3</b>Cumpra missões, ache selos e suba no ranking</li>
+          </ol>
           <SignInButton mode="modal"><button className="tw-btn tw-btn-primary tw-btn-block">Entrar / Criar conta</button></SignInButton>
         </div>
       </div>
@@ -109,7 +226,7 @@ export function JoinGate({ tw, track, children }) {
   if (participant?.blocked) {
     return (
       <div className="tw-center-screen">
-        <div style={{ maxWidth: 420 }}>
+        <div className="tw-card" style={{ maxWidth: 420 }}>
           <h1 className="tw-h2">Participação suspensa</h1>
           <p className="tw-p" style={{ marginTop: '0.5rem' }}>{participant.blocked_reason || 'Sua participação foi desclassificada pela organização.'} Fale com a equipe do Mestres da Tattoo no evento.</p>
         </div>
@@ -117,60 +234,82 @@ export function JoinGate({ tw, track, children }) {
     );
   }
 
-  if (participant && isEnrolled(campaign.id, track)) return children;
+  if (participant && isEnrolled(campaign.id, track)) {
+    return <><PhotoNudge participant={participant} setParticipant={setParticipant} user={user} />{children}<PendingSeals participant={participant} campaign={campaign} enrollments={enrollments} /></>;
+  }
+
+  const hasPhoto = !!(photo || isRealPhoto(participant?.photo_url) || (!participant && user?.hasImage));
+
+  const uploadPhoto = async () => {
+    if (!photo) return null;
+    const m = await uploadMedia(photo.file, `perfil/${user.id}`);
+    return m.url;
+  };
 
   const handleJoin = async (e) => {
     e.preventDefault();
     if (!participant && !form.consent_media) { setError('Precisamos da sua autorização para usar suas fotos no seu vídeo.'); return; }
+    if (!hasPhoto) { setError('Coloque uma foto sua: ela aparece no ranking, no card e no vídeo.'); return; }
     setSaving(true);
     setError('');
     let p = participant;
-    const flag = track === 'artist' ? { in_challenge: true } : { in_public: true };
-    if (!p) {
-      const res = await supabase.from('tw_participants').insert([{
-        clerk_id: user.id,
-        email: user.primaryEmailAddress?.emailAddress,
-        name: form.name,
-        phone: form.phone,
-        instagram: form.instagram,
-        city: form.city,
-        photo_url: user.imageUrl,
-        show_in_ranking: form.show_in_ranking,
-        consent_media: form.consent_media,
-        consent_marketing: form.consent_marketing,
-        in_public: track !== 'artist',
-        in_challenge: track === 'artist',
-      }]).select().single();
-      if (res.error) {
-        // Cadastro já existe (ex.: conexão caiu no meio): reaproveita em vez de travar
-        const again = await supabase.from('tw_participants').select('*').eq('clerk_id', user.id).maybeSingle();
-        if (!again.data) { setSaving(false); setError(friendlyError(res.error)); return; }
-        p = again.data;
-      } else p = res.data;
+    try {
+      const photoUrl = await uploadPhoto();
+      const flag = track === 'artist' ? { in_challenge: true } : { in_public: true };
+      if (!p) {
+        const res = await supabase.from('tw_participants').insert([{
+          clerk_id: user.id,
+          email: user.primaryEmailAddress?.emailAddress,
+          name: form.name,
+          phone: form.phone,
+          instagram: form.instagram,
+          city: form.city,
+          photo_url: photoUrl || user.imageUrl,
+          show_in_ranking: form.show_in_ranking,
+          consent_media: form.consent_media,
+          consent_marketing: form.consent_marketing,
+          in_public: track !== 'artist',
+          in_challenge: track === 'artist',
+        }]).select().single();
+        if (res.error) {
+          // Cadastro já existe (ex.: conexão caiu no meio): reaproveita em vez de travar
+          const again = await supabase.from('tw_participants').select('*').eq('clerk_id', user.id).maybeSingle();
+          if (!again.data) { setSaving(false); setError(friendlyError(res.error)); return; }
+          p = again.data;
+        } else p = res.data;
+        setParticipant(p);
+      } else {
+        const patch = { ...(!p[track === 'artist' ? 'in_challenge' : 'in_public'] ? flag : {}), ...(photoUrl ? { photo_url: photoUrl } : {}) };
+        if (Object.keys(patch).length) {
+          const res = await supabase.from('tw_participants').update(patch).eq('id', p.id).select().single();
+          if (res.data) p = res.data;
+        }
+      }
+      const en = await supabase.from('tw_enrollments')
+        .upsert({ participant_id: p.id, campaign_id: campaign.id, track }, { onConflict: 'participant_id,campaign_id,track' })
+        .select().single();
+      setSaving(false);
+      if (en.error) { setError(friendlyError(en.error)); return; }
+      setEnrollments(list => [...list.filter(x => x.id !== en.data.id), en.data]);
       setParticipant(p);
-    } else if (!p[track === 'artist' ? 'in_challenge' : 'in_public']) {
-      const res = await supabase.from('tw_participants').update(flag).eq('id', p.id).select().single();
-      if (res.data) p = res.data;
+    } catch (err) {
+      setSaving(false);
+      setError(friendlyError(err));
     }
-    const en = await supabase.from('tw_enrollments')
-      .upsert({ participant_id: p.id, campaign_id: campaign.id, track }, { onConflict: 'participant_id,campaign_id,track' })
-      .select().single();
-    setSaving(false);
-    if (en.error) { setError(friendlyError(en.error)); return; }
-    setEnrollments(list => [...list.filter(x => x.id !== en.data.id), en.data]);
-    setParticipant(p);
   };
 
-  // Já tem cadastro: só confirma a inscrição nesta campanha/trilha
+  // Já tem cadastro: confirma a inscrição nesta trilha (e pede a foto se ainda não tiver)
   if (participant) {
     return (
-      <div className="tw-center-screen">
-        <form onSubmit={handleJoin} style={{ maxWidth: 420, width: '100%' }} className="tw-stack">
+      <div className="tw-wrap tw-join" style={{ maxWidth: 520 }}>
+        <JoinScene left={track === 'artist' ? 'tigre' : 'oni'} right="dragao" />
+        <form onSubmit={handleJoin} className="tw-card tw-join-card tw-stack">
           <span className="tw-kicker">{label}</span>
           <h1 className="tw-h2">Olá, {participant.name.split(' ')[0]}!</h1>
+          <AvatarPick preview={photo?.preview || (isRealPhoto(participant.photo_url) ? participant.photo_url : null)} onPick={pickPhoto} required={!isRealPhoto(participant.photo_url)} />
           <p className="tw-p">{track === 'artist'
-            ? 'O Artist Challenge é a competição dos tatuadores: networking, conteúdo e desafios dos parceiros.'
-            : `Entre no ${label}: missões todos os dias e um vídeo só seu no final.`}</p>
+            ? 'O Artist Challenge é a competição dos tatuadores: 5 missões por dia, selos secretos e 1 impressora Bronc por dia.'
+            : `Entre no ${label}: missões rápidas, selos secretos, chaveiros Bronc e um vídeo só seu no final.`}</p>
           {error && <div className="tw-error">{error}</div>}
           <button className="tw-btn tw-btn-primary tw-btn-block" disabled={saving}>{saving ? 'Entrando...' : 'Quero participar'}</button>
         </form>
@@ -179,11 +318,13 @@ export function JoinGate({ tw, track, children }) {
   }
 
   return (
-    <div className="tw-wrap" style={{ maxWidth: 520 }}>
-      <form onSubmit={handleJoin} className="tw-stack">
-        <span className="tw-kicker">Inscrição — {label}</span>
+    <div className="tw-wrap tw-join" style={{ maxWidth: 560 }}>
+      <JoinScene left={track === 'artist' ? 'tigre' : 'oni'} right="caveira" />
+      <form onSubmit={handleJoin} className="tw-card tw-join-card tw-stack">
+        <span className="tw-kicker">Inscrição · {label}</span>
         <h1 className="tw-h2">Seu cadastro</h1>
         <p className="tw-p">Rapidinho: só o necessário para acompanhar seu progresso e te entregar o vídeo. Vale para os próximos desafios também.</p>
+        <AvatarPick preview={photo?.preview || (user?.hasImage ? user.imageUrl : null)} onPick={pickPhoto} required />
         <label className="tw-field"><span>Nome</span><input className="tw-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></label>
         <label className="tw-field"><span>E-mail</span><input className="tw-input" value={user.primaryEmailAddress?.emailAddress || ''} disabled /></label>
         <label className="tw-field"><span>Telefone / WhatsApp</span><input className="tw-input" type="tel" inputMode="tel" placeholder="(11) 99999-9999" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required /></label>
@@ -210,7 +351,6 @@ export function JoinGate({ tw, track, children }) {
   );
 }
 
-// Links (https://...) saem do texto da missão e viram botões (ex.: "Baixar na App Store")
 const URL_RE = /https?:\/\/[^\s)]+/g;
 
 function splitLinks(text) {
