@@ -439,7 +439,7 @@ export const PUBLIC_GIFT = {
   total: 200,
   missions: 5,
   partner: 'bronc',
-  image: '/tattooweek/bronc/chaveiro.jpg',
+  image: '/tattooweek/bronc/chaveiro-produto.jpg',
 };
 
 export const hasGift = (c) => c?.id === PUBLIC_GIFT.campaign;
