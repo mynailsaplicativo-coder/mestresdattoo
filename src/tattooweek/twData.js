@@ -95,10 +95,15 @@ export const PARTNER_LOGOS = {
   mestres: { src: '/fotos artistas/logo mestres.png', dark: true },
 };
 
+const PARTNER_SITES = {
+  inkauthority: 'https://www.inkauthority.com.br',
+  stencilflow: 'https://stencilflowapp.com.br',
+};
+
 export async function loadPartners() {
   const { data } = await supabase.from('tw_partners').select('*').order('created_at');
   if (!data?.length) return DEFAULT_PARTNERS;
-  return Object.fromEntries(data.map(p => [p.id, { ...p, instagram: p.instagram || PARTNER_INSTAGRAM[p.id] || null, logo_url: p.logo_url || PARTNER_LOGOS[p.id]?.src || null }]));
+  return Object.fromEntries(data.map(p => [p.id, { ...p, instagram: p.instagram || PARTNER_INSTAGRAM[p.id] || null, logo_url: p.logo_url || PARTNER_LOGOS[p.id]?.src || null, url: p.url || PARTNER_SITES[p.id] || '' }]));
 }
 
 export async function loadCampaign(slug) {
