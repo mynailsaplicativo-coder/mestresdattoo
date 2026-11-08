@@ -50,7 +50,6 @@ export function TwRanking() {
         <div className="tw-tabs" style={{ marginBottom: '1rem' }}>
           <button className={`tw-tab ${track === 'today' ? 'on' : ''}`} onClick={() => setTrack('today')}>Hoje<small>prêmio do dia</small></button>
           <button className={`tw-tab ${track === 'artist' ? 'on' : ''}`} onClick={() => setTrack('artist')}>Artist Challenge<small>total</small></button>
-          <button className={`tw-tab ${track === 'public' ? 'on' : ''}`} onClick={() => setTrack('public')}>Meu {campaign.event_name}</button>
         </div>
 
         {track === 'today' && winners.length > 0 && (
@@ -163,7 +162,7 @@ export function TwPrizes() {
             <div className="tw-card">
               <Gift color="var(--tw-gold)" />
               <h3 className="tw-h3" style={{ margin: '0.5rem 0 0.3rem' }}>{PUBLIC_GIFT.title} · público</h3>
-              <p className="tw-p" style={{ fontSize: '0.88rem' }}>{PUBLIC_GIFT.total} chaveiros. Complete {PUBLIC_GIFT.missions} missões (uma delas da Bronc), garanta o seu no app e retire no stand da Bronc. Enquanto durar.</p>
+              <p className="tw-p" style={{ fontSize: '0.88rem' }}>{PUBLIC_GIFT.total} chaveiros. Um dos selos secretos escondidos no evento é o selo premiado: quem do público encostar o celular nele ganha o chaveiro na hora. Retire no stand da Bronc, enquanto durar.</p>
               <img className="tw-kit-photo" src={PUBLIC_GIFT.image} alt={PUBLIC_GIFT.title} loading="lazy" style={{ maxHeight: 180 }} />
             </div>
           ) : (

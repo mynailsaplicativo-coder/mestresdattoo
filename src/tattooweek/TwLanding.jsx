@@ -115,7 +115,7 @@ export default function TwLanding() {
               <div style={{ flex: '1 1 220px' }}>
                 <span className="tw-kicker"><KeyRound size={12} style={{ verticalAlign: -1 }} /> Caça aos selos</span>
                 <h3 className="tw-h2" style={{ fontSize: '1.6rem', margin: '0.2rem 0' }}>{secretCount} selos secretos</h3>
-                <p className="tw-p">Adesivos NFC escondidos pela Tattoo Week. Encostou o celular, o selo é seu na hora, com pontos extras.</p>
+                <p className="tw-p">Adesivos NFC escondidos pela Tattoo Week. Encostou o celular, o selo é seu na hora: pontos para os tatuadores e, para o público, um deles é o selo premiado do chaveiro Bronc.</p>
               </div>
             </div>
           </section>
@@ -146,7 +146,7 @@ export default function TwLanding() {
                 <div>
                   <span className="tw-kicker">Zona Bronc</span>
                   <h2>O dragão te espera</h2>
-                  <p>No stand da Bronc fica o cadastro dos tatuadores para o Artist Challenge e o backdrop do dragão: tire sua foto, poste e compartilhe com 5 amigos. Missão que vale selo e pontos.</p>
+                  <p>No stand da Bronc fica o cadastro dos tatuadores para o Artist Challenge e o backdrop do dragão: tire sua foto, poste e compartilhe com 5 amigos. Missão que vale selo (e pontos no Artist Challenge).</p>
                   <button className="tw-btn" style={{ marginTop: '1rem' }} onClick={() => navigate(`${base}/mapa`)}><MapPin size={16} /> Ver no mapa</button>
                 </div>
                 <img src="/tattooweek/bronc/dragao.jpg" alt="Arte do dragão do backdrop da Bronc" style={{ width: '100%', borderRadius: 14, border: '2px solid #f07c2a', maxHeight: 320, objectFit: 'cover' }} />
@@ -176,7 +176,7 @@ export default function TwLanding() {
               <div className="tw-card">
                 <span className="tw-kicker">Público · {PUBLIC_GIFT.total} unidades</span>
                 <h3 className="tw-h3" style={{ margin: '0.3rem 0' }}>{PUBLIC_GIFT.title}</h3>
-                <p className="tw-p" style={{ fontSize: '0.85rem' }}>Complete {PUBLIC_GIFT.missions} missões (uma delas da Bronc) e retire no stand da Bronc, enquanto durar.</p>
+                <p className="tw-p" style={{ fontSize: '0.85rem' }}>Um dos selos secretos é o selo premiado: encostou o celular nele, ganhou o chaveiro. Retire no stand da Bronc, enquanto durar.</p>
                 <img className="tw-kit-photo" src={PUBLIC_GIFT.image} alt={PUBLIC_GIFT.title} loading="lazy" />
               </div>
             </div>}

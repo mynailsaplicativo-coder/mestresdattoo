@@ -250,7 +250,20 @@ function KitAndGift({ campaign }) {
   const [daily, setDaily] = useState(null);
   const [claims, setClaims] = useState([]);
   const [suspects, setSuspects] = useState([]);
+  const [secrets, setSecrets] = useState([]);
+  const [giftSeal, setGiftSeal] = useState(campaign.gift_seal_slug || '');
   const [q, setQ] = useState('');
+
+  useEffect(() => {
+    supabase.from('tw_artists').select('slug, name').eq('campaign_id', campaign.id).eq('kind', 'secret').eq('active', true).order('slug')
+      .then(({ data }) => setSecrets(data || []));
+  }, [campaign.id]);
+
+  const saveGiftSeal = async (slug) => {
+    setGiftSeal(slug);
+    const { error } = await supabase.from('tw_campaigns').update({ gift_seal_slug: slug || null }).eq('id', campaign.id);
+    if (error) alert(`Não salvou o selo premiado: ${error.message}. Rode o SQL da fase 14.`);
+  };
 
   const load = useCallback(async () => {
     const [d, c] = await Promise.all([
@@ -300,6 +313,12 @@ function KitAndGift({ campaign }) {
       {hasGift(campaign) && (
         <div className="tw-card tw-stack">
           <h3 className="tw-h3">Chaveiros Bronc: {claims.length}/{PUBLIC_GIFT.total} garantidos</h3>
+          <label className="tw-field"><span>Selo premiado (quem do público encostar ganha o chaveiro)</span>
+            <select className="tw-input" value={giftSeal} onChange={e => saveGiftSeal(e.target.value)}>
+              <option value="">— nenhum —</option>
+              {secrets.map(s => <option key={s.slug} value={s.slug}>{s.name}</option>)}
+            </select>
+          </label>
           <input className="tw-input" placeholder="Buscar por nome, @ ou código" value={q} onChange={e => setQ(e.target.value)} />
           <div style={{ maxHeight: 240, overflowY: 'auto' }}>
             {shown.map(c => (

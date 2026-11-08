@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 import { Home, Camera, Swords, Trophy, Map as MapIcon, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound, Download, Gift } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems, PARTNER_LOGOS, KIT_IMAGE, uploadMedia, readPendingSeals, clearPendingSeals, claimSeal, secretArt, refreshScreens, isRealPhoto } from './twData';
+import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems, PARTNER_LOGOS, KIT_IMAGE, uploadMedia, readPendingSeals, clearPendingSeals, claimSeal, secretArt, refreshScreens, isRealPhoto, isGiftSeal, claimGift } from './twData';
 import './tattooweek.css';
 import './poster.css';
 import { GoldCoin, Char, Cloud, Sparkle } from './TwArt';
@@ -150,8 +150,11 @@ function PendingSeals({ participant, campaign, enrollments }) {
         if (r.fresh) { points += r.points; got.push(tag); }
       }
       clearPendingSeals(campaign.id);
-      if (alive && got.length) {
-        setShown({ got, points });
+      let gift = null;
+      const giftTag = tracks.includes('public') && list.find(tag => isGiftSeal(campaign, tag));
+      if (giftTag) { try { gift = await claimGift(campaign.id, participant.id); } catch { /* esgotado */ } }
+      if (alive && (got.length || gift?.mine)) {
+        setShown({ got: got.length ? got : [giftTag], points, gift, publicOnly: !tracks.includes('artist') });
         refreshScreens();
         try { navigator.vibrate?.([60, 40, 140]); } catch { /* sem vibração */ }
       }
@@ -172,8 +175,9 @@ function PendingSeals({ participant, campaign, enrollments }) {
           {secretArt(first.slug) ? <img className="tw-gold-medal" src={secretArt(first.slug)} alt={first.name} /> : <div className="tw-reveal-icon">★</div>}
         </div>
         <h2 className="tw-h2">{shown.got.length > 1 ? `${shown.got.length} selos secretos` : first.name}</h2>
-        <div className="tw-seal-points">+{shown.points} pontos!</div>
-        <p className="tw-p" style={{ margin: '0.6rem 0 1rem' }}>O selo que você encontrou antes de entrar já está na sua conta. Bora achar os outros!</p>
+        {!shown.publicOnly && shown.points > 0 && <div className="tw-seal-points">+{shown.points} pontos!</div>}
+        {shown.gift?.mine && <div className="tw-seal-points" style={{ background: '#f07c2a' }}>Selo premiado: chaveiro Bronc!</div>}
+        <p className="tw-p" style={{ margin: '0.6rem 0 1rem' }}>{shown.gift?.mine ? 'Você achou o selo premiado! Mostre esta tela e seu código na aba Missões, no stand da Bronc, para retirar o chaveiro exclusivo.' : 'O selo que você encontrou antes de entrar já está na sua conta. Bora achar os outros!'}</p>
         <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => setShown(null)}>Bora!</button>
       </div>
     </div>
@@ -309,7 +313,7 @@ export function JoinGate({ tw, track, children }) {
           <AvatarPick preview={photo?.preview || (isRealPhoto(participant.photo_url) ? participant.photo_url : null)} onPick={pickPhoto} required={!isRealPhoto(participant.photo_url)} />
           <p className="tw-p">{track === 'artist'
             ? 'O Artist Challenge é a competição dos tatuadores: 5 missões por dia, selos secretos e, todo dia, 1 impressora Bronc + 10 mil pontos no app E-Bronc.'
-            : `Entre no ${label}: missões rápidas, selos secretos, chaveiros Bronc e um vídeo só seu no final.`}</p>
+            : `Entre no ${label}: missões para montar um vídeo só seu da Tattoo Week, e selos secretos escondidos no evento. Um deles dá um chaveiro exclusivo Bronc!`}</p>
           {error && <div className="tw-error">{error}</div>}
           <button className="tw-btn tw-btn-primary tw-btn-block" disabled={saving}>{saving ? 'Entrando...' : 'Quero participar'}</button>
         </form>
@@ -415,7 +419,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
             {mission.day && <span className="tw-chip tw-chip-gold">Dia {mission.day}</span>}
             {mission.category && mission.category !== 'dia' && <span className="tw-chip tw-chip-gold">{CATEGORY_LABELS[mission.category]}</span>}
             {partner && <span className="tw-chip" style={{ color: partner.color, borderColor: partner.color }}>{partner.name}</span>}
-            <span className="tw-chip">+{mission.points} pts</span>
+            {mission.track === 'public' ? <span className="tw-chip">vai pro seu vídeo</span> : <span className="tw-chip">+{mission.points} pts</span>}
           </div>
           <button className="tw-sheet-x" onClick={onClose} aria-label="Fechar"><X size={22} /></button>
         </div>
@@ -423,7 +427,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
         {done ? (
           <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
             <CheckCircle2 size={56} color="#22c55e" />
-            <h2 className="tw-h2" style={{ marginTop: '0.8rem' }}>{done.status === 'approved' ? `+${done.points} pontos!` : 'Enviado!'}</h2>
+            <h2 className="tw-h2" style={{ marginTop: '0.8rem' }}>{mission.track === 'public' ? 'Guardado no seu vídeo!' : done.status === 'approved' ? `+${done.points} pontos!` : 'Enviado!'}</h2>
             <p className="tw-p">{isQuiz
               ? 'Resposta certa! Missão concluída.'
               : 'Missão concluída. Esse registro já entrou na sua retrospectiva.'}</p>
@@ -577,7 +581,7 @@ export function SurpriseCard({ mission, sub, onOpen }) {
       {mission.description && <p className="tw-p" style={{ fontSize: '0.88rem', marginBottom: '0.7rem' }}>{mission.description}</p>}
       {sub && sub.status !== 'rejected'
         ? <span className="tw-chip tw-chip-ok"><Check size={12} /> Enviada</span>
-        : <button className="tw-btn tw-btn-primary tw-btn-sm" onClick={onOpen}>Cumprir agora · +{mission.points} pts</button>}
+        : <button className="tw-btn tw-btn-primary tw-btn-sm" onClick={onOpen}>Cumprir agora{mission.track === 'public' ? '' : ` · +${mission.points} pts`}</button>}
     </div>
   );
 }

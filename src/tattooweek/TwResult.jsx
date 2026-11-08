@@ -21,7 +21,7 @@ export default function TwResult() {
   return (
     <TwShell>
       {enrolledArtist
-        ? <ResultCard participant={tw.participant} />
+        ? <ResultCard participant={tw.participant} artist />
         : <JoinGate tw={tw} track="public">{tw.participant && <ResultCard participant={tw.participant} />}</JoinGate>}
     </TwShell>
   );
@@ -71,7 +71,7 @@ function spark(ctx, x, y, scale, color) {
   ctx.restore();
 }
 
-export function ResultCard({ participant }) {
+export function ResultCard({ participant, artist = false }) {
   const { campaign, base } = useCampaign();
   const canvasRef = useRef(null);
   const [data, setData] = useState(null);
@@ -149,7 +149,12 @@ export function ResultCard({ participant }) {
       // Números em adesivos coloridos
       const total = (data.points.public || 0) + (data.points.artist || 0);
       const bestRank = [data.ranks.public, data.ranks.artist].filter(Boolean).sort((a, b) => a - b)[0];
-      const stats = [[String(total), 'PONTOS', '#f4e14d'], [bestRank ? `${bestRank}º` : '–', 'RANKING', '#ffc2e6'], [String(data.approved.length), 'MISSÕES', '#b5f1f6']];
+      // Público não tem ranking: mostra missões, fotos/vídeos e selos secretos
+      const clips = data.approved.reduce((acc, s) => acc + (s.media?.length || 0), 0);
+      const secretFound = (data.secretTags || []).filter(s => s.earned).length;
+      const stats = artist
+        ? [[String(total), 'PONTOS', '#f4e14d'], [bestRank ? `${bestRank}º` : '–', 'RANKING', '#ffc2e6'], [String(data.approved.length), 'MISSÕES', '#b5f1f6']]
+        : [[String(data.approved.filter(s => s.mission?.category !== 'selo').length), 'MISSÕES', '#f4e14d'], [String(clips), 'REGISTROS', '#ffc2e6'], [String(secretFound), 'SELOS', '#b5f1f6']];
       stats.forEach(([v, l, c], i) => {
         const bw = 240; const x = W / 2 + (i - 1) * 270 - bw / 2;
         sticker(ctx, x, 880, bw, 140, 30, c, 7);
@@ -201,7 +206,7 @@ export function ResultCard({ participant }) {
       canvasRef.current.toBlob(b => alive && setBlob(b), 'image/png');
     })();
     return () => { alive = false; };
-  }, [data, participant, campaign, base]);
+  }, [data, participant, campaign, base, artist]);
 
   const fileName = `resultado-${campaign.slug}.png`;
   const file = blob && new File([blob], fileName, { type: 'image/png' });

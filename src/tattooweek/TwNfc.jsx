@@ -4,7 +4,7 @@ import { SignInButton } from '@clerk/clerk-react';
 import { AtSign, MapPin, Nfc, KeyRound, Check, Camera, Loader2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, MissionSheet } from './TwShell';
-import { useTwParticipant, useCampaign, trackEvent, instagramUrl, activationKey, secretArt, savePendingSeal, claimSeal } from './twData';
+import { useTwParticipant, useCampaign, trackEvent, instagramUrl, activationKey, secretArt, savePendingSeal, claimSeal, isGiftSeal, claimGift, giftCode, PUBLIC_GIFT } from './twData';
 import { Char, Cloud, Sparkle } from './TwArt';
 
 // Página aberta pelo adesivo NFC (ou QR). Três tipos: ponto, selo secreto e ativação do Artist Challenge.
@@ -85,9 +85,12 @@ function SecretSeal({ tag, tw }) {
   const { campaign, base } = useCampaign();
   const { participant, enrollments, loading } = tw;
   const [result, setResult] = useState(null); // { fresh, points }
+  const [gift, setGift] = useState(null);
   const done = useRef(false);
   const tracks = enrollments.filter(e => e.campaign_id === campaign.id).map(e => e.track);
   const inGame = !!participant && tracks.length > 0;
+  const publicOnly = inGame && !tracks.includes('artist');
+  const prizeSeal = isGiftSeal(campaign, tag);
 
   // Guarda o selo no celular na hora (mesmo se o login demorar): quem entrar no jogo depois recebe sozinho
   useEffect(() => { savePendingSeal(campaign.id, tag); }, [campaign.id, tag]);
@@ -95,7 +98,11 @@ function SecretSeal({ tag, tw }) {
   useEffect(() => {
     if (loading || done.current || !inGame) return;
     done.current = true;
-    claimSeal(campaign.id, participant.id, tracks, tag).then(r => {
+    claimSeal(campaign.id, participant.id, tracks, tag).then(async r => {
+      // Selo premiado do público: garante o chaveiro Bronc (enquanto durar)
+      if (prizeSeal && tracks.includes('public')) {
+        try { setGift(await claimGift(campaign.id, participant.id)); } catch (e) { setGift({ error: e.message }); }
+      }
       setResult(r);
       if (r.fresh) { try { navigator.vibrate?.([60, 40, 140]); } catch { /* sem vibração */ } }
     });
@@ -121,8 +128,19 @@ function SecretSeal({ tag, tw }) {
             : <div className="tw-reveal-icon">{tag.seal_icon || '★'}</div>}
         </div>
         <h1 className="tw-h1" style={{ fontSize: 'clamp(2rem, 9vw, 3rem)' }}>{tag.name}</h1>
-        {result?.fresh && <div className="tw-seal-points">+{result.points} pontos!</div>}
-        {result && !result.fresh && <p className="tw-p">Você já tinha este selo. Procure os outros!</p>}
+        {result?.fresh && !publicOnly && <div className="tw-seal-points">+{result.points} pontos!</div>}
+        {result?.fresh && publicOnly && !gift && <div className="tw-seal-points">Selo na sua faixa!</div>}
+        {result && !result.fresh && !gift && <p className="tw-p">Você já tinha este selo. Procure os outros!</p>}
+        {gift?.mine && (
+          <div className="tw-card tw-stack" style={{ marginTop: '1rem', background: '#0b0b10', color: '#fff', border: '3px solid #f07c2a' }}>
+            <span className="tw-kicker" style={{ color: '#f07c2a' }}>Selo premiado!</span>
+            <h2 className="tw-h3" style={{ color: '#fff' }}>Você ganhou um {PUBLIC_GIFT.title}</h2>
+            <img src={PUBLIC_GIFT.image} alt={PUBLIC_GIFT.title} style={{ width: '100%', borderRadius: 12, border: '2px solid #f07c2a' }} />
+            <span className="tw-gift-code" style={{ alignSelf: 'center' }}>{giftCode(participant.id)}</span>
+            <p className="tw-p" style={{ color: '#ddd', fontSize: '0.88rem' }}>Mostre esta tela e o código no stand da Bronc para retirar. O código também fica na sua aba Missões.</p>
+          </div>
+        )}
+        {gift && !gift.mine && <p className="tw-p">Este era o selo premiado, mas os chaveiros já acabaram. Valeu por jogar!</p>}
         {!result && inGame && <p className="tw-p"><Loader2 className="tw-spin" size={16} style={{ verticalAlign: -3 }} /> Guardando seu selo...</p>}
         <p className="tw-p" style={{ margin: '1rem 0 0' }}>{tag.bio || 'Você encontrou um dos selos secretos escondidos no evento.'}</p>
         {result && (
@@ -136,7 +154,7 @@ function SecretSeal({ tag, tw }) {
           <span className="tw-kicker">Esse selo já é quase seu</span>
           <h2 className="tw-h3" style={{ margin: '0.3rem 0' }}>Entre no Desafio dos Mestres em 1 minuto</h2>
           <p className="tw-p" style={{ fontSize: '0.9rem' }}>
-            Guardamos o <b style={{ color: 'var(--tw-text)' }}>{tag.name}</b> aqui no seu celular por 3 horas. Entrou no jogo, ele cai na sua conta sozinho, valendo pontos para o prêmio do dia (impressora Bronc + 10 mil pontos E-Bronc) e os chaveiros exclusivos.
+            Guardamos o <b style={{ color: 'var(--tw-text)' }}>{tag.name}</b> aqui no seu celular por 3 horas. Entrou no jogo, ele cai na sua conta sozinho. Um dos selos secretos é o selo premiado do chaveiro exclusivo Bronc: será que é este?
           </p>
           <JoinPrompt tw={tw} text="" bare />
         </div>

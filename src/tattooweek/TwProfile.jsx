@@ -62,7 +62,7 @@ export default function TwProfile() {
     return <TwShell><div className="tw-center-screen"><div><Lock size={40} color="var(--tw-gold)" /><h1 className="tw-h2" style={{ marginTop: '1rem' }}>Perfil privado</h1></div></div></TwShell>;
   }
 
-  const totalPoints = history.reduce((a, h) => a + (h.progress.points.public || 0) + (h.progress.points.artist || 0), 0);
+  const totalPoints = history.reduce((a, h) => a + (h.progress.points.artist || 0), 0);
   const totalMissions = history.reduce((a, h) => a + h.progress.approved.length, 0);
   const earned = new Map();
   history.forEach(h => h.progress.badges.forEach(b => earned.set(b.id, b)));
@@ -120,7 +120,7 @@ export default function TwProfile() {
                       {c.status === 'finished' && <span className="tw-chip">Encerrada</span>}
                     </div>
                     <div className="tw-p" style={{ fontSize: '0.8rem', margin: '0.2rem 0 0.4rem' }}>
-                      {h.tracks.includes('public') && `Público: ${pr.points.public || 0} pts${pr.ranks.public ? ` (${pr.ranks.public}º)` : ''}`}
+                      {h.tracks.includes('public') && `Público: ${pr.approved.filter(s => s.mission?.track === 'public' && s.mission?.category !== 'selo').length} missões`}
                       {h.tracks.length > 1 && ' · '}
                       {h.tracks.includes('artist') && `Challenge: ${pr.points.artist || 0} pts${pr.ranks.artist ? ` (${pr.ranks.artist}º)` : ''}`}
                     </div>

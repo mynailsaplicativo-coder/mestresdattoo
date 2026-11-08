@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Film, Share2, HelpCircle, Nfc, Gift, Loader2 } from 'lucide-react';
+import { Check, Film, Share2, HelpCircle, Nfc, Gift, Camera } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip } from './TwShell';
-import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, PUBLIC_GIFT, hasGift, giftStatus, claimGift, giftCode, useLiveRefresh } from './twData';
-import { sumPoints } from './badges';
+import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, PUBLIC_GIFT, hasGift, giftStatus, giftCode, useLiveRefresh } from './twData';
+
 import { PatchSash, Char } from './TwArt';
 
 // Missões normais da lista (as outras têm seção própria)
@@ -27,7 +27,7 @@ function PublicPanel({ participant }) {
   const [missions, setMissions] = useState(null);
   const [tags, setTags] = useState([]);
   const [subs, setSubs] = useState([]);
-  const [adj, setAdj] = useState({ public: 0, artist: 0 });
+  const [, setAdj] = useState({ public: 0, artist: 0 });
   const [open, setOpen] = useState(null);
   const [gift, setGift] = useState(null);
 
@@ -58,10 +58,8 @@ function PublicPanel({ participant }) {
   const points = tags.filter(t => (t.kind || 'point') === 'point');
   const foundSeals = new Set(approved.filter(s => s.mission?.category === 'selo').map(s => s.artist_id));
   const foundPoints = new Set(approved.filter(s => s.mission?.category === 'passaporte').map(s => s.artist_id));
-  const total = sumPoints(approved, missions, 'public') + adj.public;
   const done = list.filter(m => subByMission[m.id]?.status === 'approved').length;
-  const today = new Date().toDateString();
-  const todayPts = approved.filter(s => new Date(s.created_at).toDateString() === today).reduce((acc, s) => acc + (s.points || 0), 0);
+  const clips = approved.reduce((acc, s) => acc + (s.media?.length || 0), 0);
   const seals_ = sealItems(missions, approved);
   const finished = campaign.status === 'finished';
 
@@ -77,16 +75,16 @@ function PublicPanel({ participant }) {
 
       <div className="tw-card tw-card-gold">
         <div className="tw-grid tw-stats-4">
-          <div className="tw-stat"><b>{total}</b><span>Pontos</span></div>
-          <div className="tw-stat"><b>{todayPts}</b><span>Hoje</span></div>
           <div className="tw-stat"><b>{done}/{list.length}</b><span>Missões</span></div>
-          <div className="tw-stat"><b>{foundSeals.size}/{seals.length}</b><span>Selos</span></div>
+          <div className="tw-stat"><b>{clips}</b><span>Fotos e vídeos</span></div>
+          <div className="tw-stat"><b>{foundSeals.size}/{seals.length}</b><span>Selos secretos</span></div>
+          <div className="tw-stat"><b>{seals_.filter(x => x.earned).length}</b><span>Selos bordados</span></div>
         </div>
         <div className="tw-progress" style={{ marginTop: '1rem' }}><div style={{ width: `${list.length ? (done / list.length) * 100 : 0}%` }} /></div>
-        <p className="tw-p" style={{ fontSize: '0.78rem', marginTop: '0.6rem' }}>Cada missão vale um selo bordado. Complete sua faixa e gere seu vídeo no fim!</p>
+        <p className="tw-p" style={{ fontSize: '0.78rem', marginTop: '0.6rem' }}>Aqui não tem ranking: cada missão é um momento do seu vídeo da Tattoo Week e vira um selo bordado na sua faixa. No fim, é só gerar o vídeo!</p>
       </div>
 
-      {hasGift(campaign) && <GiftCard participant={participant} done={done} partnerDone={approved.some(s => s.mission?.partner === PUBLIC_GIFT.partner && s.mission?.category !== 'selo')} gift={gift} setGift={setGift} />}
+      {hasGift(campaign) && <GiftCard participant={participant} gift={gift} />}
 
       {finished && <div className="tw-notice" style={{ marginTop: '1rem' }}>O jogo foi encerrado. Seu vídeo e seus selos continuam disponíveis.</div>}
 
@@ -105,7 +103,7 @@ function PublicPanel({ participant }) {
             const partner = m.partner && partners[m.partner];
             return (
               <button key={m.id} className={`tw-mission ${ok ? 'done' : ''} ${finished ? 'locked' : ''}`} disabled={finished || (s && s.status !== 'rejected')} onClick={() => setOpen(m)}>
-                <span className="tw-mission-num">{ok ? <Check size={18} /> : m.category === 'quiz' ? <HelpCircle size={18} /> : m.points}</span>
+                <span className="tw-mission-num">{ok ? <Check size={18} /> : m.category === 'quiz' ? <HelpCircle size={18} /> : <Camera size={18} />}</span>
                 <span className="tw-mission-body">
                   <span className="tw-mission-title">{m.title}</span>
                   <span className="tw-mission-meta">
@@ -114,7 +112,6 @@ function PublicPanel({ participant }) {
                     {s?.status === 'rejected' && <span className="tw-chip tw-chip-bad">Recusada · envie de novo</span>}
                   </span>
                 </span>
-                <span className="tw-mission-pts">+{m.points}</span>
               </button>
             );
           })}
@@ -126,7 +123,7 @@ function PublicPanel({ participant }) {
         <section className="tw-section">
           <div className="tw-between" style={{ marginBottom: '0.7rem' }}>
             <span className="tw-kicker">Selos secretos</span>
-            <span className="tw-chip tw-chip-gold">+{missions.find(m => m.category === 'selo')?.points || 25} pts cada</span>
+            {hasGift(campaign) && <span className="tw-chip tw-chip-gold">Um deles dá chaveiro Bronc</span>}
           </div>
           <SealStrip seals={seals} found={foundSeals} />
           <p className="tw-p" style={{ fontSize: '0.8rem', marginTop: '0.7rem' }}>
@@ -186,48 +183,25 @@ function PublicPanel({ participant }) {
   );
 }
 
-// Brinde do público: chaveiro exclusivo Bronc (enquanto durar)
-function GiftCard({ participant, done, partnerDone, gift, setGift }) {
-  const { campaign } = useCampaign();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const need = PUBLIC_GIFT.missions;
-  const ready = done >= need && partnerDone;
-
-  const claim = async () => {
-    setBusy(true);
-    setError('');
-    try { setGift(await claimGift(campaign.id, participant.id)); } catch (e) { setError(e.message); }
-    setBusy(false);
-  };
-
+// Brinde do público: um dos selos secretos é o selo premiado do chaveiro Bronc
+function GiftCard({ participant, gift }) {
   return (
     <div className="tw-card tw-card-gold" style={{ marginTop: '1rem' }}>
       <div className="tw-gift">
         <img src={PUBLIC_GIFT.image} alt={PUBLIC_GIFT.title} loading="lazy" />
         <div>
-          <span className="tw-kicker"><Gift size={12} style={{ verticalAlign: -1 }} /> Brinde Bronc{gift ? ` · restam ${gift.left} de ${PUBLIC_GIFT.total}` : ''}</span>
+          <span className="tw-kicker"><Gift size={12} style={{ verticalAlign: -1 }} /> Selo premiado{gift ? ` · restam ${gift.left} de ${PUBLIC_GIFT.total}` : ''}</span>
           <h3 className="tw-h3" style={{ margin: '0.25rem 0' }}>{PUBLIC_GIFT.title}</h3>
           {gift?.mine ? (
             <>
-              <p className="tw-p" style={{ fontSize: '0.85rem' }}>É seu! Mostre esta tela no stand da Bronc para retirar.</p>
+              <p className="tw-p" style={{ fontSize: '0.85rem' }}>Você achou o selo premiado! Mostre esta tela no stand da Bronc para retirar.</p>
               <span className="tw-gift-code">{giftCode(participant.id)}</span>
               <p className="tw-p" style={{ fontSize: '0.75rem' }}>{participant.name}</p>
             </>
           ) : gift && gift.left <= 0 ? (
             <p className="tw-p" style={{ fontSize: '0.85rem' }}>Os {PUBLIC_GIFT.total} chaveiros já acabaram. Valeu por jogar!</p>
           ) : (
-            <>
-              <p className="tw-p" style={{ fontSize: '0.85rem' }}>Complete {need} missões, sendo uma da Bronc, e garanta o seu enquanto durar.</p>
-              <div className="tw-kit-rules">
-                <span className={done >= need ? 'ok' : ''}>{done >= need ? '✓' : '○'} {Math.min(done, need)}/{need} missões</span>
-                <span className={partnerDone ? 'ok' : ''}>{partnerDone ? '✓' : '○'} 1 missão da Bronc</span>
-              </div>
-              {error && <div className="tw-error" style={{ marginTop: '0.5rem' }}>{error}</div>}
-              <button className="tw-btn tw-btn-primary tw-btn-sm" style={{ marginTop: '0.7rem' }} disabled={!ready || busy} onClick={claim}>
-                {busy ? <Loader2 size={14} className="tw-spin" /> : <Gift size={14} />} {ready ? 'Garantir meu chaveiro' : 'Complete as missões para liberar'}
-              </button>
-            </>
+            <p className="tw-p" style={{ fontSize: '0.85rem' }}>Um dos selos secretos escondidos no evento é o <b style={{ color: 'var(--tw-text)' }}>selo premiado</b>. Encoste o celular nos adesivos dourados: quem achar o certo ganha o chaveiro na hora, enquanto durar.</p>
           )}
         </div>
       </div>

@@ -116,7 +116,7 @@ export default function TwTelao() {
               </div>
               <div className="tw-tv-prize">
                 <img src={PUBLIC_GIFT.image} alt="" />
-                <div><small>Público · 5 missões</small><b>Chaveiro Bronc</b><em>{d.gift ? `restam ${d.gift.left}/${PUBLIC_GIFT.total}` : ''}</em></div>
+                <div><small>Público · selo premiado</small><b>Chaveiro Bronc</b><em>{d.gift ? `restam ${d.gift.left}/${PUBLIC_GIFT.total}` : ''}</em></div>
               </div>
             </div>
           )}

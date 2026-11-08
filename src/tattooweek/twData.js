@@ -438,12 +438,13 @@ export const PUBLIC_GIFT = {
   campaign: 'tattooweek-2026',
   title: 'Chaveiro exclusivo Bronc',
   total: 200,
-  missions: 5,
-  partner: 'bronc',
   image: '/tattooweek/bronc/chaveiro-produto.jpg',
 };
 
 export const hasGift = (c) => c?.id === PUBLIC_GIFT.campaign;
+
+// Selo premiado: quem do público encostar nesse selo secreto ganha o chaveiro (definido no admin / SQL)
+export const isGiftSeal = (c, tag) => hasGift(c) && !!c?.gift_seal_slug && tag?.slug === c.gift_seal_slug;
 
 export async function giftStatus(campaignId, participantId) {
   const [all, mine] = await Promise.all([
