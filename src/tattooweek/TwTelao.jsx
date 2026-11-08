@@ -97,7 +97,7 @@ export default function TwTelao() {
       </header>
 
       <div className="tw-tv-cols">
-        <List title="Prêmio do dia" sub="Tatuador nº 1 de hoje com os 5 selos secretos" rows={d.today} seals />
+        <List title="Prêmio do dia" sub="Tatuador nº 1 de hoje com os 6 selos secretos" rows={d.today} seals />
         <List title="Artist Challenge" sub="Ranking geral do evento" rows={d.artist} />
         <div className="tw-tv-side">
           {current

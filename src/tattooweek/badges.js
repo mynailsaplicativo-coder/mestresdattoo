@@ -7,7 +7,7 @@ export const BADGES = [
   { id: 'completo', icon: '🔥', title: 'Zerou o jogo', desc: 'Todas as missões da sua trilha' },
   { id: 'detetive', icon: '🕵️', title: 'Detetive', desc: 'Acertou todas as perguntas' },
   { id: 'selo1', icon: '🗝️', title: 'Caçador', desc: 'Encontrou um selo secreto' },
-  { id: 'cacador', icon: '👑', title: 'Lenda dos selos', desc: 'Encontrou os 5 selos secretos' },
+  { id: 'cacador', icon: '👑', title: 'Lenda dos selos', desc: 'Encontrou todos os selos secretos' },
   { id: 'relampago', icon: '⚡', title: 'Relâmpago', desc: 'Cumpriu uma missão surpresa' },
   { id: 'conector', icon: '📡', title: 'Conector', desc: '5 Pontos NFC encontrados' },
   { id: 'superconector', icon: '🛰️', title: 'Super conector', desc: '10 Pontos NFC encontrados' },

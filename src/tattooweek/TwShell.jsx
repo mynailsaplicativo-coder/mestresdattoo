@@ -603,7 +603,7 @@ export function BadgeGrid({ badges, all, small }) {
   );
 }
 
-// Os 5 selos secretos: medalhão dourado revelado só depois de encontrado
+// Os selos secretos: medalhão dourado revelado só depois de encontrado
 export function SealStrip({ seals, found }) {
   if (!seals.length) return null;
   return (

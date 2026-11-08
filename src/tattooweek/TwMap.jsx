@@ -55,7 +55,7 @@ export default function TwMap() {
         )}
 
         <p className="tw-p" style={{ fontSize: '0.82rem', marginTop: '1.25rem' }}>
-          Os 5 selos secretos não aparecem no mapa. Esses você tem que achar sozinho.
+          Os 6 selos secretos não aparecem no mapa. Esses você tem que achar sozinho.
         </p>
       </div>
     </TwShell>
