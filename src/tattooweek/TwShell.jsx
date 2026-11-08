@@ -621,6 +621,24 @@ export function SealStrip({ seals, found }) {
   );
 }
 
+// Participação privada: avisa que não aparece no ranking (nem concorre) e deixa sair com um toque
+export function PrivateNotice({ participant, setParticipant, onChange }) {
+  const [saving, setSaving] = useState(false);
+  if (!participant || participant.show_in_ranking !== false) return null;
+  const go = async () => {
+    setSaving(true);
+    const { data } = await supabase.from('tw_participants').update({ show_in_ranking: true }).eq('id', participant.id).select().single();
+    setSaving(false);
+    if (data) { setParticipant?.(data); onChange?.(); }
+  };
+  return (
+    <div className="tw-notice" style={{ marginBottom: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+      <span style={{ flex: '1 1 220px' }}><b>Você está em participação privada.</b> Seu nome não aparece no ranking nem no telão, e você não concorre ao prêmio do dia.</span>
+      <button className="tw-btn tw-btn-primary tw-btn-sm" disabled={saving} onClick={go}>{saving ? 'Salvando...' : 'Aparecer no ranking'}</button>
+    </div>
+  );
+}
+
 // Kit do dia do Artist Challenge: o que leva e o que precisa para ganhar
 export function KitCard({ campaign, dayNum, hasAllSeals, foundSeals, needSeals, isLeader, onRanking, compact }) {
   const items = kitItems(campaign);

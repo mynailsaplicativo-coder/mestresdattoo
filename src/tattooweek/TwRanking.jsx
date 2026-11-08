@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Gift, Award, Users, Video, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, KitCard } from './TwShell';
+import { TwShell, KitCard, PrivateNotice } from './TwShell';
 import { Char } from './TwArt';
 import { useTwParticipant, useCampaign, loadArtistDaily, useLiveRefresh, eventDayNumber, kitItems, hasGift, KIT_IMAGE, PUBLIC_GIFT } from './twData';
 
@@ -11,7 +11,7 @@ const fmtDay = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('pt-BR', { da
 export function TwRanking() {
   const navigate = useNavigate();
   const { campaign } = useCampaign();
-  const { participant } = useTwParticipant();
+  const { participant, setParticipant } = useTwParticipant();
   const [track, setTrack] = useState('today');
   const [rows, setRows] = useState(null);
   const [daily, setDaily] = useState(null);
@@ -47,6 +47,7 @@ export function TwRanking() {
           <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem', fontSize: '2.4rem' }}>Ranking</h1>
           <Char name="gato" style={{ width: 88, marginBottom: '-4px' }} />
         </div>
+        <PrivateNotice participant={participant} setParticipant={setParticipant} onChange={load} />
         <div className="tw-tabs" style={{ marginBottom: '1rem' }}>
           <button className={`tw-tab ${track === 'today' ? 'on' : ''}`} onClick={() => setTrack('today')}>Hoje<small>prêmio do dia</small></button>
           <button className={`tw-tab ${track === 'artist' ? 'on' : ''}`} onClick={() => setTrack('artist')}>Artist Challenge<small>total</small></button>
@@ -78,7 +79,13 @@ export function TwRanking() {
         )}
 
         {rows === null && <div className="tw-empty">Carregando...</div>}
-        {rows?.length === 0 && <div className="tw-empty">Ninguém pontuou ainda. Seja o primeiro!</div>}
+        {rows?.length === 0 && (
+          <div className="tw-empty">
+            {track === 'today'
+              ? <>Ninguém pontuou hoje ainda. O ranking do dia zera à meia-noite: seja o primeiro! <button className="tw-btn tw-btn-sm" style={{ marginTop: '0.6rem' }} onClick={() => setTrack('artist')}>Ver o ranking geral</button></>
+              : 'Ninguém pontuou ainda. Seja o primeiro!'}
+          </div>
+        )}
         <div className="tw-stack">
           {rows?.map((r, i) => {
             const seals = track === 'today' && daily ? daily.sealsOf(r.participant_id) : null;

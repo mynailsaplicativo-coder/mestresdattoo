@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Nfc, KeyRound, Share2, HelpCircle, Lock, MapPin, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, KitCard, PartnerLogo } from './TwShell';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, KitCard, PartnerLogo, PrivateNotice } from './TwShell';
 import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS, loadArtistDaily, useLiveRefresh, subDay, todaySP, isDailyMission, missionForToday, eventDayNumber } from './twData';
 import { PatchSash, Char } from './TwArt';
 
@@ -63,7 +63,7 @@ function ChallengeGate({ tw }) {
       </div>
     );
   }
-  return <ChallengePanel participant={tw.participant} />;
+  return <ChallengePanel participant={tw.participant} setParticipantFn={tw.setParticipant} />;
 }
 
 // O artista precisa seguir todos os perfis antes de jogar (abre cada um no Instagram)
@@ -118,7 +118,7 @@ function FollowStep({ enrollment, setEnrollments, participantId }) {
   );
 }
 
-function ChallengePanel({ participant }) {
+function ChallengePanel({ participant, setParticipantFn }) {
   const navigate = useNavigate();
   const { campaign, partners, base } = useCampaign();
   const [missions, setMissions] = useState([]);
@@ -217,6 +217,7 @@ function ChallengePanel({ participant }) {
 
       {finished && <div className="tw-notice" style={{ marginTop: '1rem' }}>O Artist Challenge foi encerrado.</div>}
 
+      <div style={{ marginTop: '1rem' }}><PrivateNotice participant={participant} setParticipant={setParticipantFn} onChange={load} /></div>
       <KitCard campaign={campaign} dayNum={dayNum} hasAllSeals={hasAllSeals} foundSeals={foundSeals.size} needSeals={needSeals} isLeader={isLeader} onRanking={() => navigate(`${base}/ranking`)} />
 
       {!finished && surprises.length > 0 && (
