@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Film, Share2, HelpCircle, Nfc, Gift, Camera } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip } from './TwShell';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, NickEditor } from './TwShell';
 import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, PUBLIC_GIFT, hasGift, giftStatus, giftCode, useLiveRefresh } from './twData';
 
 import { PatchSash, Char } from './TwArt';
@@ -15,13 +15,13 @@ export default function TwPublic() {
   return (
     <TwShell>
       <JoinGate tw={tw} track="public">
-        <PublicPanel participant={tw.participant} />
+        <PublicPanel participant={tw.participant} setParticipantFn={tw.setParticipant} />
       </JoinGate>
     </TwShell>
   );
 }
 
-function PublicPanel({ participant }) {
+function PublicPanel({ participant, setParticipantFn }) {
   const navigate = useNavigate();
   const { campaign, partners, base } = useCampaign();
   const [missions, setMissions] = useState(null);
@@ -68,7 +68,8 @@ function PublicPanel({ participant }) {
       <div className="tw-between" style={{ alignItems: 'flex-end' }}>
         <div>
           <span className="tw-kicker">Meu {campaign.event_name}</span>
-          <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem', fontSize: '2.2rem' }}>Bora, {participant.name.split(' ')[0]}!</h1>
+          <h1 className="tw-h2" style={{ margin: '0.3rem 0 0.4rem', fontSize: '2.2rem' }}>Bora, {participant.nickname || participant.name.split(' ')[0]}!</h1>
+          <NickEditor participant={participant} setParticipant={setParticipantFn} />
         </div>
         <Char name="oni" style={{ width: 96, marginBottom: '-6px' }} />
       </div>
@@ -196,7 +197,7 @@ function GiftCard({ participant, gift }) {
             <>
               <p className="tw-p" style={{ fontSize: '0.85rem' }}>Você achou o selo premiado! Mostre esta tela no stand da Bronc para retirar.</p>
               <span className="tw-gift-code">{giftCode(participant.id)}</span>
-              <p className="tw-p" style={{ fontSize: '0.75rem' }}>{participant.name}</p>
+              <p className="tw-p" style={{ fontSize: '0.75rem' }}>{participant.name}{participant.nickname ? ` · ${participant.nickname}` : ''}</p>
             </>
           ) : gift && gift.left <= 0 ? (
             <p className="tw-p" style={{ fontSize: '0.85rem' }}>Os {PUBLIC_GIFT.total} chaveiros já acabaram. Valeu por jogar!</p>

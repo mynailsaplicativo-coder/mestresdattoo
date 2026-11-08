@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../supabaseClient';
-import { useCampaign, campaignTheme, themeStyle, loadArtistDaily, useLiveRefresh, hasGift, giftStatus, PUBLIC_GIFT, KIT_IMAGE, eventDayNumber } from './twData';
+import { useCampaign, campaignTheme, themeStyle, displayName, loadArtistDaily, useLiveRefresh, hasGift, giftStatus, PUBLIC_GIFT, KIT_IMAGE, eventDayNumber } from './twData';
 import { Char, Cloud, Sparkle } from './TwArt';
 import './tattooweek.css';
 import './poster.css';
@@ -16,7 +16,7 @@ export default function TwTelao() {
     const [r, en, s, e, today, gift] = await Promise.all([
       supabase.from('tw_ranking').select('participant_id, name, track, points').eq('campaign_id', campaign.id).order('points', { ascending: false }).order('last_at'),
       supabase.from('tw_enrollments').select('id', { count: 'exact', head: true }).eq('campaign_id', campaign.id),
-      supabase.from('tw_submissions').select('media, created_at, participant:tw_participants!inner(name, consent_marketing), mission:tw_missions!inner(campaign_id, title)')
+      supabase.from('tw_submissions').select('media, created_at, participant:tw_participants!inner(*), mission:tw_missions!inner(campaign_id, title)')
         .eq('mission.campaign_id', campaign.id).eq('status', 'approved').eq('participant.consent_marketing', true)
         .order('created_at', { ascending: false }).limit(30),
       supabase.from('tw_events').select('id', { count: 'exact', head: true }).eq('campaign_id', campaign.id).in('type', ['nfc_scan', 'qr_scan']),
@@ -24,7 +24,7 @@ export default function TwTelao() {
       hasGift(campaign) ? giftStatus(campaign.id) : Promise.resolve(null),
     ]);
     const rows = r.data || [];
-    const photos = (s.data || []).flatMap(x => (x.media || []).filter(m => m.type === 'image').map(m => ({ url: m.url, name: x.participant?.name, title: x.mission?.title })));
+    const photos = (s.data || []).flatMap(x => (x.media || []).filter(m => m.type === 'image').map(m => ({ url: m.url, name: displayName(x.participant), title: x.mission?.title })));
     const total = await supabase.from('tw_submissions').select('id, mission:tw_missions!inner(campaign_id)', { count: 'exact', head: true }).eq('mission.campaign_id', campaign.id).eq('status', 'approved');
     setD({
       artist: rows.filter(x => x.track === 'artist').slice(0, 8),

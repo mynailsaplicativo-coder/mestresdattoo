@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Share2, Download, Loader2 } from 'lucide-react';
 import { TwShell, JoinGate, BadgeGrid } from './TwShell';
-import { useTwParticipant, useCampaign, trackEvent, downloadBlob, sealItems, secretArt } from './twData';
+import { useTwParticipant, useCampaign, trackEvent, downloadBlob, sealItems, secretArt, displayName } from './twData';
 import { loadCampaignProgress } from './badges';
 
 // Card vertical 1080x1920 (Stories) no visual pôster: foto, pontos, selos secretos e faixa de selos
@@ -143,7 +143,7 @@ export function ResultCard({ participant, artist = false }) {
       ctx.restore();
       ctx.beginPath(); ctx.arc(W / 2, cy, 116, 0, Math.PI * 2); ctx.lineWidth = 6; ctx.strokeStyle = INK; ctx.stroke();
 
-      text(participant.name, W / 2, 790, 66, { max: W - 260 });
+      text(displayName(participant), W / 2, 790, 66, { max: W - 260 });
       if (participant.instagram) text(`@${participant.instagram.replace(/^@/, '')}`, W / 2, 845, 34, { color: '#5d5490', font: BODY, weight: 800 });
 
       // Números em adesivos coloridos

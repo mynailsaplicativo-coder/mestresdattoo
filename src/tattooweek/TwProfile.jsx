@@ -4,7 +4,7 @@ import { SignInButton } from '@clerk/clerk-react';
 import { AtSign, MapPin, Pencil, Save, X, Lock } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, BadgeGrid } from './TwShell';
-import { useTwParticipant, useStaffRole, instagramUrl, campaignBase, uploadMedia } from './twData';
+import { useTwParticipant, useStaffRole, instagramUrl, campaignBase, uploadMedia, nickError, cleanNick, nickSaveError } from './twData';
 import { loadCampaignProgress, BADGES, BADGE_BY_ID } from './badges';
 
 // Perfil permanente: soma todos os desafios (histórico, pontos acumulados, selos)
@@ -76,7 +76,8 @@ export default function TwProfile() {
           <div className="tw-avatar">{person.photo_url ? <img src={person.photo_url} alt={person.name} /> : person.name.slice(0, 1)}</div>
           <div style={{ flex: '1 1 240px', minWidth: 0 }}>
             <span className="tw-kicker">{history.some(h => h.tracks.includes('artist')) ? 'Perfil de artista' : 'Perfil'}</span>
-            <h1 className="tw-h2" style={{ margin: '0.2rem 0 0.3rem' }}>{person.name}</h1>
+            <h1 className="tw-h2" style={{ margin: '0.2rem 0 0.3rem' }}>{person.nickname || person.name}</h1>
+            {person.nickname && <div className="tw-p" style={{ fontSize: '0.85rem', marginBottom: '0.3rem' }}>{person.name}</div>}
             <div className="tw-row" style={{ flexWrap: 'wrap', gap: '0.3rem 1rem', fontSize: '0.88rem', color: 'var(--tw-muted)' }}>
               {ig && <a href={ig} target="_blank" rel="noreferrer"><AtSign size={14} style={{ verticalAlign: -2 }} /> {person.instagram.replace(/^@/, '')}</a>}
               {person.city && <span><MapPin size={14} style={{ verticalAlign: -2 }} /> {person.city}</span>}
@@ -138,7 +139,7 @@ export default function TwProfile() {
 
 function ProfileEditor({ person, onClose, onSaved }) {
   const [f, setF] = useState({
-    name: person.name || '', instagram: person.instagram || '', city: person.city || '', studio: person.studio || '',
+    name: person.name || '', nickname: person.nickname || '', instagram: person.instagram || '', city: person.city || '', studio: person.studio || '',
     styles: person.styles || '', bio: person.bio || '', photo_url: person.photo_url || '',
     show_in_ranking: person.show_in_ranking, consent_marketing: person.consent_marketing,
   });
@@ -154,10 +155,14 @@ function ProfileEditor({ person, onClose, onSaved }) {
 
   const save = async (e) => {
     e.preventDefault();
+    const problem = nickError(f.nickname);
+    if (problem) { setError(problem); return; }
     setSaving(true);
-    const { data, error: err } = await supabase.from('tw_participants').update(f).eq('id', person.id).select().single();
+    const row = { ...f, nickname: cleanNick(f.nickname) || null };
+    if (!person.nickname && !row.nickname) delete row.nickname;
+    const { data, error: err } = await supabase.from('tw_participants').update(row).eq('id', person.id).select().single();
     setSaving(false);
-    if (err) { setError(err.message); return; }
+    if (err) { setError(row.nickname !== undefined ? nickSaveError(err) : err.message); return; }
     onSaved(data);
   };
 
@@ -170,6 +175,7 @@ function ProfileEditor({ person, onClose, onSaved }) {
       </div>
       <div className="tw-grid tw-grid-2">
         <label className="tw-field"><span>Nome</span><input className="tw-input" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} required /></label>
+        <label className="tw-field"><span>Nick no jogo</span><input className="tw-input" maxLength={20} placeholder="ex.: TattooKing" value={f.nickname} onChange={e => setF({ ...f, nickname: e.target.value.replace(/\s+/g, '') })} /></label>
         <label className="tw-field"><span>Instagram</span><input className="tw-input" value={f.instagram} onChange={e => setF({ ...f, instagram: e.target.value })} /></label>
         <label className="tw-field"><span>Cidade / Estado</span><input className="tw-input" value={f.city} onChange={e => setF({ ...f, city: e.target.value })} /></label>
         <label className="tw-field"><span>Estúdio</span><input className="tw-input" value={f.studio} onChange={e => setF({ ...f, studio: e.target.value })} /></label>

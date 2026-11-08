@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Nfc, KeyRound, Share2, HelpCircle, Lock, MapPin, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, KitCard, PartnerLogo, PrivateNotice } from './TwShell';
-import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS, loadArtistDaily, useLiveRefresh, subDay, todaySP, isDailyMission, missionForToday, eventDayNumber } from './twData';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, KitCard, PartnerLogo, PrivateNotice, NickEditor } from './TwShell';
+import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS, displayName, loadArtistDaily, useLiveRefresh, subDay, todaySP, isDailyMission, missionForToday, eventDayNumber } from './twData';
 import { PatchSash, Char } from './TwArt';
 
 const SECTIONS = ['quiz', 'parceiros', 'networking', 'conteudo', 'geral', 'secreta'];
@@ -201,7 +201,8 @@ function ChallengePanel({ participant, setParticipantFn }) {
       <div className="tw-between" style={{ alignItems: 'flex-end' }}>
         <div>
           <span className="tw-kicker">Artist Challenge · {campaign.event_name}</span>
-          <h1 className="tw-h2" style={{ margin: '0.3rem 0 1rem', fontSize: '2.1rem' }}>{participant.name}</h1>
+          <h1 className="tw-h2" style={{ margin: '0.3rem 0 0.4rem', fontSize: '2.1rem' }}>{displayName(participant)}</h1>
+          <NickEditor participant={participant} setParticipant={setParticipantFn} />
         </div>
         <Char name="tigre" style={{ width: 92, marginBottom: '-6px' }} />
       </div>

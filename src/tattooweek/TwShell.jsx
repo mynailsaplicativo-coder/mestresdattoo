@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 import { Home, Camera, Swords, Trophy, Map as MapIcon, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound, Download, Gift } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems, PARTNER_LOGOS, KIT_IMAGE, uploadMedia, readPendingSeals, clearPendingSeals, claimSeal, secretArt, refreshScreens, isRealPhoto, isGiftSeal, claimGift } from './twData';
+import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems, PARTNER_LOGOS, KIT_IMAGE, uploadMedia, readPendingSeals, clearPendingSeals, claimSeal, secretArt, refreshScreens, isRealPhoto, isGiftSeal, claimGift, cleanNick, nickError, nickSaveError } from './twData';
 import './tattooweek.css';
 import './poster.css';
 import { GoldCoin, Char, Cloud, Sparkle } from './TwArt';
@@ -90,6 +90,57 @@ function JoinScene({ left = 'oni', right = 'gato' }) {
       <Char name={left} className="tw-join-char left" />
       <Char name={right} className="tw-join-char right" />
     </div>
+  );
+}
+
+// Nick do jogo (opcional): aparece no ranking e no telão no lugar do nome
+function NickField({ value, onChange }) {
+  const err = nickError(value);
+  return (
+    <label className="tw-field">
+      <span>Seu nick no jogo <small style={{ opacity: 0.7 }}>(opcional · aparece no ranking e no telão)</small></span>
+      <input className="tw-input" placeholder="ex.: TattooKing" maxLength={20} value={value} onChange={e => onChange(e.target.value.replace(/\s+/g, ''))} autoComplete="off" />
+      {value && err && <small style={{ color: '#dc2626', fontWeight: 700 }}>{err}</small>}
+    </label>
+  );
+}
+
+// Editar o nick depois, direto do painel do jogo
+export function NickEditor({ participant, setParticipant }) {
+  const [open, setOpen] = useState(false);
+  const [v, setV] = useState(participant?.nickname || '');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  if (!participant) return null;
+  const save = async (e) => {
+    e.preventDefault();
+    const problem = nickError(v);
+    if (problem) { setErr(problem); return; }
+    setBusy(true); setErr('');
+    const nick = cleanNick(v) || null;
+    const { data, error } = await supabase.from('tw_participants').update({ nickname: nick }).eq('id', participant.id).select().single();
+    setBusy(false);
+    if (error) { setErr(nickSaveError(error)); return; }
+    setParticipant?.(data); setOpen(false);
+  };
+  if (!open) {
+    return (
+      <button type="button" className="tw-chip" style={{ cursor: 'pointer', marginBottom: '0.8rem' }} onClick={() => { setV(participant.nickname || ''); setOpen(true); }}>
+        {participant.nickname ? <>Nick: <b>{participant.nickname}</b> · trocar</> : '+ Criar meu nick do jogo'}
+      </button>
+    );
+  }
+  return (
+    <form className="tw-card tw-stack" style={{ marginBottom: '1rem' }} onSubmit={save}>
+      <label className="tw-field"><span>Seu nick no jogo (aparece no ranking e no telão)</span>
+        <input className="tw-input" autoFocus maxLength={20} placeholder="ex.: TattooKing" value={v} onChange={e => setV(e.target.value.replace(/\s+/g, ''))} autoComplete="off" />
+      </label>
+      {err && <div className="tw-error">{err}</div>}
+      <div className="tw-row" style={{ gap: '0.5rem' }}>
+        <button className="tw-btn tw-btn-primary tw-btn-sm" disabled={busy}>{busy ? 'Salvando...' : 'Salvar nick'}</button>
+        <button type="button" className="tw-btn tw-btn-ghost tw-btn-sm" onClick={() => setOpen(false)}>Cancelar</button>
+      </div>
+    </form>
   );
 }
 
@@ -187,7 +238,7 @@ function PendingSeals({ participant, campaign, enrollments }) {
 export function JoinGate({ tw, track, children }) {
   const { campaign } = useCampaign();
   const { user, isSignedIn, loading, participant, setParticipant, isEnrolled, setEnrollments, enrollments } = tw;
-  const [form, setForm] = useState({ name: '', phone: '', instagram: '', city: '', show_in_ranking: true, consent_media: false, consent_marketing: false });
+  const [form, setForm] = useState({ name: '', nickname: '', phone: '', instagram: '', city: '', show_in_ranking: true, consent_media: false, consent_marketing: false });
   const [photo, setPhoto] = useState(null); // { file, preview }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -254,6 +305,9 @@ export function JoinGate({ tw, track, children }) {
     e.preventDefault();
     if (!participant && !form.consent_media) { setError('Precisamos da sua autorização para usar suas fotos no seu vídeo.'); return; }
     if (!hasPhoto) { setError('Coloque uma foto sua: ela aparece no ranking, no card e no vídeo.'); return; }
+    const nickProblem = nickError(form.nickname);
+    if (nickProblem) { setError(nickProblem); return; }
+    const nick = cleanNick(form.nickname);
     setSaving(true);
     setError('');
     let p = participant;
@@ -265,6 +319,7 @@ export function JoinGate({ tw, track, children }) {
           clerk_id: user.id,
           email: user.primaryEmailAddress?.emailAddress,
           name: form.name,
+          ...(nick ? { nickname: nick } : {}),
           phone: form.phone,
           instagram: form.instagram,
           city: form.city,
@@ -275,6 +330,9 @@ export function JoinGate({ tw, track, children }) {
           in_public: track !== 'artist',
           in_challenge: track === 'artist',
         }]).select().single();
+        if (res.error && nick && (res.error.code === '23505' || /nickname/i.test(res.error.message || ''))) {
+          setSaving(false); setError(nickSaveError(res.error)); return;
+        }
         if (res.error) {
           // Cadastro já existe (ex.: conexão caiu no meio): reaproveita em vez de travar
           const again = await supabase.from('tw_participants').select('*').eq('clerk_id', user.id).maybeSingle();
@@ -283,9 +341,10 @@ export function JoinGate({ tw, track, children }) {
         } else p = res.data;
         setParticipant(p);
       } else {
-        const patch = { ...(!p[track === 'artist' ? 'in_challenge' : 'in_public'] ? flag : {}), ...(photoUrl ? { photo_url: photoUrl } : {}) };
+        const patch = { ...(!p[track === 'artist' ? 'in_challenge' : 'in_public'] ? flag : {}), ...(photoUrl ? { photo_url: photoUrl } : {}), ...(nick && nick !== p.nickname ? { nickname: nick } : {}) };
         if (Object.keys(patch).length) {
           const res = await supabase.from('tw_participants').update(patch).eq('id', p.id).select().single();
+          if (res.error && patch.nickname) { setSaving(false); setError(nickSaveError(res.error)); return; }
           if (res.data) p = res.data;
         }
       }
@@ -309,11 +368,12 @@ export function JoinGate({ tw, track, children }) {
         <JoinScene left={track === 'artist' ? 'tigre' : 'oni'} right="dragao" />
         <form onSubmit={handleJoin} className="tw-card tw-join-card tw-stack">
           <span className="tw-kicker">{label}</span>
-          <h1 className="tw-h2">Olá, {participant.name.split(' ')[0]}!</h1>
+          <h1 className="tw-h2">Olá, {participant.nickname || participant.name.split(' ')[0]}!</h1>
           <AvatarPick preview={photo?.preview || (isRealPhoto(participant.photo_url) ? participant.photo_url : null)} onPick={pickPhoto} required={!isRealPhoto(participant.photo_url)} />
           <p className="tw-p">{track === 'artist'
             ? 'O Artist Challenge é a competição dos tatuadores: 5 missões por dia, selos secretos e, todo dia, 1 impressora Bronc + 10 mil pontos no app E-Bronc.'
             : `Entre no ${label}: missões para montar um vídeo só seu da Tattoo Week, e selos secretos escondidos no evento. Um deles dá um chaveiro exclusivo Bronc!`}</p>
+          {!participant.nickname && <NickField value={form.nickname} onChange={v => setForm({ ...form, nickname: v })} />}
           {error && <div className="tw-error">{error}</div>}
           <button className="tw-btn tw-btn-primary tw-btn-block" disabled={saving}>{saving ? 'Entrando...' : 'Quero participar'}</button>
         </form>
@@ -330,6 +390,7 @@ export function JoinGate({ tw, track, children }) {
         <p className="tw-p">Rapidinho: só o necessário para acompanhar seu progresso e te entregar o vídeo. Vale para os próximos desafios também.</p>
         <AvatarPick preview={photo?.preview || (user?.hasImage ? user.imageUrl : null)} onPick={pickPhoto} required />
         <label className="tw-field"><span>Nome</span><input className="tw-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></label>
+        <NickField value={form.nickname} onChange={v => setForm({ ...form, nickname: v })} />
         <label className="tw-field"><span>E-mail</span><input className="tw-input" value={user.primaryEmailAddress?.emailAddress || ''} disabled /></label>
         <label className="tw-field"><span>Telefone / WhatsApp</span><input className="tw-input" type="tel" inputMode="tel" placeholder="(11) 99999-9999" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required /></label>
         <div className="tw-grid tw-grid-2">

@@ -153,6 +153,24 @@ export function isMissionLive(m, now = new Date()) {
   return true;
 }
 
+// --- Nick do jogo ---
+// Aparece no ranking, no telão, no card e no perfil no lugar do nome
+export const displayName = (p) => (p?.nickname || '').trim() || p?.name || '';
+export const cleanNick = (v) => (v || '').trim().replace(/\s+/g, '').slice(0, 20);
+export function nickError(v) {
+  const n = cleanNick(v);
+  if (!n) return '';
+  if (n.length < 3) return 'O nick precisa ter pelo menos 3 caracteres.';
+  if (!/^[\p{L}\p{N}_.-]+$/u.test(n)) return 'Use só letras, números, ponto, traço ou _ no nick.';
+  return '';
+}
+export function nickSaveError(err) {
+  const m = err?.message || '';
+  if (err?.code === '23505' || /nickname_unique|duplicate/i.test(m)) return 'Esse nick já está em uso. Escolha outro!';
+  if (/nickname/i.test(m)) return 'O nick ainda não está ativo no sistema (falta rodar o SQL da fase 15).';
+  return m || 'Não deu para salvar o nick.';
+}
+
 // --- Participante logado ---
 
 export function useTwParticipant() {
