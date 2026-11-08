@@ -308,7 +308,7 @@ export function JoinGate({ tw, track, children }) {
           <h1 className="tw-h2">Olá, {participant.name.split(' ')[0]}!</h1>
           <AvatarPick preview={photo?.preview || (isRealPhoto(participant.photo_url) ? participant.photo_url : null)} onPick={pickPhoto} required={!isRealPhoto(participant.photo_url)} />
           <p className="tw-p">{track === 'artist'
-            ? 'O Artist Challenge é a competição dos tatuadores: 5 missões por dia, selos secretos e 1 impressora Bronc por dia.'
+            ? 'O Artist Challenge é a competição dos tatuadores: 5 missões por dia, selos secretos e, todo dia, 1 impressora Bronc + 10 mil pontos no app E-Bronc.'
             : `Entre no ${label}: missões rápidas, selos secretos, chaveiros Bronc e um vídeo só seu no final.`}</p>
           {error && <div className="tw-error">{error}</div>}
           <button className="tw-btn tw-btn-primary tw-btn-block" disabled={saving}>{saving ? 'Entrando...' : 'Quero participar'}</button>
@@ -624,8 +624,8 @@ export function KitCard({ campaign, dayNum, hasAllSeals, foundSeals, needSeals, 
     <div className="tw-card tw-card-gold tw-kit" style={{ marginTop: '1rem' }}>
       <div className="tw-between" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
         <div>
-          <span className="tw-kicker"><Gift size={12} style={{ verticalAlign: -1 }} /> Impressora do dia{dayNum ? ` · dia ${dayNum}` : ''}</span>
-          <h3 className="tw-h3" style={{ margin: '0.25rem 0' }}>1 impressora Bronc por dia para o tatuador nº 1 do dia</h3>
+          <span className="tw-kicker"><Gift size={12} style={{ verticalAlign: -1 }} /> Prêmio do dia{dayNum ? ` · dia ${dayNum}` : ''}</span>
+          <h3 className="tw-h3" style={{ margin: '0.25rem 0' }}>1 impressora Bronc + 10 mil pontos no app E-Bronc, por dia, para o tatuador nº 1 do dia</h3>
         </div>
         {isLeader && <span className="tw-chip tw-chip-ok" style={{ whiteSpace: 'nowrap' }}>Você está na frente!</span>}
       </div>

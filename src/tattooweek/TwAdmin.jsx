@@ -285,7 +285,7 @@ function KitAndGift({ campaign }) {
     )}
     <div className="tw-grid tw-grid-2" style={{ marginTop: '1.25rem' }}>
       <div className="tw-card tw-stack">
-        <h3 className="tw-h3">Impressora do dia (Artist Challenge)</h3>
+        <h3 className="tw-h3">Prêmio do dia: impressora + 10 mil pontos E-Bronc</h3>
         <p className="tw-p" style={{ fontSize: '0.8rem' }}>Ganha o nº 1 do dia com os {daily.need} selos secretos. Para tirar alguém, desclassifique em Pessoas.</p>
         {Object.entries(daily.winners).map(([day, w]) => (
           <div key={day} className="tw-between" style={{ fontSize: '0.9rem' }}>

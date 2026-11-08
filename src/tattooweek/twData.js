@@ -428,7 +428,8 @@ export function secretArt(slug) {
 // Cada dia do evento tem ranking próprio. O kit vai para o tatuador com mais pontos no dia
 // que já tenha TODOS os selos secretos. Quem ganhou um dia não participa mais.
 
-export const DEFAULT_KIT = ['1 impressora de stencil Bronc'];
+export const DEFAULT_KIT = ['1 impressora de stencil Bronc', '10 mil pontos de crédito no app E-Bronc'];
+export const PRIZE_SHORT = '1 impressora Bronc + 10 mil pontos no app E-Bronc';
 export const KIT_IMAGE = '/tattooweek/bronc/impressora.jpg';
 
 // Brinde do público: chaveiros exclusivos da Bronc, enquanto durarem

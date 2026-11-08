@@ -97,7 +97,7 @@ export default function TwTelao() {
       </header>
 
       <div className="tw-tv-cols">
-        <List title="Impressora do dia" sub="Tatuador nº 1 de hoje com os 5 selos secretos" rows={d.today} seals />
+        <List title="Prêmio do dia" sub="Tatuador nº 1 de hoje com os 5 selos secretos" rows={d.today} seals />
         <List title="Artist Challenge" sub="Ranking geral do evento" rows={d.artist} />
         <div className="tw-tv-side">
           {current
@@ -112,7 +112,7 @@ export default function TwTelao() {
             <div className="tw-tv-prizes">
               <div className="tw-tv-prize">
                 <img src={KIT_IMAGE} alt="" />
-                <div><small>Tatuadores · 1 por dia</small><b>Impressora Bronc</b></div>
+                <div><small>Tatuadores · 1 por dia</small><b>Impressora Bronc</b><em>+ 10 mil pts E-Bronc</em></div>
               </div>
               <div className="tw-tv-prize">
                 <img src={PUBLIC_GIFT.image} alt="" />

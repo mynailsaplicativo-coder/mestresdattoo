@@ -78,7 +78,7 @@ export default function TwLanding() {
             <span className="tw-exp-letter">2</span>
             <span className="tw-kicker">Pra tatuadores</span>
             <h2 className="tw-h2" style={{ margin: '0.3rem 0 0.5rem', fontSize: '2rem' }}>Artist Challenge</h2>
-            <p className="tw-p" style={{ color: 'var(--tw-text)' }}>Aberto a todos os tatuadores do evento. Faça o cadastro no stand da Bronc, poste as missões no seu perfil e dispute <b>1 impressora Bronc por dia</b>: leva o tatuador nº 1 do dia que tiver os 5 selos secretos. São 5 missões novas por dia.</p>
+            <p className="tw-p" style={{ color: 'var(--tw-text)' }}>Aberto a todos os tatuadores do evento. Cadastre-se aqui no site, ative seu desafio no stand da Bronc, poste as missões no seu perfil e dispute, <b>todo dia, 1 impressora Bronc + 10 mil pontos de crédito no app E-Bronc</b>: leva o tatuador nº 1 do dia que tiver os 5 selos secretos. São 5 missões novas por dia.</p>
             <button className="tw-btn" style={{ marginTop: '1rem', alignSelf: 'flex-start' }} onClick={() => navigate(`${base}/artist`)}>Entrar no Challenge</button>
           </article>
         </section>
@@ -170,7 +170,7 @@ export default function TwLanding() {
             {hasGift(c) && <div className="tw-grid tw-grid-2" style={{ marginTop: '0.75rem' }}>
               <div className="tw-card">
                 <span className="tw-kicker">Artist Challenge · 1 por dia</span>
-                <h3 className="tw-h3" style={{ margin: '0.3rem 0' }}>Impressora de stencil Bronc</h3>
+                <h3 className="tw-h3" style={{ margin: '0.3rem 0' }}>Impressora Bronc + 10 mil pontos E-Bronc</h3>
                 <img className="tw-kit-photo" src={KIT_IMAGE} alt="Impressora de stencil Bronc" loading="lazy" />
               </div>
               <div className="tw-card">

@@ -187,8 +187,8 @@ function ChallengePanel({ participant }) {
         <div style={{ maxWidth: 440 }}>
           <div className="tw-reveal-icon" style={{ width: 120, height: 120, animation: 'tw-glow 2.4s ease-in-out infinite' }}><Trophy size={52} color="var(--tw-gold)" /></div>
           <span className="tw-kicker">Artist Challenge</span>
-          <h1 className="tw-h2" style={{ margin: '0.4rem 0' }}>Você levou a impressora Bronc!</h1>
-          <p className="tw-p">Você foi o tatuador do dia em {new Date(`${wonDay}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}. Procure a equipe no stand da Bronc para retirar sua impressora.</p>
+          <h1 className="tw-h2" style={{ margin: '0.4rem 0' }}>Você é o tatuador do dia!</h1>
+          <p className="tw-p">Você foi o tatuador do dia em {new Date(`${wonDay}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}. Você ganhou 1 impressora Bronc e 10 mil pontos de crédito no app E-Bronc. Procure a equipe no stand da Bronc para retirar.</p>
           <p className="tw-p" style={{ marginTop: '0.8rem' }}>Quem ganha não disputa os outros dias: a vaga fica para outro tatuador. Valeu demais!</p>
           <button className="tw-btn tw-btn-primary tw-btn-block" style={{ marginTop: '1.25rem' }} onClick={() => navigate(`${base}/resultado`)}><Share2 size={14} /> Ver meu card de resultado</button>
         </div>

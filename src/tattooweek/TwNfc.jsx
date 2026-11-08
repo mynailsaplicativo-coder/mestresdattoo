@@ -136,7 +136,7 @@ function SecretSeal({ tag, tw }) {
           <span className="tw-kicker">Esse selo já é quase seu</span>
           <h2 className="tw-h3" style={{ margin: '0.3rem 0' }}>Entre no Desafio dos Mestres em 1 minuto</h2>
           <p className="tw-p" style={{ fontSize: '0.9rem' }}>
-            Guardamos o <b style={{ color: 'var(--tw-text)' }}>{tag.name}</b> aqui no seu celular por 3 horas. Entrou no jogo, ele cai na sua conta sozinho, valendo pontos para a impressora Bronc e os chaveiros exclusivos.
+            Guardamos o <b style={{ color: 'var(--tw-text)' }}>{tag.name}</b> aqui no seu celular por 3 horas. Entrou no jogo, ele cai na sua conta sozinho, valendo pontos para o prêmio do dia (impressora Bronc + 10 mil pontos E-Bronc) e os chaveiros exclusivos.
           </p>
           <JoinPrompt tw={tw} text="" bare />
         </div>
