@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Nfc, KeyRound, Share2, HelpCircle, Lock, MapPin, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, KitCard, PartnerLogo, PrivateNotice, NickEditor } from './TwShell';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, KitCard, PartnerLogo, PrivateNotice, NickEditor, GuideTour, TourButton } from './TwShell';
 import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS, displayName, loadArtistDaily, useLiveRefresh, subDay, todaySP, isDailyMission, missionForToday, eventDayNumber } from './twData';
 import { PatchSash, Char } from './TwArt';
 
@@ -129,6 +129,7 @@ function ChallengePanel({ participant, setParticipantFn }) {
   const [adj, setAdj] = useState({ public: 0, artist: 0 });
   const [open, setOpen] = useState(null);
   const [loaded, setLoaded] = useState(false);
+  const [tourAgain, setTourAgain] = useState(false);
 
   const load = useCallback(async () => {
     const [m, a, s, e, r, ad] = await Promise.all([
@@ -207,7 +208,7 @@ function ChallengePanel({ participant, setParticipantFn }) {
         <Char name="tigre" style={{ width: 92, marginBottom: '-6px' }} />
       </div>
 
-      <div className="tw-card tw-card-gold">
+      <div className="tw-card tw-card-gold" data-tour="stats">
         <div className="tw-grid tw-stats-4">
           <div className="tw-stat"><b>{todayRow?.points || 0}</b><span>Pontos hoje</span></div>
           <div className="tw-stat"><b>{todayPos ? `${todayPos}º` : '–'}</b><span>Ranking hoje</span></div>
@@ -227,6 +228,7 @@ function ChallengePanel({ participant, setParticipantFn }) {
         </div>
       )}
 
+      <div data-tour="missions">
       {SECTIONS.map(cat => {
         const list = visible.filter(m => m.category === cat);
         if (!list.length) return null;
@@ -256,8 +258,10 @@ function ChallengePanel({ participant, setParticipantFn }) {
         );
       })}
 
+      </div>
+
       {seals.length > 0 && (
-        <section className="tw-section">
+        <section className="tw-section" data-tour="seals">
           <div className="tw-between" style={{ marginBottom: '0.7rem' }}>
             <span className="tw-kicker">Selos secretos</span>
             {sealMission && <span className="tw-chip tw-chip-gold">+{sealMission.points} pts cada</span>}
@@ -302,6 +306,27 @@ function ChallengePanel({ participant, setParticipantFn }) {
       <p className="tw-p" style={{ fontSize: '0.8rem', marginTop: '2rem' }}>
         Os pontos entram na hora. O ranking do dia zera à meia-noite e as missões valem de novo no dia seguinte. A equipe revisa os envios e pode recusar o que não cumprir a missão.
       </p>
+
+      <TourButton onClick={() => setTourAgain(true)} />
+      <GuideTour
+        storageKey={`tw-tour-${campaign.id}-artist-${participant.id}`}
+        forceOpen={tourAgain}
+        onClose={() => setTourAgain(false)}
+        welcome={{
+          char: 'tigre',
+          kicker: 'Artist Challenge',
+          title: `Bem-vindo, ${participant.nickname || participant.name.split(' ')[0]}!`,
+          points: ['Todo dia tem 5 missões novas', 'Poste cada missão no seu perfil marcando os parceiros e cole o link', `Encontre os ${needSeals} selos secretos escondidos no evento`, 'O nº 1 do dia com todos os selos leva a impressora Bronc + 10 mil pontos E-Bronc'],
+        }}
+        steps={[
+          { target: 'kit', title: 'O prêmio do dia', text: 'Impressora Bronc + 10 mil pontos no app E-Bronc. Aqui você vê o que falta para concorrer.' },
+          { target: 'stats', title: 'Seus números de hoje', text: 'Pontos e posição no ranking do dia (zera à meia-noite), selos secretos e total do evento.' },
+          { target: 'missions', title: 'Suas missões de hoje', text: 'Toque numa missão, envie a foto ou vídeo e cole o link do post no seu perfil marcando os parceiros.' },
+          { target: 'seals', title: 'Selos secretos', text: `Adesivos dourados escondidos pelo evento. Encoste o celular: precisa dos ${needSeals} para levar o prêmio.` },
+          { target: 'nav-Ranking', title: 'Ranking ao vivo', text: 'Acompanhe quem está na frente pelo prêmio do dia, atualizado na hora.' },
+          { target: 'nick', title: 'Seu nick', text: 'Crie um nick: é ele que aparece no ranking e no telão do evento.' },
+        ]}
+      />
 
       {open && (
         <MissionSheet

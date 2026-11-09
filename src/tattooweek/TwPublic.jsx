@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Film, Share2, HelpCircle, Nfc, Gift, Camera } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, NickEditor } from './TwShell';
+import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, NickEditor, GuideTour, TourButton } from './TwShell';
 import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, PUBLIC_GIFT, hasGift, giftStatus, giftCode, useLiveRefresh } from './twData';
 
 import { PatchSash, Char } from './TwArt';
@@ -30,6 +30,7 @@ function PublicPanel({ participant, setParticipantFn }) {
   const [, setAdj] = useState({ public: 0, artist: 0 });
   const [open, setOpen] = useState(null);
   const [gift, setGift] = useState(null);
+  const [tourAgain, setTourAgain] = useState(false);
 
   const load = useCallback(async () => {
     const [m, t, s, a] = await Promise.all([
@@ -74,7 +75,7 @@ function PublicPanel({ participant, setParticipantFn }) {
         <Char name="oni" style={{ width: 96, marginBottom: '-6px' }} />
       </div>
 
-      <div className="tw-card tw-card-gold">
+      <div className="tw-card tw-card-gold" data-tour="stats">
         <div className="tw-grid tw-stats-4">
           <div className="tw-stat"><b>{done}/{list.length}</b><span>Missões</span></div>
           <div className="tw-stat"><b>{clips}</b><span>Fotos e vídeos</span></div>
@@ -95,7 +96,7 @@ function PublicPanel({ participant, setParticipantFn }) {
         </div>
       )}
 
-      <section className="tw-section">
+      <section className="tw-section" data-tour="missions">
         <span className="tw-kicker">Missões</span>
         <div className="tw-stack" style={{ marginTop: '0.7rem' }}>
           {list.map(m => {
@@ -121,7 +122,7 @@ function PublicPanel({ participant, setParticipantFn }) {
       </section>
 
       {seals.length > 0 && (
-        <section className="tw-section">
+        <section className="tw-section" data-tour="seals">
           <div className="tw-between" style={{ marginBottom: '0.7rem' }}>
             <span className="tw-kicker">Selos secretos</span>
             {hasGift(campaign) && <span className="tw-chip tw-chip-gold">Um deles dá chaveiro Bronc</span>}
@@ -154,7 +155,7 @@ function PublicPanel({ participant, setParticipantFn }) {
       </section>
 
       <div className="tw-grid tw-grid-2" style={{ marginTop: '1.5rem' }}>
-        <div className="tw-card" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div className="tw-card" data-tour="video" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <Film color="var(--tw-gold)" size={30} />
           <div style={{ flex: 1 }}>
             <h3 className="tw-h3">Sua retrospectiva</h3>
@@ -172,6 +173,27 @@ function PublicPanel({ participant, setParticipantFn }) {
         </div>
       </div>
 
+      <TourButton onClick={() => setTourAgain(true)} />
+      <GuideTour
+        storageKey={`tw-tour-${campaign.id}-public-${participant.id}`}
+        forceOpen={tourAgain}
+        onClose={() => setTourAgain(false)}
+        welcome={{
+          char: 'oni',
+          kicker: `Meu ${campaign.event_name}`,
+          title: `Bem-vindo(a), ${participant.nickname || participant.name.split(' ')[0]}!`,
+          points: ['Cumpra as missões: cada uma vira um momento do seu vídeo', 'Encontre os selos secretos dourados pelo evento', 'Um selo é premiado: quem achar ganha um chaveiro Bronc', 'No fim, gere seu vídeo pronto pro Stories'],
+        }}
+        steps={[
+          { target: 'stats', title: 'Seu progresso', text: 'Aqui você vê quantas missões fez, quantas fotos e vídeos já tem e quantos selos encontrou.' },
+          { target: 'missions', title: 'Comece por aqui!', text: 'Toque numa missão, tire a foto ou grave o vídeo e envie. Pronto: já entrou no seu vídeo.' },
+          { target: 'gift', title: 'O selo premiado', text: 'Um dos selos secretos dá um chaveiro exclusivo Bronc. Encoste o celular nos adesivos dourados para descobrir.' },
+          { target: 'seals', title: 'Selos secretos', text: 'Adesivos NFC dourados escondidos no evento. Encostou o celular, o selo é seu.' },
+          { target: 'nav-Mapa', title: 'Mapa do evento', text: 'Perdido? O mapa mostra o stand da Bronc, o palco e a entrada.' },
+          { target: 'video', title: 'Seu vídeo', text: 'Quando quiser, toque aqui e gere o vídeo com seus melhores momentos.' },
+        ]}
+      />
+
       {open && (
         <MissionSheet
           mission={open}
@@ -187,7 +209,7 @@ function PublicPanel({ participant, setParticipantFn }) {
 // Brinde do público: um dos selos secretos é o selo premiado do chaveiro Bronc
 function GiftCard({ participant, gift }) {
   return (
-    <div className="tw-card tw-card-gold" style={{ marginTop: '1rem' }}>
+    <div className="tw-card tw-card-gold" data-tour="gift" style={{ marginTop: '1rem' }}>
       <div className="tw-gift">
         <img src={PUBLIC_GIFT.image} alt={PUBLIC_GIFT.title} loading="lazy" />
         <div>

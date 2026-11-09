@@ -43,7 +43,7 @@ export function TwShell({ children }) {
         </button>
         <nav className="tw-top-links">
           {nav.map(n => (
-            <button key={n.to} className={pathname === n.to ? 'on' : ''} onClick={() => navigate(n.to)}>{n.label}</button>
+            <button key={n.to} data-tour={`nav-${n.label}`} className={pathname === n.to ? 'on' : ''} onClick={() => navigate(n.to)}>{n.label}</button>
           ))}
           {base && <button className={pathname === `${base}/premiacao` ? 'on' : ''} onClick={() => navigate(`${base}/premiacao`)}>Premiação</button>}
         </nav>
@@ -62,7 +62,7 @@ export function TwShell({ children }) {
       {base && (
         <nav className="tw-bottom">
           {nav.map(n => (
-            <button key={n.to} className={pathname === n.to ? 'on' : ''} onClick={() => navigate(n.to)}>
+            <button key={n.to} data-tour={`nav-${n.label}`} className={pathname === n.to ? 'on' : ''} onClick={() => navigate(n.to)}>
               <n.icon size={20} />{n.label}
             </button>
           ))}
@@ -125,7 +125,7 @@ export function NickEditor({ participant, setParticipant }) {
   };
   if (!open) {
     return (
-      <button type="button" className="tw-chip" style={{ cursor: 'pointer', marginBottom: '0.8rem' }} onClick={() => { setV(participant.nickname || ''); setOpen(true); }}>
+      <button type="button" data-tour="nick" className="tw-chip" style={{ cursor: 'pointer', marginBottom: '0.8rem' }} onClick={() => { setV(participant.nickname || ''); setOpen(true); }}>
         {participant.nickname ? <>Nick: <b>{participant.nickname}</b> · trocar</> : '+ Criar meu nick do jogo'}
       </button>
     );
@@ -704,7 +704,7 @@ export function PrivateNotice({ participant, setParticipant, onChange }) {
 export function KitCard({ campaign, dayNum, hasAllSeals, foundSeals, needSeals, isLeader, onRanking, compact }) {
   const items = kitItems(campaign);
   return (
-    <div className="tw-card tw-card-gold tw-kit" style={{ marginTop: '1rem' }}>
+    <div className="tw-card tw-card-gold tw-kit" data-tour="kit" style={{ marginTop: '1rem' }}>
       <div className="tw-between" style={{ alignItems: 'flex-start', gap: '0.75rem' }}>
         <div>
           <span className="tw-kicker"><Gift size={12} style={{ verticalAlign: -1 }} /> Prêmio do dia{dayNum ? ` · dia ${dayNum}` : ''}</span>
@@ -728,4 +728,89 @@ export function KitCard({ campaign, dayNum, hasAllSeals, foundSeals, needSeals, 
       {onRanking && <button className="tw-btn tw-btn-sm" style={{ marginTop: '0.75rem' }} onClick={onRanking}><Trophy size={14} /> Ranking ao vivo</button>}
     </div>
   );
+}
+
+// --- Boas-vindas + tour guiado com setas (aparece na primeira vez que a pessoa entra no jogo) ---
+function tourTarget(name) {
+  const list = [...document.querySelectorAll(`[data-tour="${name}"]`)];
+  return list.find(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }) || null;
+}
+
+export function GuideTour({ storageKey, welcome, steps, forceOpen, onClose }) {
+  const [stage, setStage] = useState(null); // null | 'welcome' | número do passo
+  const [rect, setRect] = useState(null);
+
+  useEffect(() => {
+    if (forceOpen) { setStage('welcome'); return; }
+    let seen = false;
+    try { seen = !!localStorage.getItem(storageKey); } catch { /* sem storage */ }
+    if (!seen) { const t = setTimeout(() => setStage('welcome'), 600); return () => clearTimeout(t); }
+  }, [storageKey, forceOpen]);
+
+  const live = typeof stage === 'number' ? steps.filter(s => tourTarget(s.target)) : [];
+  const step = typeof stage === 'number' ? live[stage] : null;
+
+  useEffect(() => {
+    if (!step) return;
+    const el = tourTarget(step.target);
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    let raf;
+    const tick = () => { const r = el.getBoundingClientRect(); setRect({ x: r.left, y: r.top, w: r.width, h: r.height }); raf = requestAnimationFrame(tick); };
+    tick();
+    return () => cancelAnimationFrame(raf);
+  }, [step]);
+
+  const finish = () => {
+    try { localStorage.setItem(storageKey, '1'); } catch { /* sem storage */ }
+    setStage(null); setRect(null); onClose?.();
+  };
+  const next = () => (stage + 1 < live.length ? setStage(stage + 1) : finish());
+
+  if (stage === null) return null;
+
+  if (stage === 'welcome') {
+    return (
+      <div className="tw-modal tw-tour-welcome" onClick={e => { if (e.target === e.currentTarget) finish(); }}>
+        <div className="tw-card tw-stack" style={{ width: 'min(460px, 100%)', marginTop: '7vh', textAlign: 'center' }}>
+          <Char name={welcome.char || 'gato'} className="tw-tour-char" />
+          <span className="tw-kicker">{welcome.kicker}</span>
+          <h2 className="tw-h2" style={{ margin: '0.2rem 0' }}>{welcome.title}</h2>
+          <ol className="tw-join-steps" style={{ textAlign: 'left', margin: '0.6rem 0' }}>
+            {welcome.points.map((p, i) => <li key={i}><b>{i + 1}</b>{p}</li>)}
+          </ol>
+          <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => setStage(0)}>Me mostra por onde começar</button>
+          <button className="tw-btn tw-btn-ghost tw-btn-block" onClick={finish}>Já sei, pular</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!step || !rect) return <div className="tw-tour-block" onClick={next} />;
+  const pad = 10;
+  const below = rect.y + rect.h / 2 < window.innerHeight / 2;
+  const hole = { left: rect.x - pad, top: rect.y - pad, width: rect.w + pad * 2, height: rect.h + pad * 2 };
+  const arrowTop = below ? hole.top + hole.height + 6 : hole.top - 74;
+  const cardTop = below ? Math.min(window.innerHeight - 210, hole.top + hole.height + 80) : Math.max(12, hole.top - 74 - 190);
+  return (
+    <>
+      <div className="tw-tour-block" />
+      <div className="tw-tour-hole" style={hole} />
+      <div className={`tw-tour-arrow ${below ? 'up' : 'down'}`} style={{ top: arrowTop, left: Math.min(window.innerWidth - 70, Math.max(10, rect.x + rect.w / 2 - 30)) }}>{below ? '⬆' : '⬇'}</div>
+      <div className="tw-tour-card" style={{ top: cardTop }}>
+        <span className="tw-kicker">Passo {stage + 1} de {live.length}</span>
+        <h3 className="tw-h3" style={{ margin: '0.2rem 0 0.3rem' }}>{step.title}</h3>
+        <p className="tw-p" style={{ fontSize: '0.9rem' }}>{step.text}</p>
+        <div className="tw-row" style={{ gap: '0.5rem', marginTop: '0.7rem' }}>
+          <button className="tw-btn tw-btn-primary tw-btn-sm" onClick={next}>{stage + 1 < live.length ? 'Próximo' : 'Bora começar!'}</button>
+          {stage > 0 && <button className="tw-btn tw-btn-ghost tw-btn-sm" onClick={() => setStage(stage - 1)}>Voltar</button>}
+          <button className="tw-btn tw-btn-ghost tw-btn-sm" style={{ marginLeft: 'auto' }} onClick={finish}>Pular</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export function TourButton({ onClick }) {
+  return <button type="button" className="tw-tour-help" onClick={onClick} aria-label="Ver o guia">?</button>;
 }
