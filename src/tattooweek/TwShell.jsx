@@ -98,6 +98,9 @@ function JoinScene({ left = 'oni', right = 'gato' }) {
   );
 }
 
+// Perfis que a galera marca nos stories de cada missão
+const STORY_TAGS = ['tcm', 'bronc', 'mestres', 'stencilflow'];
+
 // Dica de como resolver a missão (fica fechada até a pessoa tocar)
 function MissionHint({ text }) {
   const [open, setOpen] = useState(false);
@@ -474,8 +477,9 @@ function linkLabel(url) {
 export function MissionSheet({ mission, participant, artist, onClose, onDone }) {
   const ctx = useCampaign();
   const partners = ctx?.partners || DEFAULT_PARTNERS;
-  const needsPost = !!mission.require_post;
-  const tags = (ctx?.campaign.follow_partners || []).map(id => partners[id]?.instagram).filter(Boolean).map(h => `@${h.replace(/^@/, '')}`);
+  // Sem link de post: só as fotos. Aviso para postar nos stories marcando os parceiros
+  const needsPost = false;
+  const tags = STORY_TAGS.map(id => partners[id]?.instagram).filter(Boolean).map(h => `@${h.replace(/^@/, '')}`);
   // media_count 0 = só resposta (pergunta)
   const slots = Math.max(0, mission.media_count ?? 1);
   const isQuiz = !!mission.answer_hash || mission.category === 'quiz';
@@ -483,7 +487,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
   const [files, setFiles] = useState([]);
   const [note, setNote] = useState('');
   const [answer, setAnswer] = useState('');
-  const [postUrl, setPostUrl] = useState('');
+  const postUrl = '';
   // Aceita link de post, reel ou story do Instagram (instagram.com/p/..., /reel/..., /stories/...)
   const postOk = !needsPost || /instagram\.com\/(p|reel|reels|stories|tv)\//i.test(postUrl.trim());
   const [sending, setSending] = useState(false);
@@ -595,15 +599,11 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
               })}
             </div>}
 
-            {needsPost && (
-              <div className="tw-card tw-stack" style={{ padding: '0.8rem' }}>
-                <b style={{ fontSize: '0.9rem' }}>Poste no seu perfil marcando:</b>
+            {tags.length > 0 && (
+              <div className="tw-story-tip">
+                <b>📲 Posta nos stories e marca:</b>
                 <div className="tw-tags">{tags.map(t => <code key={t}>{t}</code>)}</div>
-                {tags.length > 0 && <button type="button" className="tw-btn tw-btn-sm" onClick={() => navigator.clipboard?.writeText(tags.join(' '))}>Copiar marcações</button>}
-                <label className="tw-field"><span>Link do post</span>
-                  <input className="tw-input" type="url" inputMode="url" placeholder="https://www.instagram.com/p/..." value={postUrl} onChange={e => setPostUrl(e.target.value)} />
-                </label>
-                {postUrl && !postOk && <small style={{ color: '#b0123a', fontWeight: 700 }}>Cole o link do post ou reel do Instagram.</small>}
+                <button type="button" className="tw-btn tw-btn-sm" onClick={() => navigator.clipboard?.writeText(tags.join(' '))}>Copiar marcações</button>
               </div>
             )}
 

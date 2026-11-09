@@ -739,7 +739,7 @@ function Missions({ campaign, partners }) {
             </div>
           </div>
           {edit.track === 'artist' && (
-            <label className="tw-check"><input type="checkbox" checked={!!edit.require_post} onChange={e => setEdit({ ...edit, require_post: e.target.checked })} /><span>Pedir o link do post no perfil do tatuador marcando os parceiros.</span></label>
+            <label className="tw-check" style={{ display: 'none' }}><input type="checkbox" checked={!!edit.require_post} onChange={e => setEdit({ ...edit, require_post: e.target.checked })} /><span>Pedir o link do post no perfil do tatuador marcando os parceiros.</span></label>
           )}
           <label className="tw-check"><input type="checkbox" checked={!!edit.hidden} onChange={e => setEdit({ ...edit, hidden: e.target.checked })} /><span>Escondida: só aparece para quem ler o Ponto NFC que a revela (configure em Pontos NFC).</span></label>
           <label className="tw-check"><input type="checkbox" checked={edit.active !== false} onChange={e => setEdit({ ...edit, active: e.target.checked })} /><span>No ar (aparece no site)</span></label>

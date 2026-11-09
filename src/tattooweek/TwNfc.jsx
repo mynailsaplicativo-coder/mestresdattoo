@@ -199,7 +199,7 @@ function Activation({ tag, tw }) {
             <h2 style={{ fontSize: '1.7rem' }}>{state === 'active' ? 'Challenge liberado!' : 'Artist Challenge'}</h2>
             <p style={{ marginBottom: '1.2rem' }}>
               {state === 'active'
-                ? 'Você está dentro. Poste cada missão no seu perfil marcando os parceiros e dispute o kit do tatuador do dia.'
+                ? 'Você está dentro! Envie as fotos das missões, poste nos stories marcando TCM, Bronc, Mestres da Tattoo e STENCILFLOW e dispute o prêmio do dia.'
                 : 'Tatuador: faça seu cadastro, siga os perfis dos parceiros e o desafio libera na hora. Todo dia, o melhor tatuador leva um kit.'}
             </p>
             {state === 'active'

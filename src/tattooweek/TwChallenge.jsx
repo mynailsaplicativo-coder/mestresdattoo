@@ -92,7 +92,7 @@ function FollowStep({ enrollment, setEnrollments, participantId }) {
     <div className="tw-wrap" style={{ maxWidth: 520 }}>
       <span className="tw-kicker">Artist Challenge · passo 1 de 2</span>
       <h1 className="tw-h2" style={{ fontSize: '2.2rem', margin: '0.3rem 0 0.5rem' }}>Siga a galera</h1>
-      <p className="tw-p" style={{ marginBottom: '1rem' }}>Para participar, siga os {list.length} perfis abaixo. Toque em cada um para abrir no Instagram. Depois, cada missão precisa ser postada no seu perfil marcando todos eles.</p>
+      <p className="tw-p" style={{ marginBottom: '1rem' }}>Para participar, siga os {list.length} perfis abaixo. Toque em cada um para abrir no Instagram. Depois é só enviar as fotos das missões e postar nos stories marcando a galera.</p>
       <div className="tw-follow">
         {list.map(p => {
           const h = handle(p);
@@ -318,12 +318,12 @@ function ChallengePanel({ participant, setParticipantFn }) {
           char: 'tigre',
           kicker: 'Artist Challenge',
           title: `Bem-vindo, ${participant.nickname || participant.name.split(' ')[0]}!`,
-          points: ['Todo dia tem 5 missões novas', 'Poste cada missão no seu perfil marcando os parceiros e cole o link', `Encontre os ${needSeals} selos secretos escondidos no evento`, 'O nº 1 do dia com todos os selos leva a impressora Bronc + 10 mil pontos E-Bronc'],
+          points: ['Todo dia tem 5 missões novas', 'Envie as fotos de cada missão e poste nos stories marcando TCM, Bronc, Mestres da Tattoo e STENCILFLOW', `Encontre os ${needSeals} selos secretos escondidos no evento`, 'O nº 1 do dia com todos os selos leva a impressora Bronc + 10 mil pontos E-Bronc'],
         }}
         steps={[
           { target: 'kit', title: 'O prêmio do dia', text: 'Impressora Bronc + 10 mil pontos no app E-Bronc. Aqui você vê o que falta para concorrer.' },
           { target: 'stats', title: 'Seus números de hoje', text: 'Pontos e posição no ranking do dia (zera à meia-noite), selos secretos e total do evento.' },
-          { target: 'missions', title: 'Suas missões de hoje', text: 'Toque numa missão, envie a foto ou vídeo e cole o link do post no seu perfil marcando os parceiros.' },
+          { target: 'missions', title: 'Suas missões de hoje', text: 'Toque numa missão e envie a foto ou o vídeo. Depois posta nos stories marcando TCM, Bronc, Mestres da Tattoo e STENCILFLOW.' },
           { target: 'seals', title: 'Selos secretos', text: `Adesivos dourados escondidos pelo evento. Encoste o celular: precisa dos ${needSeals} para levar o prêmio.` },
           { target: 'nav-Ranking', title: 'Ranking ao vivo', text: 'Acompanhe quem está na frente pelo prêmio do dia, atualizado na hora.' },
           { target: 'nick', title: 'Seu nick', text: 'Crie um nick: é ele que aparece no ranking e no telão do evento.' },

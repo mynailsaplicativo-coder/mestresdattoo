@@ -523,3 +523,7 @@
 .tw-patch-pop { position: relative; z-index: 2; display: inline-block; animation: tw-patch-in 1.1s cubic-bezier(.2,1.5,.35,1) both; }
 @keyframes tw-patch-in { 0% { transform: scale(0.1) rotate(-200deg); opacity: 0; } 60% { transform: scale(1.18) rotate(12deg); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
 @media (prefers-reduced-motion: reduce) { .tw-patch-pop { animation: none; } }
+
+/* Aviso: posta nos stories marcando os parceiros */
+.tw-story-tip { display: flex; flex-direction: column; gap: 0.5rem; background: linear-gradient(135deg, #fde8f5, #efe6ff); border: 2px solid #1d1646; border-radius: 14px; padding: 0.75rem 0.9rem; box-shadow: 3px 3px 0 #1d1646; color: #1d1646; font-size: 0.9rem; }
+.tw-story-tip .tw-btn { align-self: flex-start; }
