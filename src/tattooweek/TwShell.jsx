@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 import { Home, Camera, Swords, Trophy, Map as MapIcon, X, Upload, Loader2, CheckCircle2, Check, Clock, Zap, UserRound, Download, Gift } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems, PARTNER_LOGOS, KIT_IMAGE, uploadMedia, readPendingSeals, clearPendingSeals, claimSeal, secretArt, refreshScreens, isRealPhoto, isGiftSeal, claimGift, cleanNick, nickError, nickSaveError } from './twData';
+import { submitMission, useCountdown, useCampaign, useTwParticipant, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems, PARTNER_LOGOS, KIT_IMAGE, uploadMedia, readPendingSeals, clearPendingSeals, claimSeal, secretArt, refreshScreens, isRealPhoto, isGiftSeal, claimGift, cleanNick, nickError, nickSaveError } from './twData';
 import './tattooweek.css';
 import './poster.css';
 import { GoldCoin, Char, Cloud, Sparkle, Patch } from './TwArt';
@@ -13,6 +13,7 @@ export function TwShell({ children }) {
   const { pathname } = useLocation();
   const ctx = useCampaign();
   const base = ctx?.base;
+  const me = useTwParticipant();
 
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
 
@@ -25,6 +26,10 @@ export function TwShell({ children }) {
       { to: `${base}/mapa`, label: 'Mapa', icon: MapIcon },
     ]
     : [{ to: '/desafios', label: 'Desafios', icon: Home }];
+  // Menu só com a trilha da pessoa (tatuador não vê Missões do público e vice-versa)
+  const myArtist = ctx && me.participant && me.isEnrolled(ctx.campaign.id, 'artist');
+  const myPublic = ctx && me.participant && me.isEnrolled(ctx.campaign.id, 'public');
+  const navShown = nav.filter(n => !(myArtist && n.to === `${base}/meu`) && !(myPublic && !myArtist && n.to === `${base}/artist`));
 
   // Quebra antes da última palavra: "Desafio dos" / "Mestres"
   const words = (ctx?.campaign.name || 'Desafio dos Mestres').split(' ');
@@ -42,7 +47,7 @@ export function TwShell({ children }) {
           <span>{words.join(' ')}{last && <><br />{last}</>}</span>
         </button>
         <nav className="tw-top-links">
-          {nav.map(n => (
+          {navShown.map(n => (
             <button key={n.to} data-tour={`nav-${n.label}`} className={pathname === n.to ? 'on' : ''} onClick={() => navigate(n.to)}>{n.label}</button>
           ))}
           {base && <button className={pathname === `${base}/premiacao` ? 'on' : ''} onClick={() => navigate(`${base}/premiacao`)}>Premiação</button>}
@@ -61,7 +66,7 @@ export function TwShell({ children }) {
       {children}
       {base && (
         <nav className="tw-bottom">
-          {nav.map(n => (
+          {navShown.map(n => (
             <button key={n.to} data-tour={`nav-${n.label}`} className={pathname === n.to ? 'on' : ''} onClick={() => navigate(n.to)}>
               <n.icon size={20} />{n.label}
             </button>
@@ -99,6 +104,26 @@ function MissionHint({ text }) {
   return open
     ? <div className="tw-hint"><b>💡 Dica:</b> {text}</div>
     : <button type="button" className="tw-hint-btn" onClick={() => setOpen(true)}>💡 Ver dica de como fazer</button>;
+}
+
+// Tela para quem tenta abrir a trilha que não é a sua
+function WrongTrack({ track, campaign }) {
+  const navigate = useNavigate();
+  const { base } = useCampaign();
+  const artist = track === 'public';
+  return (
+    <div className="tw-wrap tw-join" style={{ maxWidth: 520 }}>
+      <JoinScene left={artist ? 'tigre' : 'oni'} right="gato" />
+      <div className="tw-card tw-join-card tw-stack" style={{ textAlign: 'center' }}>
+        <span className="tw-kicker">{artist ? 'Artist Challenge' : `Meu ${campaign.event_name}`}</span>
+        <h1 className="tw-h2">{artist ? 'Você joga como tatuador' : 'Você joga como público'}</h1>
+        <p className="tw-p">{artist
+          ? `O Meu ${campaign.event_name} é o jogo do público. Suas missões, selos e o prêmio do dia estão no Artist Challenge.`
+          : 'O Artist Challenge é só para tatuadores. Se você é tatuador e entrou como público por engano, fale com a equipe no stand da Bronc para trocar.'}</p>
+        <button className="tw-btn tw-btn-primary tw-btn-block" onClick={() => navigate(`${base}/${artist ? 'artist' : 'meu'}`)}>{artist ? 'Ir para o Artist Challenge' : 'Ir para minhas missões'}</button>
+      </div>
+    </div>
+  );
 }
 
 // Nick do jogo (opcional): aparece no ranking e no telão no lugar do nome
@@ -295,6 +320,13 @@ export function JoinGate({ tw, track, children }) {
         </div>
       </div>
     );
+  }
+
+  // Uma trilha por pessoa: tatuador não entra no jogo do público e vice-versa
+  const inArtist = participant && isEnrolled(campaign.id, 'artist');
+  const inPublic = participant && isEnrolled(campaign.id, 'public');
+  if ((track === 'public' && inArtist) || (track === 'artist' && inPublic && !inArtist)) {
+    return <WrongTrack track={track} campaign={campaign} />;
   }
 
   if (participant && isEnrolled(campaign.id, track)) {

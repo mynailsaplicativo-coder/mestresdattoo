@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check, Nfc, KeyRound, Share2, HelpCircle, Lock, MapPin, Trophy } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { TwShell, JoinGate, MissionSheet, SurpriseCard, SealStrip, KitCard, PartnerLogo, PrivateNotice, NickEditor, GuideTour, TourButton } from './TwShell';
-import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS, displayName, loadArtistDaily, useLiveRefresh, subDay, todaySP, isDailyMission, missionForToday, eventDayNumber } from './twData';
+import { useTwParticipant, useCampaign, loadAdjustments, sealItems, isMissionLive, activationKey, trackEvent, CATEGORY_LABELS, displayName, loadArtistDaily, useLiveRefresh, subDay, todaySP, isDailyMission, artistDailyMissions, eventDayNumber } from './twData';
 import { PatchSash, Char } from './TwArt';
 
 const SECTIONS = ['quiz', 'parceiros', 'networking', 'conteudo', 'geral', 'secreta'];
@@ -160,7 +160,9 @@ function ChallengePanel({ participant, setParticipantFn }) {
   const revealed = new Set(tags.filter(a => a.reveals_mission_id && scanned.has(a.slug)).map(a => a.reveals_mission_id));
   const today = todaySP();
   const dayNum = eventDayNumber(campaign);
-  const visible = missions.filter(m => (!m.hidden || revealed.has(m.id)) && missionForToday(m, campaign));
+  // Só as 5 missões do dia (+ selos, surpresas e missões escondidas reveladas por NFC)
+  const dailyIds = new Set(artistDailyMissions(missions, campaign).map(m => m.id));
+  const visible = missions.filter(m => ['selo', 'surpresa', 'passaporte'].includes(m.category) ? (!m.hidden || revealed.has(m.id)) : (dailyIds.has(m.id) || (m.hidden && revealed.has(m.id))));
   // Missão diária: conta só o envio de hoje (amanhã vale de novo)
   const subFor = (m) => {
     const list = missionSubs(m.id);

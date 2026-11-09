@@ -507,6 +507,37 @@ export function eventDayNumber(campaign, date = todaySP()) {
 // Missões do tatuador que podem ser refeitas a cada dia (o ranking zera todo dia)
 export const isDailyMission = (m) => m.track === 'artist' && !['selo', 'passaporte', 'surpresa'].includes(m.category);
 
+// --- 5 missões por dia no Artist Challenge (1 de parceiro + 4) ---
+// Nos dias do evento valem as missões sorteadas para aquele dia (campo "Dia" no admin).
+// Em qualquer outro dia o site sorteia 5 sozinho, as mesmas para todo mundo naquele dia.
+export const ARTIST_DAILY = 5;
+const isPartnerMission = (m) => !!m.partner && m.partner !== 'mestres';
+
+function seededRandom(seed) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return () => {
+    h += 0x6D2B79F5;
+    let t = h;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export function artistDailyMissions(missions, campaign, date = todaySP()) {
+  const pool = missions.filter(m => m.track === 'artist' && !m.hidden && !['selo', 'surpresa', 'passaporte'].includes(m.category));
+  const dayNum = eventDayNumber(campaign, date);
+  const planned = dayNum ? pool.filter(m => Number(m.day) === dayNum) : [];
+  if (planned.length) return planned.slice(0, ARTIST_DAILY);
+  const rnd = seededRandom(`${campaign?.id}:${date}`);
+  const shuffle = (a) => a.map(x => [rnd(), x]).sort((p, q) => p[0] - q[0]).map(p => p[1]);
+  const partners = shuffle(pool.filter(isPartnerMission));
+  const others = shuffle(pool.filter(m => !isPartnerMission(m)));
+  return [...partners.slice(0, 1), ...others].slice(0, ARTIST_DAILY)
+    .sort((a, b) => (a.position || 0) - (b.position || 0));
+}
+
 // Missão com "Dia" marcado no admin só aparece naquele dia do evento
 export function missionForToday(m, campaign) {
   if (!m.day) return true;
