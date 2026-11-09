@@ -549,7 +549,7 @@ function ReviewCard({ row, onDecide, checked, onToggle, onOpenParticipant }) {
 
 // --- Missões ---
 
-const EMPTY_MISSION = { track: 'artist', day: '', category: 'geral', partner: '', title: '', description: '', points: 20, media_count: 1, approval: 'auto', hidden: false, active: true, position: 0, seal_name: '', seal_icon: 'star', seal_color: '#a995ff', require_post: true };
+const EMPTY_MISSION = { track: 'artist', day: '', category: 'geral', partner: '', title: '', description: '', points: 20, media_count: 1, approval: 'auto', hidden: false, active: true, position: 0, seal_name: '', seal_icon: 'star', seal_color: '#a995ff', require_post: true, hint: '' };
 
 function Missions({ campaign, partners }) {
   const [rows, setRows] = useState([]);
@@ -705,6 +705,7 @@ function Missions({ campaign, partners }) {
           <h3 className="tw-h3">{edit.id ? 'Editar missão' : 'Nova missão'}</h3>
           <input className="tw-input" placeholder="Título" value={edit.title} onChange={e => setEdit({ ...edit, title: e.target.value })} required />
           <textarea className="tw-input" placeholder="Descrição / instruções" value={edit.description || ''} onChange={e => setEdit({ ...edit, description: e.target.value })} />
+          <textarea className="tw-input" placeholder="💡 Dica de como resolver (ex.: vá até o stand da TCM e pergunte)" value={edit.hint || ''} onChange={e => setEdit({ ...edit, hint: e.target.value })} />
           <div className="tw-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
             <label className="tw-field"><span>Trilha</span><select className="tw-input" value={edit.track} onChange={e => setEdit({ ...edit, track: e.target.value })}><option value="public">Público</option><option value="artist">Artist Challenge</option></select></label>
             <label className="tw-field"><span>Categoria</span><select className="tw-input" value={edit.category} onChange={e => setEdit({ ...edit, category: e.target.value })}>{Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>

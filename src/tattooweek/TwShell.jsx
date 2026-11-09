@@ -6,7 +6,7 @@ import { supabase } from '../supabaseClient';
 import { submitMission, useCountdown, useCampaign, campaignTheme, themeStyle, CATEGORY_LABELS, DEFAULT_PARTNERS, kitItems, PARTNER_LOGOS, KIT_IMAGE, uploadMedia, readPendingSeals, clearPendingSeals, claimSeal, secretArt, refreshScreens, isRealPhoto, isGiftSeal, claimGift, cleanNick, nickError, nickSaveError } from './twData';
 import './tattooweek.css';
 import './poster.css';
-import { GoldCoin, Char, Cloud, Sparkle } from './TwArt';
+import { GoldCoin, Char, Cloud, Sparkle, Patch } from './TwArt';
 
 export function TwShell({ children }) {
   const navigate = useNavigate();
@@ -91,6 +91,14 @@ function JoinScene({ left = 'oni', right = 'gato' }) {
       <Char name={right} className="tw-join-char right" />
     </div>
   );
+}
+
+// Dica de como resolver a missão (fica fechada até a pessoa tocar)
+function MissionHint({ text }) {
+  const [open, setOpen] = useState(false);
+  return open
+    ? <div className="tw-hint"><b>💡 Dica:</b> {text}</div>
+    : <button type="button" className="tw-hint-btn" onClick={() => setOpen(true)}>💡 Ver dica de como fazer</button>;
 }
 
 // Nick do jogo (opcional): aparece no ranking e no telão no lugar do nome
@@ -486,9 +494,20 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
         </div>
 
         {done ? (
-          <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-            <CheckCircle2 size={56} color="#22c55e" />
-            <h2 className="tw-h2" style={{ marginTop: '0.8rem' }}>{mission.track === 'public' ? 'Guardado no seu vídeo!' : done.status === 'approved' ? `+${done.points} pontos!` : 'Enviado!'}</h2>
+          <div style={{ textAlign: 'center', padding: '0.5rem 0 1rem' }}>
+            {mission.seal_name ? (
+              <>
+                <span className="tw-seal-ribbon">Selo conquistado!</span>
+                <div className="tw-gold-stage fresh tw-patch-stage">
+                  <span className="tw-gold-rays" />
+                  <span className="tw-gold-glow" />
+                  {Array.from({ length: 14 }).map((_, i) => <i key={i} className="tw-gold-spark" style={{ '--a': `${i * (360 / 14)}deg`, '--d': `${(i % 4) * 0.12}s` }} />)}
+                  <span className="tw-patch-pop"><Patch name={mission.seal_name} icon={mission.seal_icon || 'star'} color={mission.seal_color || '#a995ff'} size={170} /></span>
+                </div>
+                <h2 className="tw-h2" style={{ margin: '0.2rem 0' }}>{mission.seal_name}</h2>
+              </>
+            ) : <CheckCircle2 size={56} color="#22c55e" />}
+            <h2 className={mission.seal_name ? 'tw-seal-points' : 'tw-h2'} style={{ marginTop: '0.6rem' }}>{mission.track === 'public' ? 'Guardado no seu vídeo!' : done.status === 'approved' ? `+${done.points} pontos!` : 'Enviado!'}</h2>
             <p className="tw-p">{isQuiz
               ? 'Resposta certa! Missão concluída.'
               : 'Missão concluída. Esse registro já entrou na sua retrospectiva.'}</p>
@@ -511,6 +530,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
                 </>
               );
             })()}
+            {mission.hint && <MissionHint text={mission.hint} />}
             {isQuiz && !quizReady && <div className="tw-notice">Esta pergunta abre em breve. Fique de olho!</div>}
             {isQuiz && quizReady && (
               <label className="tw-field"><span>Sua resposta</span>
