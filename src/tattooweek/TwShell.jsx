@@ -62,7 +62,7 @@ export function TwShell({ children }) {
           </SignedIn>
         </div>
       </header>
-      {ctx && <Announcements campaignId={ctx.campaign.id} />}
+      {ctx && <Announcements campaignId={ctx.campaign.id} participantId={me.participant?.id} myTrack={myArtist ? 'artist' : myPublic ? 'public' : null} />}
       {children}
       {base && (
         <nav className="tw-bottom">
@@ -621,7 +621,7 @@ export function MissionSheet({ mission, participant, artist, onClose, onDone }) 
 }
 
 // Avisos da organização (aba Avisos do admin). Some depois de fechado.
-function Announcements({ campaignId }) {
+function Announcements({ campaignId, participantId, myTrack }) {
   const [list, setList] = useState([]);
   const [hidden, setHidden] = useState(() => {
     try { return JSON.parse(localStorage.getItem('tw-hidden-notices') || '[]'); } catch { return []; }
@@ -632,12 +632,15 @@ function Announcements({ campaignId }) {
       const now = new Date().toISOString();
       supabase.from('tw_announcements').select('*').eq('campaign_id', campaignId).eq('active', true)
         .lte('starts_at', now).or(`ends_at.is.null,ends_at.gt.${now}`).order('created_at', { ascending: false })
-        .then(({ data }) => setList(data || []));
+        .then(({ data }) => setList((data || []).filter(a =>
+          // Aviso para uma pessoa só aparece pra ela; aviso por trilha só pra quem está nela
+          (!a.participant_id || a.participant_id === participantId) &&
+          (!a.audience || a.audience === 'all' || a.audience === myTrack))));
     };
     load();
-    const t = setInterval(load, 60000);
+    const t = setInterval(load, 30000);
     return () => clearInterval(t);
-  }, [campaignId]);
+  }, [campaignId, participantId, myTrack]);
 
   const close = (id) => {
     const next = [...hidden, id];

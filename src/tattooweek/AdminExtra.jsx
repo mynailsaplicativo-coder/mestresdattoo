@@ -303,6 +303,17 @@ export function ParticipantSheet({ participantId, campaign, role, onClose, onCha
     else await supabase.from('tw_enrollments').insert([{ participant_id: p.id, campaign_id: campaign.id, track: to }]);
     done(`Agora é ${to === 'artist' ? 'tatuador' : 'público'}.`);
   };
+  const sendNotice = async () => {
+    const message = prompt(`Aviso só para ${p.nickname || p.name} (aparece no topo do site para ele, por 24h):`);
+    if (!message) return;
+    const now = new Date();
+    const { error } = await supabase.from('tw_announcements').insert([{
+      campaign_id: campaign.id, message, level: 'urgent', participant_id: p.id,
+      starts_at: now.toISOString(), ends_at: new Date(now.getTime() + 24 * 3600000).toISOString(),
+    }]);
+    if (error) { setMsg(/participant_id/.test(error.message) ? 'Rode o tattooweek_fase21_avisos_pessoa.sql no Supabase para liberar aviso por pessoa.' : error.message); return; }
+    setMsg('Aviso enviado. Ele vê no topo do site em até 30 segundos.');
+  };
   const toggleRanking = async () => {
     const { error } = await supabase.from('tw_participants').update({ show_in_ranking: !p.show_in_ranking }).eq('id', p.id);
     if (error) { setMsg(error.message); return; }
@@ -340,6 +351,7 @@ export function ParticipantSheet({ participantId, campaign, role, onClose, onCha
                   <div className="tw-row" style={{ gap: '0.4rem', marginTop: 8, flexWrap: 'wrap' }}>
                     <button className="tw-btn tw-btn-sm" onClick={switchTrack}>{isArtist ? 'Mudar para público' : 'Mudar para tatuador'}</button>
                     <button className="tw-btn tw-btn-sm" onClick={toggleRanking}>{p.show_in_ranking ? 'Tirar do ranking' : 'Mostrar no ranking'}</button>
+                    <button className="tw-btn tw-btn-sm" onClick={sendNotice}><Megaphone size={13} /> Aviso só pra ele</button>
                   </div>
                 </div>
               </div>
@@ -598,12 +610,22 @@ export function Awards({ campaign, reload, onOpenParticipant }) {
 
 export function Announcements({ campaign }) {
   const [rows, setRows] = useState([]);
-  const [f, setF] = useState({ message: '', level: 'info', link: '', hours: 2 });
+  const [f, setF] = useState({ message: '', level: 'info', link: '', hours: 2, audience: 'all', participant_id: '' });
+  const [people, setPeople] = useState([]);
+  const [q, setQ] = useState('');
 
   const load = useCallback(async () => {
-    const { data } = await supabase.from('tw_announcements').select('*').eq('campaign_id', campaign.id).order('created_at', { ascending: false });
+    const [{ data }, pp] = await Promise.all([
+      supabase.from('tw_announcements').select('*').eq('campaign_id', campaign.id).order('created_at', { ascending: false }),
+      supabase.from('tw_participants').select('id, name, nickname, email, instagram, in_challenge').order('created_at', { ascending: false }).limit(3000),
+    ]);
     setRows(data || []);
+    setPeople(pp.data || []);
   }, [campaign.id]);
+  const who = (id) => { const p = people.find(x => x.id === id); return p ? (p.nickname || p.name) : 'participante'; };
+  const matches = q.trim().length >= 2
+    ? people.filter(p => [p.name, p.nickname, p.email, p.instagram].filter(Boolean).join(' ').toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8)
+    : [];
   useEffect(() => { load(); }, [load]);
 
   const create = async (e) => {
@@ -612,9 +634,13 @@ export function Announcements({ campaign }) {
     const { error } = await supabase.from('tw_announcements').insert([{
       campaign_id: campaign.id, message: f.message, level: f.level, link: f.link || null,
       starts_at: now.toISOString(), ends_at: Number(f.hours) > 0 ? new Date(now.getTime() + Number(f.hours) * 3600000).toISOString() : null,
+      ...(f.audience === 'person' ? { participant_id: f.participant_id, audience: 'all' } : f.audience !== 'all' ? { audience: f.audience } : {}),
     }]);
-    if (error) { alert(error.message); return; }
-    setF({ ...f, message: '', link: '' });
+    if (error) {
+      alert(/participant_id|audience/.test(error.message) ? 'Rode o tattooweek_fase21_avisos_pessoa.sql no Supabase para liberar aviso por pessoa/trilha.' : error.message);
+      return;
+    }
+    setF({ ...f, message: '', link: '', participant_id: '', audience: 'all' }); setQ('');
     load();
   };
 
@@ -632,12 +658,33 @@ export function Announcements({ campaign }) {
           <select className="tw-input" style={{ width: 'auto' }} value={f.level} onChange={e => setF({ ...f, level: e.target.value })}><option value="info">Normal (dourado)</option><option value="urgent">Urgente (vermelho)</option></select>
           <input className="tw-input" style={{ flex: 1, minWidth: 180 }} placeholder="Link opcional (ex.: /tattooweek/artist)" value={f.link} onChange={e => setF({ ...f, link: e.target.value })} />
           <label className="tw-row" style={{ gap: '0.3rem', fontSize: '0.85rem' }}>Duração (h, 0 = sem fim) <input className="tw-input" type="number" min="0" style={{ width: 70 }} value={f.hours} onChange={e => setF({ ...f, hours: e.target.value })} /></label>
-          <button className="tw-btn tw-btn-sm tw-btn-primary"><Megaphone size={14} /> Publicar</button>
+          <button className="tw-btn tw-btn-sm tw-btn-primary" disabled={f.audience === 'person' && !f.participant_id}><Megaphone size={14} /> Publicar</button>
         </div>
+        <div className="tw-row" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>Para quem:</span>
+          <select className="tw-input" style={{ width: 'auto' }} value={f.audience} onChange={e => setF({ ...f, audience: e.target.value, participant_id: '' })}>
+            <option value="all">Todo mundo</option>
+            <option value="artist">Só tatuadores</option>
+            <option value="public">Só público</option>
+            <option value="person">Uma pessoa específica</option>
+          </select>
+          {f.audience === 'person' && (f.participant_id
+            ? <span className="tw-chip tw-chip-ok">{who(f.participant_id)} <button type="button" className="tw-icon-btn" onClick={() => setF({ ...f, participant_id: '' })}><X size={12} /></button></span>
+            : <input className="tw-input" style={{ flex: 1, minWidth: 200 }} placeholder="Buscar por nome, nick, e-mail ou @" value={q} onChange={e => setQ(e.target.value)} />)}
+        </div>
+        {f.audience === 'person' && !f.participant_id && matches.length > 0 && (
+          <div className="tw-stack" style={{ gap: '0.3rem' }}>
+            {matches.map(p => (
+              <button type="button" key={p.id} className="tw-btn tw-btn-sm tw-btn-ghost" style={{ justifyContent: 'flex-start' }} onClick={() => setF({ ...f, participant_id: p.id })}>
+                {(p.nickname || p.name)} · {p.name} · {p.email || p.instagram} · {p.in_challenge ? 'tatuador' : 'público'}
+              </button>
+            ))}
+          </div>
+        )}
       </form>
       {rows.map(a => (
         <div key={a.id} className={`tw-notice-bar ${a.level === 'urgent' ? 'urgent' : ''}`} style={{ opacity: live(a) ? 1 : 0.5 }}>
-          <span style={{ flex: 1 }}>{a.message}<br /><small className="tw-p">{new Date(a.created_at).toLocaleString('pt-BR')}{a.ends_at ? ` → ${new Date(a.ends_at).toLocaleString('pt-BR')}` : ''} · {live(a) ? 'no ar' : 'fora do ar'}</small></span>
+          <span style={{ flex: 1 }}>{a.message}<br /><small className="tw-p">{a.participant_id ? `Só para ${who(a.participant_id)} · ` : a.audience === 'artist' ? 'Só tatuadores · ' : a.audience === 'public' ? 'Só público · ' : 'Todo mundo · '}{new Date(a.created_at).toLocaleString('pt-BR')}{a.ends_at ? ` → ${new Date(a.ends_at).toLocaleString('pt-BR')}` : ''} · {live(a) ? 'no ar' : 'fora do ar'}</small></span>
           <button className="tw-btn tw-btn-sm tw-btn-ghost" onClick={() => toggle(a)}>{a.active ? 'Tirar do ar' : 'Reativar'}</button>
           <button className="tw-icon-btn" onClick={() => remove(a)} title="Excluir"><Trash2 size={13} /></button>
         </div>
