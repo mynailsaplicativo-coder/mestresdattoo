@@ -546,12 +546,15 @@ export function missionForToday(m, campaign) {
 }
 
 export async function loadArtistDaily(campaign) {
-  const [r, tags, sealSubs] = await Promise.all([
+  const [r, tags, sealSubs, artists] = await Promise.all([
     supabase.from('tw_ranking_daily').select('*').eq('campaign_id', campaign.id).eq('track', 'artist')
       .order('points', { ascending: false }).order('last_at').limit(2000),
     supabase.from('tw_artists').select('id').eq('campaign_id', campaign.id).eq('kind', 'secret').eq('active', true),
     supabase.from('tw_submissions').select('participant_id, artist_id, created_at, mission:tw_missions!inner(category, campaign_id)')
       .eq('mission.campaign_id', campaign.id).eq('mission.category', 'selo').eq('status', 'approved').limit(5000),
+    supabase.from('tw_participants').select('id, name, nickname, instagram, photo_url, created_at')
+      .eq('in_challenge', true).eq('show_in_ranking', true).or('blocked.is.null,blocked.eq.false')
+      .order('created_at').limit(2000),
   ]);
   const secretIds = new Set((tags.data || []).map(t => t.id));
   const need = secretIds.size;
@@ -578,8 +581,18 @@ export async function loadArtistDaily(campaign) {
   }
   // Ranking de um dia sem quem já levou kit em dia anterior
   const rankingOf = (day) => rows.filter(x => x.day === day && !(winnerSet.has(x.participant_id) && winners[day]?.participant_id !== x.participant_id));
-  const todayRows = rankingOf(today);
-  const leader = todayRows.find(x => eligible(x.participant_id, today)) || null;
+  // Todo tatuador cadastrado aparece no ranking do dia, mesmo com 0 ponto (fica abaixo de quem já pontuou)
+  const scored = rankingOf(today);
+  const inList = new Set(scored.map(x => x.participant_id));
+  const roster = (artists.data || [])
+    .filter(p => !inList.has(p.id) && !winnerSet.has(p.id))
+    .map(p => ({
+      campaign_id: campaign.id, track: 'artist', day: today, participant_id: p.id,
+      name: (p.nickname || '').trim() || p.name, instagram: p.instagram, photo_url: p.photo_url,
+      points: 0, actions: 0, last_at: null,
+    }));
+  const todayRows = [...scored, ...roster];
+  const leader = scored.find(x => x.points > 0 && eligible(x.participant_id, today)) || null;
   return { need, sealsOf, eligible, winners, winnerSet, rankingOf, todayRows, leader, today };
 }
 

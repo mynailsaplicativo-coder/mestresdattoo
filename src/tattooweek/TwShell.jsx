@@ -448,10 +448,6 @@ export function JoinGate({ tw, track, children }) {
           <input type="checkbox" checked={form.consent_marketing} onChange={e => setForm({ ...form, consent_marketing: e.target.checked })} />
           <span>Autorizo que meus registros sejam divulgados nas redes do Mestres da Tattoo e dos parceiros. Opcional — sem isso, nada seu é publicado.</span>
         </label>
-        <label className="tw-check">
-          <input type="checkbox" checked={!form.show_in_ranking} onChange={e => setForm({ ...form, show_in_ranking: !e.target.checked })} />
-          <span>Participação privada: não mostrar meu nome no ranking nem meu perfil público.</span>
-        </label>
         {error && <div className="tw-error">{error}</div>}
         <button className="tw-btn tw-btn-primary tw-btn-block" disabled={saving}>{saving ? 'Salvando...' : 'Começar'}</button>
       </form>

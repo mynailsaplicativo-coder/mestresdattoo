@@ -94,7 +94,7 @@ export function TwRanking() {
             return (
               <button
                 key={r.participant_id}
-                className={`tw-rank ${i < 3 ? `top${i + 1}` : ''} ${participant?.id === r.participant_id ? 'me' : ''}`}
+                className={`tw-rank ${i < 3 && r.points > 0 ? `top${i + 1}` : ''} ${participant?.id === r.participant_id ? 'me' : ''}`}
                 style={{ width: '100%', color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
                 onClick={() => navigate(`/desafios/perfil/${r.participant_id}`)}
               >
