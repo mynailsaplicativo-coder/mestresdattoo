@@ -24,9 +24,21 @@ export function TwRanking() {
       setDaily(d);
       setRows(d.todayRows.slice(0, 100));
     } else {
-      const { data } = await supabase.from('tw_ranking').select('*').eq('campaign_id', campaign.id).eq('track', track)
-        .order('points', { ascending: false }).order('last_at').limit(100);
-      setRows(data || []);
+      const flag = track === 'public' ? 'in_public' : 'in_challenge';
+      const [{ data }, people] = await Promise.all([
+        supabase.from('tw_ranking').select('*').eq('campaign_id', campaign.id).eq('track', track)
+          .order('points', { ascending: false }).order('last_at').limit(500),
+        // Todo mundo cadastrado nessa trilha aparece, mesmo com 0 ponto
+        supabase.from('tw_participants').select('id, name, nickname, instagram, city, photo_url, created_at')
+          .eq(flag, true).eq('show_in_ranking', true).or('blocked.is.null,blocked.eq.false').order('created_at').limit(2000),
+      ]);
+      const scored = data || [];
+      const seen = new Set(scored.map(x => x.participant_id));
+      const zeros = (people.data || []).filter(p => !seen.has(p.id)).map(p => ({
+        campaign_id: campaign.id, track, participant_id: p.id, name: (p.nickname || '').trim() || p.name,
+        instagram: p.instagram, city: p.city, photo_url: p.photo_url, points: 0, missions_done: 0, last_at: null,
+      }));
+      setRows([...scored, ...zeros]);
     }
     setUpdated(new Date());
   }, [track, campaign]);
@@ -51,6 +63,7 @@ export function TwRanking() {
         <div className="tw-tabs" style={{ marginBottom: '1rem' }}>
           <button className={`tw-tab ${track === 'today' ? 'on' : ''}`} onClick={() => setTrack('today')}>Hoje<small>prêmio do dia</small></button>
           <button className={`tw-tab ${track === 'artist' ? 'on' : ''}`} onClick={() => setTrack('artist')}>Artist Challenge<small>total</small></button>
+          <button className={`tw-tab ${track === 'public' ? 'on' : ''}`} onClick={() => setTrack('public')}>Público<small>total</small></button>
         </div>
 
         {track === 'today' && winners.length > 0 && (
