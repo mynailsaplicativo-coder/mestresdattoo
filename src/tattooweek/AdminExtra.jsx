@@ -287,6 +287,28 @@ export function ParticipantSheet({ participantId, campaign, role, onClose, onCha
     }
   };
 
+  // Troca a trilha: tatuador (Artist Challenge) ↔ público. Os pontos antigos ficam guardados na trilha antiga,
+  // mas o ranking só mostra a pessoa na trilha em que ela está agora.
+  const isArtist = !!p?.in_challenge;
+  const switchTrack = async () => {
+    const to = isArtist ? 'public' : 'artist';
+    const label = to === 'artist' ? 'TATUADOR (Artist Challenge)' : 'PÚBLICO';
+    if (!confirm(`Mudar ${p.nickname || p.name} para ${label}?\n\nA pessoa passa a ver as missões dessa trilha e aparece no ranking dela.`)) return;
+    const { error } = await supabase.from('tw_participants').update({
+      in_challenge: to === 'artist', in_public: to === 'public', ...(to === 'artist' ? { show_in_ranking: true } : {}),
+    }).eq('id', p.id);
+    if (error) { setMsg(error.message); return; }
+    const en = await supabase.from('tw_enrollments').select('id').eq('participant_id', p.id).eq('campaign_id', campaign.id);
+    if (en.data?.length) await supabase.from('tw_enrollments').update({ track: to }).eq('participant_id', p.id).eq('campaign_id', campaign.id);
+    else await supabase.from('tw_enrollments').insert([{ participant_id: p.id, campaign_id: campaign.id, track: to }]);
+    done(`Agora é ${to === 'artist' ? 'tatuador' : 'público'}.`);
+  };
+  const toggleRanking = async () => {
+    const { error } = await supabase.from('tw_participants').update({ show_in_ranking: !p.show_in_ranking }).eq('id', p.id);
+    if (error) { setMsg(error.message); return; }
+    done(p.show_in_ranking ? 'Saiu do ranking (participação privada).' : 'Voltou a aparecer no ranking.');
+  };
+
   const removeFromCampaign = async () => {
     if (!confirm(`Remover ${p.name} desta campanha? Os envios dele nesta campanha são apagados e isso não pode ser desfeito.`)) return;
     const ids = subs.map(s => s.id);
@@ -313,6 +335,11 @@ export function ParticipantSheet({ participantId, campaign, role, onClose, onCha
                   <div className="tw-row" style={{ gap: '0.3rem', marginTop: 4, flexWrap: 'wrap' }}>
                     {p.consent_marketing ? <span className="tw-chip tw-chip-ok">Autoriza divulgação</span> : <span className="tw-chip">Não autoriza divulgação</span>}
                     {!p.show_in_ranking && <span className="tw-chip">Participação privada</span>}
+                    <span className="tw-chip tw-chip-ok">{isArtist ? 'Tatuador' : 'Público'}</span>
+                  </div>
+                  <div className="tw-row" style={{ gap: '0.4rem', marginTop: 8, flexWrap: 'wrap' }}>
+                    <button className="tw-btn tw-btn-sm" onClick={switchTrack}>{isArtist ? 'Mudar para público' : 'Mudar para tatuador'}</button>
+                    <button className="tw-btn tw-btn-sm" onClick={toggleRanking}>{p.show_in_ranking ? 'Tirar do ranking' : 'Mostrar no ranking'}</button>
                   </div>
                 </div>
               </div>

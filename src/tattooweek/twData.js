@@ -582,7 +582,8 @@ export async function loadArtistDaily(campaign) {
   // Ranking de um dia sem quem já levou kit em dia anterior
   const rankingOf = (day) => rows.filter(x => x.day === day && !(winnerSet.has(x.participant_id) && winners[day]?.participant_id !== x.participant_id));
   // Todo tatuador cadastrado aparece no ranking do dia, mesmo com 0 ponto (fica abaixo de quem já pontuou)
-  const scored = rankingOf(today);
+  const artistIds = new Set((artists.data || []).map(p => p.id));
+  const scored = rankingOf(today).filter(x => artistIds.has(x.participant_id));
   const inList = new Set(scored.map(x => x.participant_id));
   const roster = (artists.data || [])
     .filter(p => !inList.has(p.id) && !winnerSet.has(p.id))

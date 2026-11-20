@@ -32,7 +32,9 @@ export function TwRanking() {
         supabase.from('tw_participants').select('id, name, nickname, instagram, city, photo_url, created_at')
           .eq(flag, true).eq('show_in_ranking', true).or('blocked.is.null,blocked.eq.false').order('created_at').limit(2000),
       ]);
-      const scored = data || [];
+      // Só quem está nessa trilha agora (quem trocou de trilha não aparece na antiga)
+      const ids = new Set((people.data || []).map(p => p.id));
+      const scored = (data || []).filter(x => ids.has(x.participant_id));
       const seen = new Set(scored.map(x => x.participant_id));
       const zeros = (people.data || []).filter(p => !seen.has(p.id)).map(p => ({
         campaign_id: campaign.id, track, participant_id: p.id, name: (p.nickname || '').trim() || p.name,
