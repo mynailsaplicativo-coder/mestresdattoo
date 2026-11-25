@@ -14,6 +14,11 @@ import GuestHub from './GuestHub';
 import ContactMediaKit from './ContactMediaKit';
 import SearchOverlay from './SearchOverlay';
 import MastersInkSelection from './MastersInkSelection';
+
+// Itens escondidos do site (as páginas continuam no ar pelo endereço direto e pelo admin).
+// Para mostrar de novo, troque para true.
+const SHOW_MASTERS_INK = false;
+const SHOW_DESAFIO = false;
 import CampaignApp from './tattooweek/TwCampaign';
 import TwHub from './tattooweek/TwHub';
 import TwProfile from './tattooweek/TwProfile';
@@ -55,8 +60,8 @@ function Header() {
           <button className="wte-nav-btn" onClick={() => navigate('/')}><Calendar size={14} /> Eventos</button>
           <button className="wte-nav-btn" onClick={() => navigate('/magazine')}><BookOpen size={14} /> Magazine</button>
           <button className="wte-nav-btn" onClick={() => navigate('/artists')}><User size={14} /> Artistas</button>
-          <button className="wte-nav-btn" onClick={() => navigate('/selecaomastersink')} style={{ color: 'var(--wte-gold)' }}><Star size={14} /> Seleção Masters</button>
-          <button className="wte-nav-btn" onClick={() => navigate('/tattooweek')} style={{ color: 'var(--wte-gold)' }}><Sparkles size={14} /> Desafio dos Mestres</button>
+          {SHOW_MASTERS_INK && <button className="wte-nav-btn" onClick={() => navigate('/selecaomastersink')} style={{ color: 'var(--wte-gold)' }}><Star size={14} /> Seleção Masters</button>}
+          {SHOW_DESAFIO && <button className="wte-nav-btn" onClick={() => navigate('/tattooweek')} style={{ color: 'var(--wte-gold)' }}><Sparkles size={14} /> Desafio dos Mestres</button>}
           <button className="wte-nav-btn" onClick={() => navigate('/hub')}><Store size={14} /> Guest Hub</button>
           <button className="wte-nav-btn" onClick={() => navigate('/contato')}><Star size={14} /> Mídia Kit</button>
           <SignedOut>
@@ -190,10 +195,10 @@ function EventsHub() {
             <button className="wte-icon-btn"><UserCircle size={20} /></button>
           </div>
           
-          {/* BANNER MASTERS INK */}
-          <div className="fade-in delay-1" style={{ marginTop: '2rem', display: 'inline-block', background: 'var(--wte-gold)', color: '#000', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 204, 13, 0.3)' }} onClick={() => navigate('/selecaomastersink')}>
+          {/* BANNER MASTERS INK (escondido: mude SHOW_MASTERS_INK para true para voltar) */}
+          {SHOW_MASTERS_INK && <div className="fade-in delay-1" style={{ marginTop: '2rem', display: 'inline-block', background: 'var(--wte-gold)', color: '#000', padding: '0.8rem 1.5rem', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 204, 13, 0.3)' }} onClick={() => navigate('/selecaomastersink')}>
             🔥 SELEÇÃO MASTERS INK: GARANTA SUA VAGA NO STAND! CLIQUE AQUI
-          </div>
+          </div>}
 
           <h1 className="wte-title fade-in delay-1" style={{ marginTop: '1.5rem' }}>Mestres da Tattoo:<br/> O Maior Portal da Tatuagem no Brasil</h1>
           <p className="wte-subtitle fade-in delay-2">Encontre estúdios, tatuadores, cultura e muito mais.</p>
